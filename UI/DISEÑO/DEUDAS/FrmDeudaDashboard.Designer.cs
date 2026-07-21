@@ -1,0 +1,302 @@
+namespace UI
+{
+    partial class FrmDeudaDashboard
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            panel1 = new Panel();
+            panelIngresoPendiente = new Panel();
+            lblIngresoPendiente = new Label();
+            label3 = new Label();
+            panelDeudasVencidas = new Panel();
+            lblDeudasVencidas = new Label();
+            label2 = new Label();
+            panelDeudasActivas = new Panel();
+            lblDeudasActivas = new Label();
+            label1 = new Label();
+            dgvDeudas = new DataGridView();
+            label4 = new Label();
+            btnCrearDeuda = new Button();
+            btnRegistrarPago = new Button();
+            btnIrAPagarDeuda = new Button();
+            btnDescargarReporte = new Button();
+            txtMontoPago = new TextBox();
+            panel1.SuspendLayout();
+            panelIngresoPendiente.SuspendLayout();
+            panelDeudasVencidas.SuspendLayout();
+            panelDeudasActivas.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvDeudas).BeginInit();
+            SuspendLayout();
+            // 
+            // panel1
+            // 
+            panel1.BackColor = Color.White;
+            panel1.Controls.Add(panelIngresoPendiente);
+            panel1.Controls.Add(panelDeudasVencidas);
+            panel1.Controls.Add(panelDeudasActivas);
+            panel1.Dock = DockStyle.Top;
+            panel1.Location = new Point(0, 0);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(1611, 200);
+            panel1.TabIndex = 0;
+            // 
+            // panelIngresoPendiente
+            // 
+            panelIngresoPendiente.BackColor = Color.FromArgb(45, 45, 45, 50);
+            panelIngresoPendiente.Controls.Add(lblIngresoPendiente);
+            panelIngresoPendiente.Controls.Add(label3);
+            panelIngresoPendiente.Location = new Point(748, 36);
+            panelIngresoPendiente.Name = "panelIngresoPendiente";
+            panelIngresoPendiente.Size = new Size(250, 125);
+            panelIngresoPendiente.TabIndex = 1;
+            // 
+            // lblIngresoPendiente
+            // 
+            lblIngresoPendiente.AutoSize = true;
+            lblIngresoPendiente.BackColor = Color.Transparent;
+            lblIngresoPendiente.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
+            lblIngresoPendiente.ForeColor = Color.ForestGreen;
+            lblIngresoPendiente.Location = new Point(4, 53);
+            lblIngresoPendiente.Name = "lblIngresoPendiente";
+            lblIngresoPendiente.Size = new Size(49, 57);
+            lblIngresoPendiente.TabIndex = 3;
+            lblIngresoPendiente.Text = "0";
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.BackColor = Color.ForestGreen;
+            label3.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            label3.ForeColor = Color.White;
+            label3.Location = new Point(17, 7);
+            label3.Name = "label3";
+            label3.Size = new Size(214, 28);
+            label3.TabIndex = 2;
+            label3.Text = "INGRESO PENDIENTE";
+            // 
+            // panelDeudasVencidas
+            // 
+            panelDeudasVencidas.BackColor = Color.FromArgb(45, 45, 45, 50);
+            panelDeudasVencidas.Controls.Add(lblDeudasVencidas);
+            panelDeudasVencidas.Controls.Add(label2);
+            panelDeudasVencidas.Location = new Point(442, 36);
+            panelDeudasVencidas.Name = "panelDeudasVencidas";
+            panelDeudasVencidas.Size = new Size(250, 125);
+            panelDeudasVencidas.TabIndex = 1;
+            // 
+            // lblDeudasVencidas
+            // 
+            lblDeudasVencidas.AutoSize = true;
+            lblDeudasVencidas.BackColor = Color.Transparent;
+            lblDeudasVencidas.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
+            lblDeudasVencidas.ForeColor = Color.Red;
+            lblDeudasVencidas.Location = new Point(4, 53);
+            lblDeudasVencidas.Name = "lblDeudasVencidas";
+            lblDeudasVencidas.Size = new Size(49, 57);
+            lblDeudasVencidas.TabIndex = 2;
+            lblDeudasVencidas.Text = "0";
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.BackColor = Color.Red;
+            label2.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            label2.ForeColor = Color.White;
+            label2.Location = new Point(27, 8);
+            label2.Name = "label2";
+            label2.Size = new Size(196, 28);
+            label2.TabIndex = 1;
+            label2.Text = "DEUDAS VENCIDAS";
+            // 
+            // panelDeudasActivas
+            // 
+            panelDeudasActivas.BackColor = Color.FromArgb(45, 45, 45, 50);
+            panelDeudasActivas.Controls.Add(lblDeudasActivas);
+            panelDeudasActivas.Controls.Add(label1);
+            panelDeudasActivas.Location = new Point(137, 36);
+            panelDeudasActivas.Name = "panelDeudasActivas";
+            panelDeudasActivas.Size = new Size(250, 125);
+            panelDeudasActivas.TabIndex = 0;
+            // 
+            // lblDeudasActivas
+            // 
+            lblDeudasActivas.AutoSize = true;
+            lblDeudasActivas.BackColor = Color.Transparent;
+            lblDeudasActivas.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
+            lblDeudasActivas.ForeColor = Color.DarkViolet;
+            lblDeudasActivas.Location = new Point(4, 53);
+            lblDeudasActivas.Name = "lblDeudasActivas";
+            lblDeudasActivas.Size = new Size(49, 57);
+            lblDeudasActivas.TabIndex = 1;
+            lblDeudasActivas.Text = "0";
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.BackColor = Color.DarkViolet;
+            label1.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            label1.ForeColor = SystemColors.ControlLightLight;
+            label1.Location = new Point(32, 10);
+            label1.Name = "label1";
+            label1.Size = new Size(179, 28);
+            label1.TabIndex = 0;
+            label1.Text = "DEUDAS ACTIVAS";
+            // 
+            // dgvDeudas
+            // 
+            dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dgvDeudas.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvDeudas.Location = new Point(28, 275);
+            dgvDeudas.Name = "dgvDeudas";
+            dgvDeudas.RowHeadersWidth = 51;
+            dgvDeudas.Size = new Size(1349, 228);
+            dgvDeudas.TabIndex = 1;
+            dgvDeudas.SelectionChanged += dgvDeudas_SelectionChanged;
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.BackColor = Color.Transparent;
+            label4.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
+            label4.ForeColor = Color.Black;
+            label4.Location = new Point(631, 215);
+            label4.Name = "label4";
+            label4.Size = new Size(192, 57);
+            label4.TabIndex = 2;
+            label4.Text = "DEUDAS";
+            // 
+            // btnCrearDeuda
+            // 
+            btnCrearDeuda.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnCrearDeuda.Location = new Point(10, 555);
+            btnCrearDeuda.Name = "btnCrearDeuda";
+            btnCrearDeuda.Size = new Size(167, 29);
+            btnCrearDeuda.TabIndex = 3;
+            btnCrearDeuda.Text = "CREAR DEUDA";
+            btnCrearDeuda.UseVisualStyleBackColor = true;
+            btnCrearDeuda.Click += btnCrearDeuda_Click;
+            // 
+            // btnRegistrarPago
+            // 
+            btnRegistrarPago.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnRegistrarPago.Location = new Point(183, 555);
+            btnRegistrarPago.Name = "btnRegistrarPago";
+            btnRegistrarPago.Size = new Size(167, 29);
+            btnRegistrarPago.TabIndex = 5;
+            btnRegistrarPago.Text = "REGISTRAR PAGO";
+            btnRegistrarPago.UseVisualStyleBackColor = true;
+            btnRegistrarPago.Click += btnRegistrarPago_Click;
+            // 
+            // btnIrAPagarDeuda
+            // 
+            btnIrAPagarDeuda.BackColor = Color.FromArgb(22, 163, 74);
+            btnIrAPagarDeuda.FlatAppearance.BorderSize = 0;
+            btnIrAPagarDeuda.FlatStyle = FlatStyle.Flat;
+            btnIrAPagarDeuda.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnIrAPagarDeuda.ForeColor = Color.White;
+            btnIrAPagarDeuda.Location = new Point(541, 555);
+            btnIrAPagarDeuda.Name = "btnIrAPagarDeuda";
+            btnIrAPagarDeuda.Size = new Size(166, 29);
+            btnIrAPagarDeuda.TabIndex = 6;
+            btnIrAPagarDeuda.Text = "COBRAR";
+            btnIrAPagarDeuda.UseVisualStyleBackColor = false;
+            btnIrAPagarDeuda.Click += btnIrAPagarDeuda_Click;
+            // 
+            // btnDescargarReporte
+            // 
+            btnDescargarReporte.BackColor = Color.White;
+            btnDescargarReporte.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnDescargarReporte.FlatStyle = FlatStyle.Flat;
+            btnDescargarReporte.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnDescargarReporte.ForeColor = Color.FromArgb(15, 23, 42);
+            btnDescargarReporte.Location = new Point(713, 555);
+            btnDescargarReporte.Name = "btnDescargarReporte";
+            btnDescargarReporte.Size = new Size(267, 29);
+            btnDescargarReporte.TabIndex = 7;
+            btnDescargarReporte.Text = "DESCARGAR REPORTE";
+            btnDescargarReporte.UseVisualStyleBackColor = false;
+            btnDescargarReporte.Click += btnDescargarReporte_Click;
+            // 
+            // txtMontoPago
+            // 
+            txtMontoPago.Location = new Point(1429, 390);
+            txtMontoPago.Name = "txtMontoPago";
+            txtMontoPago.Size = new Size(125, 27);
+            txtMontoPago.TabIndex = 8;
+            // 
+            // FrmDeudaDashboard
+            // 
+            AutoScaleDimensions = new SizeF(8F, 20F);
+            AutoScaleMode = AutoScaleMode.Font;
+            BackColor = SystemColors.ControlDark;
+            ClientSize = new Size(1611, 768);
+            Controls.Add(txtMontoPago);
+            Controls.Add(btnDescargarReporte);
+            Controls.Add(btnIrAPagarDeuda);
+            Controls.Add(btnRegistrarPago);
+            Controls.Add(btnCrearDeuda);
+            Controls.Add(label4);
+            Controls.Add(dgvDeudas);
+            Controls.Add(panel1);
+            Name = "FrmDeudaDashboard";
+            Text = "FrmDeudaDashboard";
+            WindowState = FormWindowState.Maximized;
+            Load += FrmDeudaDashboard_Load;
+            panel1.ResumeLayout(false);
+            panelIngresoPendiente.ResumeLayout(false);
+            panelIngresoPendiente.PerformLayout();
+            panelDeudasVencidas.ResumeLayout(false);
+            panelDeudasVencidas.PerformLayout();
+            panelDeudasActivas.ResumeLayout(false);
+            panelDeudasActivas.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvDeudas).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
+        }
+
+        #endregion
+
+        private Panel panel1;
+        private Panel panelIngresoPendiente;
+        private Panel panelDeudasVencidas;
+        private Panel panelDeudasActivas;
+        private Label label2;
+        private Label label1;
+        private Label label3;
+        private Label lblDeudasActivas;
+        private Label lblIngresoPendiente;
+        private Label lblDeudasVencidas;
+        private DataGridView dgvDeudas;
+        private Label label4;
+        private Button btnCrearDeuda;
+        private Button btnRegistrarPago;
+        private Button btnIrAPagarDeuda;
+        private Button btnDescargarReporte;
+        private TextBox txtMontoPago;
+    }
+}

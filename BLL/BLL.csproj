@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ProjectGuid>{5875EBB1-01BE-2D17-3613-D0BAD09CBB40}</ProjectGuid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="itext" Version="9.7.0" />
+    <PackageReference Include="itext.bouncy-castle-adapter" Version="9.7.0" />
+    <PackageReference Include="QuestPDF" Version="2026.7.1" />
+    <PackageReference Include="Supabase" Version="1.1.1" />
+    <PackageReference Include="Twilio" Version="7.14.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CORE\CORE.csproj" />
+    <ProjectReference Include="..\DALL\DL.csproj" />
+    <ProjectReference Include="..\MODELS\DTO.csproj" />
+  </ItemGroup>
+
+</Project>

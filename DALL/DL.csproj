@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ProjectGuid>{751AF2FE-E902-693D-7E5D-707EDDF679D7}</ProjectGuid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.0-preview2.26190.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MODELS\DTO.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# CS8600: Se va a convertir un literal nulo o un posible valor nulo en un TipoMovimiento que no acepta valores NULL
+dotnet_diagnostic.CS8600.severity = none

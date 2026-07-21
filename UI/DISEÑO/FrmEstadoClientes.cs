@@ -1,0 +1,534 @@
+﻿using DTO;
+using BLL;
+using BLL.Models;
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Data;
+using CORE;
+using UI.Helpers;
+using UI.Theme;
+using UI;
+
+namespace UI.DISEÑO
+{
+    [System.ComponentModel.DesignerCategory("Form")]
+    public partial class FrmEstadoClientes : Form
+    {
+        // ===============================
+        // INSTANCIAS
+        // ===============================
+        private readonly EstadoBLL estadoBLL = new EstadoBLL();
+        private readonly MembresiaBLL membresiaBLL = new MembresiaBLL();
+        private readonly FrmPresentacion _presentacion;
+        private readonly MensajeAutomaticoBLL mensajeBLL = new MensajeAutomaticoBLL();
+        private readonly BindingSource _bsEstado = new BindingSource();
+
+        // ===============================
+        // CONTROL
+        // ===============================
+        private System.Windows.Forms.Timer timerActualizacion = new System.Windows.Forms.Timer();
+        private bool cargando = false;
+
+        /// <summary>Constructor para el diseñador de WinForms.</summary>
+        public FrmEstadoClientes()
+        {
+            InitializeComponent();
+            ThemeHost.Attach(this);
+            _presentacion = null!;
+        }
+
+        public FrmEstadoClientes(FrmPresentacion presentacion)
+        {
+            InitializeComponent();
+            ThemeHost.Attach(this);
+            _presentacion = presentacion;
+            if (ThemeHost.IsDesignTime())
+                return;
+
+            ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloEstado);
+            AjustarContenidoTrasNavBar();
+        }
+
+        /// <summary>
+        /// Baja el contenido absoluto para que no quede debajo de la barra Dock.Top.
+        /// </summary>
+        private void AjustarContenidoTrasNavBar()
+        {
+            const int offset = 52;
+            foreach (Control c in Controls)
+            {
+                if (c.Dock != DockStyle.None)
+                    continue;
+                c.Top += offset;
+            }
+
+            // Back ya está en la barra de navegación
+            btnAtras.Visible = false;
+        }
+
+        // ===============================
+        // OBTENER CLIENTE
+        // ===============================
+        private int ObtenerClienteSeleccionado()
+        {
+            if (dgvEstado.CurrentRow == null) return 0;
+
+            var cell = ObtenerCelda(dgvEstado.CurrentRow, "ID");
+            if (cell?.Value == null) return 0;
+
+            return int.TryParse(cell.Value.ToString(), out int id) ? id : 0;
+        }
+
+        private static DataGridViewCell? ObtenerCelda(DataGridViewRow row, string nombreColumna)
+        {
+            if (row.DataGridView == null)
+                return null;
+
+            if (row.DataGridView.Columns.Contains(nombreColumna))
+                return row.Cells[nombreColumna];
+
+            foreach (DataGridViewColumn col in row.DataGridView.Columns)
+            {
+                if (string.Equals(col.Name, nombreColumna, StringComparison.OrdinalIgnoreCase))
+                    return row.Cells[col.Index];
+            }
+
+            return null;
+        }
+
+        private static string ObtenerValorCelda(DataGridViewRow row, string nombreColumna)
+        {
+            return ObtenerCelda(row, nombreColumna)?.Value?.ToString() ?? "";
+        }
+
+        // ===============================
+        // LOAD
+        // ===============================
+        private void FrmEstadoClientes_Load(object? sender, EventArgs e)
+        {
+
+            CargarEstado();
+
+            timerActualizacion.Interval = 30000;
+            timerActualizacion.Tick += TimerActualizacion_Tick;
+            timerActualizacion.Start();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            timerActualizacion.Stop();
+            base.OnFormClosed(e);
+        }
+
+        private void TimerActualizacion_Tick(object? sender, EventArgs e) 
+        {
+            CargarEstado();
+        }
+
+        // ===============================
+        // CARGAR DATA
+        // ===============================
+        private void CargarEstado()
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(CargarEstado));
+                return;
+            }
+
+            if (cargando) return;
+
+            try
+            {
+                cargando = true;
+
+                membresiaBLL.ActualizarVencimientos();
+
+                _bsEstado.DataSource = estadoBLL.ObtenerEstadoClientes();
+                dgvEstado.DataSource = _bsEstado;
+                AplicarFiltroBusqueda();
+                FormatearGrid();
+                dgvEstado.ClearSelection();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al cargar estado: " + ex.Message);
+            }
+            finally
+            {
+                cargando = false;
+            }
+        }
+
+        // ===============================
+        // 🆕 FORMATEAR GRID CON COLUMNAS DE FINANCIAMIENTO
+        // ===============================
+        private void FormatearGrid()
+        {
+            try
+            {
+                DataGridViewHelper.HideColumn(dgvEstado, "ID");
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "Nombre", col =>
+                {
+                    col.HeaderText = "Cliente";
+                    col.Width = 200;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "FechaInicio", col =>
+                {
+                    col.HeaderText = "Inicio";
+                    col.DefaultCellStyle.Format = "dd/MM/yyyy";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    col.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    col.Width = 110;
+                    col.MinimumWidth = 110;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "FechaFin", col =>
+                {
+                    col.HeaderText = "Vencimiento";
+                    col.DefaultCellStyle.Format = "dd/MM/yyyy";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    col.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    col.Width = 110;
+                    col.MinimumWidth = 110;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "Membresia", col =>
+                {
+                    col.HeaderText = "Plan";
+                    col.Width = 130;
+                    col.MinimumWidth = 100;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "Estado", col =>
+                {
+                    col.HeaderText = "Estado";
+                    col.Width = 160;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "EstadoDeuda", col =>
+                {
+                    col.HeaderText = "Estado Deuda";
+                    col.Width = 110;
+                    col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "SaldoPendiente", col =>
+                {
+                    col.HeaderText = "Saldo Pendiente";
+                    col.DefaultCellStyle.Format = "C2";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    col.Width = 120;
+                    col.DefaultCellStyle.ForeColor = Color.Red;
+                    col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "MontoFinanciado", col =>
+                {
+                    col.HeaderText = "Monto Financiado";
+                    col.DefaultCellStyle.Format = "C2";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    col.Width = 130;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "VencimientoDeuda", col =>
+                {
+                    col.HeaderText = "Vence Deuda";
+                    col.DefaultCellStyle.Format = "dd/MM/yyyy";
+                    col.Width = 100;
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error al formatear grid: {ex.Message}");
+            }
+        }
+
+        private void AplicarFiltroBusqueda()
+        {
+            var termino = txtBuscar.Text.Trim();
+            _bsEstado.Filter = string.IsNullOrEmpty(termino)
+                ? null
+                : BusquedaGridHelper.ConstruirFiltroEstadoClientes(termino);
+        }
+
+        private void txtBuscar_TextChanged(object sender, EventArgs e)
+        {
+            AplicarFiltroBusqueda();
+        }
+
+        private void dgvEstado_SelectionChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (dgvEstado.CurrentRow == null)
+                {
+                    btnRenovar.Enabled = false;
+                    return;
+                }
+
+                string estado = ObtenerValorCelda(dgvEstado.CurrentRow, "Estado");
+                btnRenovar.Enabled =
+                    estado.Equals("VENCIDO", StringComparison.OrdinalIgnoreCase) ||
+                    estado.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase) ||
+                    estado.Equals("SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error en selección del grid: {ex.Message}");
+                btnRenovar.Enabled = false;
+            }
+        }
+
+        private void dgvEstado_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0)
+                return;
+
+            var fila = dgvEstado.Rows[e.RowIndex];
+            string estadoDeuda = ObtenerValorCelda(fila, "EstadoDeuda");
+
+            if (!estadoDeuda.Equals("ACTIVA", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (!TryObtenerClienteDeFila(fila, out int clienteId))
+                return;
+
+            AbrirGestionDeudasCliente(clienteId);
+        }
+
+        private static bool TryObtenerClienteDeFila(DataGridViewRow fila, out int clienteId)
+        {
+            clienteId = 0;
+            var cell = ObtenerCelda(fila, "ID");
+            if (cell?.Value == null || cell.Value == DBNull.Value)
+                return false;
+
+            return int.TryParse(cell.Value.ToString(), out clienteId) && clienteId > 0;
+        }
+
+        private void AbrirGestionDeudasCliente(int clienteId)
+        {
+            try
+            {
+                using var frm = new FrmModuloDeudas(clienteId);
+                frm.ShowDialog();
+                CargarEstado();
+                _presentacion?.CargarDashboard();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Error al abrir gestión de deudas: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        // ===============================
+        // COLORES
+        // ===============================
+        private void dgvEstado_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            string estado = dgvEstado.Rows[e.RowIndex].Cells["Estado"]?.Value?.ToString()?.ToUpper() ?? "";
+
+            if (estado == "VENCIDO")
+                dgvEstado.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightCoral;
+
+            else if (estado == "ACTIVO")
+                dgvEstado.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightGreen;
+
+            else if (estado == "DESACTIVADO" || estado == "SIN MEMBRESIA")
+                dgvEstado.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightGray;
+
+            // Etiquetas legibles en la columna Estado (datos internos: VENCIDO / DESACTIVADO)
+            if (e.ColumnIndex >= 0 && dgvEstado.Columns[e.ColumnIndex].Name == "Estado")
+            {
+                if (estado == "VENCIDO")
+                {
+                    e.Value = "CLIENTE VENCIDO";
+                    e.FormattingApplied = true;
+                }
+                else if (estado == "DESACTIVADO")
+                {
+                    e.Value = "CLIENTE DESACTIVADO";
+                    e.FormattingApplied = true;
+                }
+            }
+
+            // Fechas solo dd/MM/yyyy (evita desalineación por hora/offset)
+            if (e.ColumnIndex >= 0)
+            {
+                string colName = dgvEstado.Columns[e.ColumnIndex].Name;
+                if ((colName == "FechaInicio" || colName == "FechaFin" || colName == "VencimientoDeuda")
+                    && e.Value != null && e.Value != DBNull.Value
+                    && e.Value is DateTime dt)
+                {
+                    e.Value = dt.ToString("dd/MM/yyyy");
+                    e.FormattingApplied = true;
+                    e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+            }
+
+            // 🆕 RESALTAR DEUDAS ACTIVAS EN COLUMNA ESPECÍFICA
+            if (e.ColumnIndex >= 0 && dgvEstado.Columns[e.ColumnIndex].Name == "EstadoDeuda")
+            {
+                string estadoDeuda = e.Value?.ToString() ?? "";
+                if (estadoDeuda == "ACTIVA")
+                {
+                    e.CellStyle.BackColor = Color.LightYellow;
+                    e.CellStyle.ForeColor = Color.DarkOrange;
+                    e.CellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
+                }
+            }
+
+            // 🆕 RESALTAR SALDO PENDIENTE > 0
+            if (e.ColumnIndex >= 0 && dgvEstado.Columns[e.ColumnIndex].Name == "SaldoPendiente")
+            {
+                if (e.Value != null && decimal.TryParse(e.Value.ToString(), out decimal saldo))
+                {
+                    if (saldo > 0)
+                    {
+                        e.CellStyle.BackColor = Color.MistyRose;
+                        e.CellStyle.ForeColor = Color.DarkRed;
+                        e.CellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
+                    }
+                }
+            }
+        }
+
+        // ===============================
+        // RENOVAR CLIENTE
+        // ===============================
+        private void btnRenovar_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (dgvEstado.CurrentRow == null)
+                {
+                    MessageBox.Show("Selecciona un cliente.");
+                    return;
+                }
+
+                int clienteId = ObtenerClienteSeleccionado();
+                string nombre = ObtenerValorCelda(dgvEstado.CurrentRow, "Nombre");
+
+                RenovacionMembresiaDialog.Mostrar(this, clienteId, nombre, () =>
+                {
+                    CargarEstado();
+                    _presentacion?.CargarDashboard();
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al renovar: " + ex.Message);
+            }
+        }
+
+        // ===============================
+        // DESACTIVAR CLIENTE
+        // ===============================
+        private void btnDesactivar_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (dgvEstado.CurrentRow == null)
+                {
+                    MessageBox.Show("Selecciona un cliente.");
+                    return;
+                }
+
+                int clienteId = ObtenerClienteSeleccionado();
+                if (clienteId <= 0)
+                {
+                    MessageBox.Show("No se pudo identificar al cliente seleccionado.");
+                    return;
+                }
+
+                string nombreCliente = ObtenerValorCelda(dgvEstado.CurrentRow, "Nombre");
+                ModoDesactivacionMiembro? modo = DesactivacionMiembroDialog.Mostrar(this, nombreCliente);
+                if (modo == null)
+                    return;
+
+                string usuario = Sesion.Usuario ?? "ADMIN";
+
+                string motivo = Microsoft.VisualBasic.Interaction.InputBox(
+                    modo == ModoDesactivacionMiembro.Vencido
+                        ? "Motivo de baja por vencimiento:"
+                        : "¿Por qué se va el cliente?",
+                    "Motivo de salida",
+                    ""
+                );
+
+                if (string.IsNullOrWhiteSpace(motivo))
+                    motivo = "Sin especificar";
+
+                int resultado = membresiaBLL.DesactivarMiembro(clienteId, usuario, motivo, modo.Value);
+                if (resultado <= 0)
+                {
+                    MessageBox.Show(
+                        "No se pudo registrar la baja del cliente.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                try
+                {
+                    bool whatsappEnviado = mensajeBLL.EnviarMensajeDesactivacion(clienteId, motivo);
+                    if (!whatsappEnviado)
+                    {
+                        string? error = mensajeBLL.ObtenerUltimoErrorCliente(clienteId);
+                        MessageBox.Show(
+                            "Miembro desactivado, pero no se pudo enviar WhatsApp.\n\n" +
+                            (error ?? "Verifique telefono del cliente y TwilioContentSidGenerico en App.config."),
+                            "WhatsApp",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Miembro desactivado, pero fallo WhatsApp: " + ex.Message,
+                        "WhatsApp",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+
+                string estadoFinal = modo == ModoDesactivacionMiembro.Vencido
+                    ? "CLIENTE VENCIDO"
+                    : "CLIENTE DESACTIVADO";
+                MessageBox.Show($"Miembro desactivado correctamente.\nEstado: {estadoFinal}.");
+
+                CargarEstado();
+                _presentacion?.CargarDashboard();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Error al desactivar miembro: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        // ===============================
+        // CERRAR
+        // ===============================
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            timerActualizacion.Stop();
+            timerActualizacion.Dispose();
+            base.OnFormClosing(e);
+        }
+    }
+}

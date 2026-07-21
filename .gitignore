@@ -1,0 +1,18 @@
+# Build / IDE
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Twilio y secretos locales (nunca commitear)
+secrets/
+**/twilio.secrets.config
+!twilio.secrets.config.example
+**/supabase.secrets.config
+!supabase.secrets.config.example
+**/App.Secrets.config
+
+# Logs locales
+**/logs/
+*.log

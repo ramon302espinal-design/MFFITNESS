@@ -1,0 +1,112 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<!-- Requerido por el diseñador WinForms (VS: "No se puede recuperar el GUID del proyecto") -->
+		<ProjectGuid>{5B286F5E-1DA4-C61D-7861-80C46E44F0B3}</ProjectGuid>
+		<RootNamespace>UI</RootNamespace>
+		<AssemblyName>UI</AssemblyName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\BLL\BLL.csproj" />
+		<ProjectReference Include="..\CORE\CORE.csproj" />
+		<ProjectReference Include="..\MODELS\DTO.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="Resources\mf_logo.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Resources\nav_back.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<!-- Formularios: editables en el diseñador WinForms -->
+	<ItemGroup>
+		<Compile Update="DISEÑO\FrmPresentacion.CS">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmLogin.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmClientes.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmClientes.FichaSalud.cs">
+			<DependentUpon>FrmClientes.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\FrmClientes.Designer.cs">
+			<DependentUpon>FrmClientes.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\Controles\UcFichaSaludEditor.cs">
+			<SubType>UserControl</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\Controles\UcFichaSaludEditor.Designer.cs">
+			<DependentUpon>UcFichaSaludEditor.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\FrmEstadoClientes.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmPagos.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmPago.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmProductos.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmHistorialVentas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmReportes.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmCajaDashboard.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmMovimientosCaja.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmCierresCaja.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmRegistrarGasto.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmVistaPrevia.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmHistorialMembresia.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmModuloDeudas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmDeudaDashboard.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmDeudas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmCrearDeuda.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmPagarDeudas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmHistorialDeudas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmReporteDeudas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+	</ItemGroup>
+
+</Project>

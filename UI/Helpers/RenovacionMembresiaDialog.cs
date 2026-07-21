@@ -1,0 +1,195 @@
+using System;
+using System.Data;
+using System.Drawing;
+using System.Windows.Forms;
+using BLL;
+using BLL.Commands;
+using BLL.Models;
+using CORE;
+using UI.Facturas;
+
+namespace UI.Helpers
+{
+    public static class RenovacionMembresiaDialog
+    {
+        public static bool Mostrar(
+            IWin32Window? owner,
+            int clienteId,
+            string nombreCliente,
+            Action? onRenovacionExitosa = null)
+        {
+            bool renovacionCompletada = false;
+
+            var deudaBLL = new DeudaBLL();
+            if (deudaBLL.ClienteBloqueadoPorDeudaPendiente(clienteId, out string motivoDeuda))
+            {
+                MessageBox.Show(
+                    owner,
+                    motivoDeuda,
+                    "Deuda pendiente",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return false;
+            }
+
+            Form frm = new Form
+            {
+                Text = "Renovar - " + nombreCliente,
+                Size = new Size(350, 250),
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label lblPrecio = new Label
+            {
+                Location = new Point(30, 70),
+                AutoSize = true,
+                Text = "Precio: RD$ 0.00"
+            };
+
+            PlanBLL planBLL = new PlanBLL();
+            var tabla = planBLL.ObtenerPlanes();
+            DataView dv = tabla.DefaultView;
+            dv.RowFilter = "Nombre IN ('PREMIUM', 'PRO', '3x', 'MENSUALIDAD')";
+
+            ComboBox comboPlanes = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(30, 30),
+                Width = 250,
+                DataSource = dv,
+                DisplayMember = "Nombre",
+                ValueMember = "Id",
+                SelectedIndex = -1
+            };
+
+            comboPlanes.SelectedIndexChanged += (s, ev) =>
+            {
+                if (comboPlanes.SelectedItem is DataRowView row &&
+                    row["Precio"] != DBNull.Value)
+                {
+                    decimal precio = Convert.ToDecimal(row["Precio"]);
+                    lblPrecio.Text = "Precio: RD$ " + precio.ToString("0.00");
+                }
+            };
+
+            Button btnConfirmar = new Button
+            {
+                Text = "CONFIRMAR",
+                Location = new Point(30, 120),
+                Width = 120,
+                Height = 30,
+            };
+
+            btnConfirmar.Click += (s, ev) =>
+            {
+                try
+                {
+                    if (comboPlanes.SelectedValue == null)
+                    {
+                        MessageBox.Show(owner, "Seleccione un plan.", "Renovación",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    int planId = Convert.ToInt32(comboPlanes.SelectedValue);
+                    var plan = planBLL.ObtenerPlan(planId);
+
+                    if (plan == null)
+                    {
+                        MessageBox.Show(owner, "El plan no existe o no se pudo cargar.", "Renovación",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    string usuario = Sesion.Usuario ?? "ADMIN";
+                    CajaBLL cajaBLL = new CajaBLL();
+
+                    if (cajaBLL.ObtenerCajaAbiertaHoy() == null)
+                    {
+                        DialogResult r = MessageBox.Show(
+                            owner,
+                            "No hay caja abierta. ¿Deseas abrir caja?",
+                            "Caja",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (r == DialogResult.Yes)
+                        {
+                            string input = Microsoft.VisualBasic.Interaction.InputBox(
+                                "Ingrese monto inicial:",
+                                "Abrir Caja",
+                                "0");
+
+                            if (decimal.TryParse(input, out decimal montoInicial))
+                            {
+                                cajaBLL.AbrirCaja(montoInicial, usuario);
+                            }
+                            else
+                            {
+                                MessageBox.Show(owner, "Monto inválido", "Caja",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }
+
+                    var result = MembresiaCommandService.RenovarMembresia(
+                        clienteId,
+                        planId,
+                        plan.Precio,
+                        usuario);
+
+                    if (!result.Success)
+                    {
+                        MessageBox.Show(owner, result.Message, "Renovación",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    if (result.Payload is RenovacionOperacionResult opRen)
+                    {
+                        FacturaMembresiaPdfService.GenerarAbrirDesdeOperacion(
+                            owner,
+                            clienteId,
+                            plan.Nombre ?? "PLAN",
+                            plan.Precio,
+                            opRen.FechaFinMembresia == default
+                                ? MembresiaHelper.CalcularFechaVencimiento(DateTime.Now)
+                                : opRen.FechaFinMembresia,
+                            "Efectivo",
+                            new MembresiaOperacionResult
+                            {
+                                MembresiaId = opRen.MembresiaId,
+                                PagoId = opRen.PagoId,
+                                CajaMovimientoId = opRen.CajaMovimientoId,
+                                FechaFinMembresia = opRen.FechaFinMembresia
+                            });
+                    }
+
+                    renovacionCompletada = true;
+                    onRenovacionExitosa?.Invoke();
+                    frm.Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(owner, "Error: " + ex.Message, "Renovación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            frm.Controls.Add(comboPlanes);
+            frm.Controls.Add(lblPrecio);
+            frm.Controls.Add(btnConfirmar);
+
+            frm.ShowDialog(owner);
+            return renovacionCompletada;
+        }
+    }
+}
