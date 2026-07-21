@@ -1,4 +1,4 @@
-﻿namespace UI.DISEÑO
+namespace UI.DISEÑO
 {
     partial class FrmClientes
     {
@@ -78,6 +78,7 @@
             lblLesionDescripcion = new Label();
             lblMedicamentos = new Label();
             panelMedicamentos = new Panel();
+            txtLesionDescripcion = new TextBox();
             rbMedicamentosSi = new RadioButton();
             rbMedicamentosNo = new RadioButton();
             lblListaMedicamentos = new Label();
@@ -127,24 +128,23 @@
             panelToolbarMiembros = new Panel();
             label6 = new Label();
             txtBuscar = new TextBox();
-            panel1 = new Panel();
-            ucFichaMiembro = new UI.DISEÑO.Controles.UcFichaSaludEditor();
             dgvClientes = new DataGridView();
+            panelDetalleScroll = new Panel();
+            ucFichaMiembro = new UI.DISEÑO.Controles.UcFichaSaludEditor();
+            panelEdicion = new Panel();
+            lblEditTitulo = new Label();
+            lblDetalleHint = new Label();
+            lblEditId = new Label();
+            txtEditId = new TextBox();
+            lblEditNombre = new Label();
+            txtEditNombre = new TextBox();
+            lblEditTelefono = new Label();
+            txtEditTelefono = new TextBox();
+            lblEditFechaNac = new Label();
+            dtpEditFechaNac = new DateTimePicker();
+            lblEditDireccion = new Label();
+            txtEditDireccion = new TextBox();
             btnBack = new Button();
-            panel2 = new Panel();
-            ucFichaSaludEditor1 = new UI.DISEÑO.Controles.UcFichaSaludEditor();
-            panel3 = new Panel();
-            label17 = new Label();
-            label18 = new Label();
-            textBox1 = new TextBox();
-            label19 = new Label();
-            textBox2 = new TextBox();
-            label20 = new Label();
-            textBox3 = new TextBox();
-            label21 = new Label();
-            dateTimePicker1 = new DateTimePicker();
-            label22 = new Label();
-            textBox4 = new TextBox();
             layoutNavClientes.SuspendLayout();
             panelNav.SuspendLayout();
             tabControlClientes.SuspendLayout();
@@ -157,10 +157,9 @@
             tabMiembros.SuspendLayout();
             layoutMiembros.SuspendLayout();
             panelToolbarMiembros.SuspendLayout();
-            panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvClientes).BeginInit();
-            panel2.SuspendLayout();
-            panel3.SuspendLayout();
+            panelDetalleScroll.SuspendLayout();
+            panelEdicion.SuspendLayout();
             SuspendLayout();
             // 
             // layoutNavClientes
@@ -176,7 +175,7 @@
             layoutNavClientes.RowCount = 2;
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            layoutNavClientes.Size = new Size(1704, 673);
+            layoutNavClientes.Size = new Size(1080, 720);
             layoutNavClientes.TabIndex = 0;
             // 
             // panelNav
@@ -195,7 +194,7 @@
             panelNav.Location = new Point(0, 0);
             panelNav.Margin = new Padding(0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1704, 52);
+            panelNav.Size = new Size(1080, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -301,7 +300,7 @@
             tabControlClientes.Margin = new Padding(0);
             tabControlClientes.Name = "tabControlClientes";
             tabControlClientes.SelectedIndex = 0;
-            tabControlClientes.Size = new Size(1704, 621);
+            tabControlClientes.Size = new Size(1080, 668);
             tabControlClientes.TabIndex = 1;
             tabControlClientes.SelectedIndexChanged += tabControlClientes_SelectedIndexChanged;
             // 
@@ -391,7 +390,7 @@
             tabAgregar.Location = new Point(4, 34);
             tabAgregar.Name = "tabAgregar";
             tabAgregar.Padding = new Padding(24);
-            tabAgregar.Size = new Size(1696, 583);
+            tabAgregar.Size = new Size(1072, 630);
             tabAgregar.TabIndex = 0;
             tabAgregar.Text = "AGREGAR CLIENTES";
             // 
@@ -893,12 +892,21 @@
             // panelMedicamentos
             // 
             panelMedicamentos.BackColor = Color.Transparent;
+            panelMedicamentos.Controls.Add(txtLesionDescripcion);
             panelMedicamentos.Controls.Add(rbMedicamentosSi);
             panelMedicamentos.Controls.Add(rbMedicamentosNo);
             panelMedicamentos.Location = new Point(662, 426);
             panelMedicamentos.Name = "panelMedicamentos";
             panelMedicamentos.Size = new Size(200, 36);
             panelMedicamentos.TabIndex = 49;
+            // 
+            // txtLesionDescripcion
+            // 
+            txtLesionDescripcion.Font = new Font("Segoe UI", 11F);
+            txtLesionDescripcion.Location = new Point(0, 0);
+            txtLesionDescripcion.Name = "txtLesionDescripcion";
+            txtLesionDescripcion.Size = new Size(450, 32);
+            txtLesionDescripcion.TabIndex = 47;
             // 
             // rbMedicamentosSi
             // 
@@ -942,7 +950,7 @@
             txtListaMedicamentos.Location = new Point(662, 495);
             txtListaMedicamentos.Name = "txtListaMedicamentos";
             txtListaMedicamentos.PlaceholderText = "Ej: Losartán 50mg, Metformina...";
-            txtListaMedicamentos.Size = new Size(409, 32);
+            txtListaMedicamentos.Size = new Size(560, 32);
             txtListaMedicamentos.TabIndex = 51;
             // 
             // lblAlergias
@@ -1404,39 +1412,39 @@
             tabMiembros.Location = new Point(4, 34);
             tabMiembros.Name = "tabMiembros";
             tabMiembros.Padding = new Padding(16);
-            tabMiembros.Size = new Size(1696, 583);
+            tabMiembros.Size = new Size(1072, 630);
             tabMiembros.TabIndex = 1;
             tabMiembros.Text = "MIEMBROS";
             // 
             // layoutMiembros
             // 
-            layoutMiembros.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            layoutMiembros.BackColor = Color.White;
             layoutMiembros.ColumnCount = 1;
             layoutMiembros.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             layoutMiembros.Controls.Add(panelToolbarMiembros, 0, 0);
             layoutMiembros.Controls.Add(dgvClientes, 0, 1);
-            layoutMiembros.Controls.Add(panel1, 0, 2);
+            layoutMiembros.Controls.Add(panelDetalleScroll, 0, 2);
+            layoutMiembros.Dock = DockStyle.Fill;
             layoutMiembros.Location = new Point(16, 16);
             layoutMiembros.Margin = new Padding(0);
             layoutMiembros.Name = "layoutMiembros";
             layoutMiembros.RowCount = 3;
             layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Absolute, 64F));
-            layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 27.9260788F));
-            layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 72.07392F));
-            layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
-            layoutMiembros.Size = new Size(1664, 551);
+            layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 38F));
+            layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 62F));
+            layoutMiembros.Size = new Size(1040, 598);
             layoutMiembros.TabIndex = 0;
             // 
             // panelToolbarMiembros
             // 
-            panelToolbarMiembros.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            panelToolbarMiembros.BackColor = Color.Silver;
+            panelToolbarMiembros.BackColor = Color.White;
             panelToolbarMiembros.Controls.Add(label6);
             panelToolbarMiembros.Controls.Add(txtBuscar);
+            panelToolbarMiembros.Dock = DockStyle.Fill;
             panelToolbarMiembros.Location = new Point(0, 0);
             panelToolbarMiembros.Margin = new Padding(0);
             panelToolbarMiembros.Name = "panelToolbarMiembros";
-            panelToolbarMiembros.Size = new Size(1664, 64);
+            panelToolbarMiembros.Size = new Size(1040, 64);
             panelToolbarMiembros.TabIndex = 0;
             // 
             // label6
@@ -1444,7 +1452,7 @@
             label6.AutoSize = true;
             label6.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             label6.ForeColor = Color.FromArgb(15, 23, 42);
-            label6.Location = new Point(16, 18);
+            label6.Location = new Point(0, 18);
             label6.Name = "label6";
             label6.Size = new Size(77, 23);
             label6.TabIndex = 0;
@@ -1454,57 +1462,204 @@
             // 
             txtBuscar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtBuscar.Font = new Font("Segoe UI", 11F);
-            txtBuscar.Location = new Point(109, 14);
+            txtBuscar.Location = new Point(90, 14);
             txtBuscar.Name = "txtBuscar";
             txtBuscar.PlaceholderText = "Buscar por nombre, telefono...";
-            txtBuscar.Size = new Size(443, 32);
+            txtBuscar.Size = new Size(411, 32);
             txtBuscar.TabIndex = 1;
             txtBuscar.TextChanged += txtBuscar_TextChanged;
-            // 
-            // panel1
-            // 
-            panel1.Anchor = AnchorStyles.None;
-            panel1.BackColor = Color.DodgerBlue;
-            panel1.Controls.Add(panel3);
-            panel1.Controls.Add(panel2);
-            panel1.Controls.Add(ucFichaMiembro);
-            panel1.Location = new Point(387, 222);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(889, 307);
-            panel1.TabIndex = 2;
-            // 
-            // ucFichaMiembro
-            // 
-            ucFichaMiembro.AutoScroll = true;
-            ucFichaMiembro.AutoScrollMinSize = new Size(1380, 1480);
-            ucFichaMiembro.BackColor = Color.White;
-            ucFichaMiembro.Font = new Font("Segoe UI", 10F);
-            ucFichaMiembro.Location = new Point(662, 101);
-            ucFichaMiembro.Name = "ucFichaMiembro";
-            ucFichaMiembro.Size = new Size(339, 123);
-            ucFichaMiembro.TabIndex = 5;
             // 
             // dgvClientes
             // 
             dgvClientes.AllowUserToAddRows = false;
             dgvClientes.AllowUserToDeleteRows = false;
-            dgvClientes.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             dgvClientes.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvClientes.BackgroundColor = Color.DarkGray;
+            dgvClientes.BackgroundColor = Color.White;
             dgvClientes.BorderStyle = BorderStyle.None;
             dgvClientes.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvClientes.Dock = DockStyle.Fill;
             dgvClientes.EditMode = DataGridViewEditMode.EditProgrammatically;
             dgvClientes.Location = new Point(0, 64);
-            dgvClientes.Margin = new Padding(0, 0, 0, 10);
+            dgvClientes.Margin = new Padding(0, 0, 0, 12);
             dgvClientes.Name = "dgvClientes";
             dgvClientes.ReadOnly = true;
             dgvClientes.RowHeadersWidth = 51;
             dgvClientes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvClientes.Size = new Size(1664, 126);
+            dgvClientes.Size = new Size(1040, 190);
             dgvClientes.TabIndex = 1;
             dgvClientes.CellClick += dgvClientes_CellClick;
             dgvClientes.CellDoubleClick += dgvClientes_CellDoubleClick;
             dgvClientes.SelectionChanged += dgvClientes_SelectionChanged;
+            // 
+            // panelDetalleScroll
+            // 
+            panelDetalleScroll.AutoScroll = true;
+            panelDetalleScroll.AutoScrollMinSize = new Size(1400, 1750);
+            panelDetalleScroll.BackColor = Color.White;
+            panelDetalleScroll.Controls.Add(ucFichaMiembro);
+            panelDetalleScroll.Controls.Add(panelEdicion);
+            panelDetalleScroll.Dock = DockStyle.Fill;
+            panelDetalleScroll.Location = new Point(0, 266);
+            panelDetalleScroll.Margin = new Padding(0);
+            panelDetalleScroll.Name = "panelDetalleScroll";
+            panelDetalleScroll.Size = new Size(1040, 332);
+            panelDetalleScroll.TabIndex = 2;
+            // 
+            // ucFichaMiembro
+            // 
+            ucFichaMiembro.Anchor = AnchorStyles.Top;
+            ucFichaMiembro.AutoScrollMinSize = new Size(1380, 1480);
+            ucFichaMiembro.BackColor = Color.White;
+            ucFichaMiembro.Font = new Font("Segoe UI", 10F);
+            ucFichaMiembro.Location = new Point(-40, 220);
+            ucFichaMiembro.Name = "ucFichaMiembro";
+            ucFichaMiembro.Size = new Size(1480, 1550);
+            ucFichaMiembro.TabIndex = 1;
+            // 
+            // panelEdicion
+            // 
+            panelEdicion.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panelEdicion.AutoScroll = true;
+            panelEdicion.AutoScrollMinSize = new Size(1080, 720);
+            panelEdicion.BackColor = Color.FromArgb(248, 250, 252);
+            panelEdicion.BorderStyle = BorderStyle.FixedSingle;
+            panelEdicion.Controls.Add(lblEditTitulo);
+            panelEdicion.Controls.Add(lblDetalleHint);
+            panelEdicion.Controls.Add(lblEditId);
+            panelEdicion.Controls.Add(txtEditId);
+            panelEdicion.Controls.Add(lblEditNombre);
+            panelEdicion.Controls.Add(txtEditNombre);
+            panelEdicion.Controls.Add(lblEditTelefono);
+            panelEdicion.Controls.Add(txtEditTelefono);
+            panelEdicion.Controls.Add(lblEditFechaNac);
+            panelEdicion.Controls.Add(dtpEditFechaNac);
+            panelEdicion.Controls.Add(lblEditDireccion);
+            panelEdicion.Controls.Add(txtEditDireccion);
+            panelEdicion.Location = new Point(-20, 0);
+            panelEdicion.Name = "panelEdicion";
+            panelEdicion.Size = new Size(1400, 150);
+            panelEdicion.TabIndex = 0;
+            // 
+            // lblEditTitulo
+            // 
+            lblEditTitulo.AutoSize = true;
+            lblEditTitulo.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblEditTitulo.ForeColor = Color.FromArgb(15, 23, 42);
+            lblEditTitulo.Location = new Point(16, 12);
+            lblEditTitulo.Name = "lblEditTitulo";
+            lblEditTitulo.Size = new Size(223, 25);
+            lblEditTitulo.TabIndex = 0;
+            lblEditTitulo.Text = "DETALLE DEL MIEMBRO";
+            // 
+            // lblDetalleHint
+            // 
+            lblDetalleHint.AutoSize = true;
+            lblDetalleHint.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            lblDetalleHint.ForeColor = Color.FromArgb(100, 116, 139);
+            lblDetalleHint.Location = new Point(250, 16);
+            lblDetalleHint.Name = "lblDetalleHint";
+            lblDetalleHint.Size = new Size(238, 20);
+            lblDetalleHint.TabIndex = 1;
+            lblDetalleHint.Text = "Seleccione un miembro en el listado";
+            // 
+            // lblEditId
+            // 
+            lblEditId.AutoSize = true;
+            lblEditId.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblEditId.ForeColor = Color.FromArgb(15, 23, 42);
+            lblEditId.Location = new Point(16, 52);
+            lblEditId.Name = "lblEditId";
+            lblEditId.Size = new Size(28, 23);
+            lblEditId.TabIndex = 2;
+            lblEditId.Text = "ID";
+            // 
+            // txtEditId
+            // 
+            txtEditId.Font = new Font("Segoe UI", 11F);
+            txtEditId.Location = new Point(48, 48);
+            txtEditId.Name = "txtEditId";
+            txtEditId.ReadOnly = true;
+            txtEditId.Size = new Size(64, 32);
+            txtEditId.TabIndex = 3;
+            // 
+            // lblEditNombre
+            // 
+            lblEditNombre.AutoSize = true;
+            lblEditNombre.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblEditNombre.ForeColor = Color.FromArgb(15, 23, 42);
+            lblEditNombre.Location = new Point(128, 52);
+            lblEditNombre.Name = "lblEditNombre";
+            lblEditNombre.Size = new Size(83, 23);
+            lblEditNombre.TabIndex = 4;
+            lblEditNombre.Text = "NOMBRE";
+            // 
+            // txtEditNombre
+            // 
+            txtEditNombre.Font = new Font("Segoe UI", 11F);
+            txtEditNombre.Location = new Point(220, 48);
+            txtEditNombre.Name = "txtEditNombre";
+            txtEditNombre.Size = new Size(280, 32);
+            txtEditNombre.TabIndex = 5;
+            // 
+            // lblEditTelefono
+            // 
+            lblEditTelefono.AutoSize = true;
+            lblEditTelefono.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblEditTelefono.ForeColor = Color.FromArgb(15, 23, 42);
+            lblEditTelefono.Location = new Point(520, 52);
+            lblEditTelefono.Name = "lblEditTelefono";
+            lblEditTelefono.Size = new Size(95, 23);
+            lblEditTelefono.TabIndex = 6;
+            lblEditTelefono.Text = "TELEFONO";
+            // 
+            // txtEditTelefono
+            // 
+            txtEditTelefono.Font = new Font("Segoe UI", 11F);
+            txtEditTelefono.Location = new Point(624, 48);
+            txtEditTelefono.Name = "txtEditTelefono";
+            txtEditTelefono.Size = new Size(160, 32);
+            txtEditTelefono.TabIndex = 7;
+            // 
+            // lblEditFechaNac
+            // 
+            lblEditFechaNac.AutoSize = true;
+            lblEditFechaNac.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblEditFechaNac.ForeColor = Color.FromArgb(15, 23, 42);
+            lblEditFechaNac.Location = new Point(804, 52);
+            lblEditFechaNac.Name = "lblEditFechaNac";
+            lblEditFechaNac.Size = new Size(134, 23);
+            lblEditFechaNac.TabIndex = 8;
+            lblEditFechaNac.Text = "F. NACIMIENTO";
+            // 
+            // dtpEditFechaNac
+            // 
+            dtpEditFechaNac.CustomFormat = "dd-MMMM-yyyy";
+            dtpEditFechaNac.Font = new Font("Segoe UI", 11F);
+            dtpEditFechaNac.Format = DateTimePickerFormat.Custom;
+            dtpEditFechaNac.Location = new Point(948, 48);
+            dtpEditFechaNac.Name = "dtpEditFechaNac";
+            dtpEditFechaNac.Size = new Size(220, 32);
+            dtpEditFechaNac.TabIndex = 9;
+            // 
+            // lblEditDireccion
+            // 
+            lblEditDireccion.AutoSize = true;
+            lblEditDireccion.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblEditDireccion.ForeColor = Color.FromArgb(15, 23, 42);
+            lblEditDireccion.Location = new Point(16, 100);
+            lblEditDireccion.Name = "lblEditDireccion";
+            lblEditDireccion.Size = new Size(100, 23);
+            lblEditDireccion.TabIndex = 10;
+            lblEditDireccion.Text = "DIRECCION";
+            // 
+            // txtEditDireccion
+            // 
+            txtEditDireccion.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtEditDireccion.Font = new Font("Segoe UI", 11F);
+            txtEditDireccion.Location = new Point(128, 96);
+            txtEditDireccion.Name = "txtEditDireccion";
+            txtEditDireccion.Size = new Size(1139, 32);
+            txtEditDireccion.TabIndex = 11;
             // 
             // btnBack
             // 
@@ -1516,164 +1671,13 @@
             btnBack.UseVisualStyleBackColor = true;
             btnBack.Visible = false;
             // 
-            // panel2
-            // 
-            panel2.Anchor = AnchorStyles.None;
-            panel2.BackColor = Color.DodgerBlue;
-            panel2.Controls.Add(ucFichaSaludEditor1);
-            panel2.Location = new Point(738, 32);
-            panel2.Name = "panel2";
-            panel2.Size = new Size(869, 294);
-            panel2.TabIndex = 6;
-            // 
-            // ucFichaSaludEditor1
-            // 
-            ucFichaSaludEditor1.AutoScroll = true;
-            ucFichaSaludEditor1.AutoScrollMinSize = new Size(1380, 1480);
-            ucFichaSaludEditor1.BackColor = Color.White;
-            ucFichaSaludEditor1.Font = new Font("Segoe UI", 10F);
-            ucFichaSaludEditor1.Location = new Point(662, 101);
-            ucFichaSaludEditor1.Name = "ucFichaSaludEditor1";
-            ucFichaSaludEditor1.Size = new Size(339, 123);
-            ucFichaSaludEditor1.TabIndex = 5;
-            // 
-            // panel3
-            // 
-            panel3.BackColor = Color.FromArgb(248, 250, 252);
-            panel3.BorderStyle = BorderStyle.FixedSingle;
-            panel3.Controls.Add(label17);
-            panel3.Controls.Add(label18);
-            panel3.Controls.Add(textBox1);
-            panel3.Controls.Add(label19);
-            panel3.Controls.Add(textBox2);
-            panel3.Controls.Add(label20);
-            panel3.Controls.Add(textBox3);
-            panel3.Controls.Add(label21);
-            panel3.Controls.Add(dateTimePicker1);
-            panel3.Controls.Add(label22);
-            panel3.Controls.Add(textBox4);
-            panel3.Location = new Point(16, 39);
-            panel3.Name = "panel3";
-            panel3.Size = new Size(278, 169);
-            panel3.TabIndex = 7;
-            // 
-            // label17
-            // 
-            label17.Anchor = AnchorStyles.None;
-            label17.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
-            label17.ForeColor = Color.FromArgb(15, 23, 42);
-            label17.Location = new Point(-771, 73);
-            label17.Name = "label17";
-            label17.Size = new Size(163, 23);
-            label17.TabIndex = 0;
-            label17.Text = "DETALLE DEL MIEMBRO";
-            // 
-            // label18
-            // 
-            label18.Anchor = AnchorStyles.None;
-            label18.AutoSize = true;
-            label18.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            label18.Location = new Point(-759, 117);
-            label18.Name = "label18";
-            label18.Size = new Size(28, 23);
-            label18.TabIndex = 2;
-            label18.Text = "ID";
-            // 
-            // textBox1
-            // 
-            textBox1.Anchor = AnchorStyles.None;
-            textBox1.Font = new Font("Segoe UI", 11F);
-            textBox1.Location = new Point(-713, 113);
-            textBox1.Name = "textBox1";
-            textBox1.ReadOnly = true;
-            textBox1.Size = new Size(46, 32);
-            textBox1.TabIndex = 3;
-            // 
-            // label19
-            // 
-            label19.Anchor = AnchorStyles.None;
-            label19.AutoSize = true;
-            label19.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            label19.Location = new Point(-653, 121);
-            label19.Name = "label19";
-            label19.Size = new Size(83, 23);
-            label19.TabIndex = 4;
-            label19.Text = "NOMBRE";
-            // 
-            // textBox2
-            // 
-            textBox2.Anchor = AnchorStyles.None;
-            textBox2.Font = new Font("Segoe UI", 11F);
-            textBox2.Location = new Point(-573, 117);
-            textBox2.Name = "textBox2";
-            textBox2.Size = new Size(280, 32);
-            textBox2.TabIndex = 5;
-            // 
-            // label20
-            // 
-            label20.Anchor = AnchorStyles.None;
-            label20.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            label20.Location = new Point(-288, 125);
-            label20.Name = "label20";
-            label20.Size = new Size(95, 23);
-            label20.TabIndex = 6;
-            label20.Text = "TELEFONO";
-            // 
-            // textBox3
-            // 
-            textBox3.Anchor = AnchorStyles.None;
-            textBox3.Font = new Font("Segoe UI", 11F);
-            textBox3.Location = new Point(-189, 121);
-            textBox3.Name = "textBox3";
-            textBox3.Size = new Size(140, 32);
-            textBox3.TabIndex = 7;
-            // 
-            // label21
-            // 
-            label21.Anchor = AnchorStyles.None;
-            label21.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            label21.Location = new Point(-20, 130);
-            label21.Name = "label21";
-            label21.Size = new Size(215, 23);
-            label21.TabIndex = 8;
-            label21.Text = "FECHA DE  NACIMIENTO";
-            // 
-            // dateTimePicker1
-            // 
-            dateTimePicker1.Anchor = AnchorStyles.None;
-            dateTimePicker1.CustomFormat = "dd-MMMM-yyyy";
-            dateTimePicker1.Font = new Font("Segoe UI", 11F);
-            dateTimePicker1.Format = DateTimePickerFormat.Custom;
-            dateTimePicker1.Location = new Point(-40, 156);
-            dateTimePicker1.Name = "dateTimePicker1";
-            dateTimePicker1.Size = new Size(250, 32);
-            dateTimePicker1.TabIndex = 9;
-            // 
-            // label22
-            // 
-            label22.Anchor = AnchorStyles.None;
-            label22.AutoSize = true;
-            label22.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            label22.Location = new Point(-758, 152);
-            label22.Name = "label22";
-            label22.Size = new Size(100, 23);
-            label22.TabIndex = 10;
-            label22.Text = "DIRECCION";
-            // 
-            // textBox4
-            // 
-            textBox4.Anchor = AnchorStyles.None;
-            textBox4.Font = new Font("Segoe UI", 11F);
-            textBox4.Location = new Point(-658, 151);
-            textBox4.Name = "textBox4";
-            textBox4.Size = new Size(465, 32);
-            textBox4.TabIndex = 11;
-            // 
             // FrmClientes
             // 
             AutoScaleMode = AutoScaleMode.None;
+            AutoScroll = true;
+            AutoScrollMinSize = new Size(1080, 720);
             BackColor = Color.White;
-            ClientSize = new Size(1704, 673);
+            ClientSize = new Size(1062, 673);
             Controls.Add(layoutNavClientes);
             Controls.Add(btnBack);
             Name = "FrmClientes";
@@ -1700,11 +1704,10 @@
             layoutMiembros.ResumeLayout(false);
             panelToolbarMiembros.ResumeLayout(false);
             panelToolbarMiembros.PerformLayout();
-            panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)dgvClientes).EndInit();
-            panel2.ResumeLayout(false);
-            panel3.ResumeLayout(false);
-            panel3.PerformLayout();
+            panelDetalleScroll.ResumeLayout(false);
+            panelEdicion.ResumeLayout(false);
+            panelEdicion.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -1727,6 +1730,19 @@
         private TableLayoutPanel layoutMiembros;
         private Panel panelToolbarMiembros;
         private DataGridView dgvClientes;
+        private Panel panelDetalleScroll;
+        private Panel panelEdicion;
+        private Label lblEditTitulo;
+        private Label lblEditId;
+        private TextBox txtEditId;
+        private Label lblEditNombre;
+        private TextBox txtEditNombre;
+        private Label lblEditTelefono;
+        private TextBox txtEditTelefono;
+        private Label lblEditFechaNac;
+        private DateTimePicker dtpEditFechaNac;
+        private Label lblEditDireccion;
+        private TextBox txtEditDireccion;
         private Label label1;
         private Label label3;
         private Label label4;
@@ -1776,6 +1792,7 @@
         private CheckBox chkLesionTobillo;
         private CheckBox chkLesionCadera;
         private Label lblLesionDescripcion;
+        private TextBox txtLesionDescripcion;
         private Label lblMedicamentos;
         private Panel panelMedicamentos;
         private RadioButton rbMedicamentosSi;
@@ -1822,23 +1839,12 @@
         private RadioButton rbHorNoche;
         private RadioButton rbHorVariado;
         private TextBox txtHorarioVariadoDetalle;
+        private ComboBox comboBox1;
         private Label label16;
         private ComboBox cmbsexo;
-        private Panel panel1;
         private Controles.UcFichaSaludEditor ucFichaMiembro;
-        private Panel panel3;
-        private Label label17;
-        private Label label18;
-        private TextBox textBox1;
-        private Label label19;
-        private TextBox textBox2;
-        private Label label20;
-        private TextBox textBox3;
-        private Label label21;
-        private DateTimePicker dateTimePicker1;
-        private Label label22;
-        private TextBox textBox4;
-        private Panel panel2;
-        private Controles.UcFichaSaludEditor ucFichaSaludEditor1;
+        private Label lblDetalleHint;
+        private Button btnIrAPagar;
+        private Button btnIrADeudas;
     }
 }

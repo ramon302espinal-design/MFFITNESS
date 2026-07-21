@@ -1,4 +1,4 @@
-﻿namespace UI.DISEÑO
+namespace UI.DISEÑO
 {
     partial class FrmEstadoClientes
     {

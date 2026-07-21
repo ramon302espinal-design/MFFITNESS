@@ -226,7 +226,7 @@ namespace UI.DISEÑO
             chkLesionCuello.Checked = false;
             chkLesionTobillo.Checked = false;
             chkLesionCadera.Checked = false;
-            
+            txtLesionDescripcion.Clear();
 
             rbMedicamentosNo.Checked = true;
             ActualizarUiMedicamentos();
@@ -307,7 +307,7 @@ namespace UI.DISEÑO
                 LesionCuello = chkLesionCuello.Checked,
                 LesionTobillo = chkLesionTobillo.Checked,
                 LesionCadera = chkLesionCadera.Checked,
-                
+                LesionDescripcion = txtLesionDescripcion.Text,
                 TomaMedicamentos = rbMedicamentosSi.Checked,
                 ListaMedicamentos = txtListaMedicamentos.Text,
                 TieneAlergias = rbAlergiasSi.Checked,
