@@ -187,6 +187,8 @@ namespace UI.DISEÑO
             // dgvHistorialMembresia
             // 
             dgvHistorialMembresia.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvHistorialMembresia.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvHistorialMembresia.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvHistorialMembresia.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvHistorialMembresia.Location = new Point(900, 56);
             dgvHistorialMembresia.Name = "dgvHistorialMembresia";
@@ -208,6 +210,7 @@ namespace UI.DISEÑO
             // 
             dgvHistorial.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvHistorial.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvHistorial.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvHistorial.Location = new Point(20, 56);
             dgvHistorial.Name = "dgvHistorial";
@@ -235,7 +238,7 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(4, 34);
             tabProductos.Name = "tabProductos";
             tabProductos.Padding = new Padding(12);
-            tabProductos.Size = new Size(1773, 679);
+            tabProductos.Size = new Size(1054, 583);
             tabProductos.TabIndex = 1;
             tabProductos.Text = "PRODUCTOS";
             // 
@@ -247,7 +250,7 @@ namespace UI.DISEÑO
             dgvDetalleProductos.Location = new Point(900, 56);
             dgvDetalleProductos.Name = "dgvDetalleProductos";
             dgvDetalleProductos.RowHeadersWidth = 51;
-            dgvDetalleProductos.Size = new Size(850, 590);
+            dgvDetalleProductos.Size = new Size(131, 494);
             dgvDetalleProductos.TabIndex = 3;
             // 
             // label3
@@ -263,11 +266,13 @@ namespace UI.DISEÑO
             // dgvVentasProductos
             // 
             dgvVentasProductos.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            dgvVentasProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvVentasProductos.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvVentasProductos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvVentasProductos.Location = new Point(20, 56);
             dgvVentasProductos.Name = "dgvVentasProductos";
             dgvVentasProductos.RowHeadersWidth = 51;
-            dgvVentasProductos.Size = new Size(860, 590);
+            dgvVentasProductos.Size = new Size(860, 494);
             dgvVentasProductos.TabIndex = 1;
             dgvVentasProductos.SelectionChanged += dgvVentasProductos_SelectionChanged;
             // 
@@ -289,7 +294,7 @@ namespace UI.DISEÑO
             Controls.Add(tabControl1);
             Controls.Add(panelNav);
             Name = "FrmHistorialVentas";
-            Text = "Historial de ventas";
+            Text = "HISTORIAL DE VENTAS";
             WindowState = FormWindowState.Maximized;
             FormClosed += FrmHistorialVentas_FormClosed;
             Load += FrmHistorialVentas_Load;

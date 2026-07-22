@@ -6,7 +6,6 @@ using System;
 using System.Data;
 using System.Windows.Forms;
 using CORE;
-using UI.Theme;
 using UI.Helpers;
 using UI.Facturas;
 
@@ -237,7 +236,7 @@ namespace UI.DISEÑO
             dgvCarrito.ReadOnly = true;
             dgvCarrito.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            ThemeApplier.ApplyReadOnlyGridBehavior(dgvCarrito);
+            dgvCarrito.AllowUserToDeleteRows = false;
         }
 
         private void dgvCarrito_SelectionChanged(object sender, EventArgs e)

@@ -7,7 +7,6 @@ using System.Windows.Forms;
 using System.Data;
 using CORE;
 using UI.Helpers;
-using UI.Theme;
 using UI;
 
 namespace UI.DISEÑO
@@ -34,16 +33,14 @@ namespace UI.DISEÑO
         public FrmEstadoClientes()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             _presentacion = null!;
         }
 
         public FrmEstadoClientes(FrmPresentacion presentacion)
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             _presentacion = presentacion;
-            if (ThemeHost.IsDesignTime())
+            if (DesignMode)
                 return;
 
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloEstado);

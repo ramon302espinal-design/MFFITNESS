@@ -2,7 +2,6 @@ using BLL;
 using System;
 using System.Data;
 using System.Windows.Forms;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -15,7 +14,6 @@ namespace UI.DISEÑO
         public FrmHistorialMembresia()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             CargarHistorial();
         }
 

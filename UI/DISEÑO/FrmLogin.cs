@@ -5,7 +5,6 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using CORE;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -17,43 +16,8 @@ namespace UI.DISEÑO
         public FrmLogin()
         {
             InitializeComponent();
-            ThemeHost.Attach(this, ApplyLoginTheme);
             ConfigurarUI();
         }
-
-        private void ApplyLoginTheme()
-        {
-            BackColor = AppTheme.Secondary;
-            tableLayoutPanel1.BackColor = AppTheme.Secondary;
-            panelCard.BackColor = AppTheme.Surface;
-            panelCard.Tag = "card";
-            panelHeader.BackColor = AppTheme.Primary;
-            panelFormulario.BackColor = AppTheme.Surface;
-            panelBotones.BackColor = AppTheme.Surface;
-
-            lblMF.ForeColor = AppTheme.TextOnPrimary;
-            lblFitness.ForeColor = AppTheme.TextOnPrimary;
-            lblSubtitulo.ForeColor = Color.FromArgb(230, 240, 255);
-            lblUsuario.ForeColor = AppTheme.TextPrimary;
-            lblContraseña.ForeColor = AppTheme.TextPrimary;
-
-            var logo = ShellTheme.LoadLogo();
-            if (logo != null)
-            {
-                lblMF.Text = "";
-                lblFitness.Text = "";
-                picLoginLogo.Image = logo;
-            }
-
-            ThemeApplier.StyleTextBox(txtContraseña);
-            ThemeApplier.StyleComboBox(comboUsuarios);
-            ThemeApplier.StyleCheckBox(chkMostrarContraseña);
-            ThemeApplier.StyleButton(btnIniciar, ButtonVariant.Primary);
-            ThemeApplier.StyleButton(btnCancelar, ButtonVariant.Secondary);
-            ThemeApplier.ApplyRoundedRegion(btnIniciar, AppTheme.RadiusMedium);
-            ThemeApplier.ApplyRoundedRegion(btnCancelar, AppTheme.RadiusMedium);
-        }
-
 
         // ===============================
         // LIMPIAR CONTROLES LOGOUT

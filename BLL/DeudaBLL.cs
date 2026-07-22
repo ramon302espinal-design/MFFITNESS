@@ -20,7 +20,7 @@ namespace BLL
         /// <exception cref="Exception">Si no hay caja abierta o el pago no existe</exception>
         public void RevertirPago(int pagoId, string usuario)
         {
-            var caja = cajaDAL.ObtenerCajaAbierta();
+            var caja = cajaDAL.ObtenerCajaAbierta(usuario);
 
             if (caja == null)
                 throw new Exception("No hay caja abierta");
@@ -95,7 +95,7 @@ namespace BLL
             if (monto <= 0)
                 throw new Exception("El monto del pago debe ser mayor a cero.");
 
-            var caja = cajaDAL.ObtenerCajaAbierta();
+            var caja = cajaDAL.ObtenerCajaAbierta(usuario);
 
             if (caja == null)
                 throw new Exception("No hay caja abierta para registrar pagos.");

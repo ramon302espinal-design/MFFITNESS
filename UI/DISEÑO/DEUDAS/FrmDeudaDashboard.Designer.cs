@@ -61,7 +61,7 @@ namespace UI
             panel1.Dock = DockStyle.Top;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(1563, 200);
+            panel1.Size = new Size(1062, 200);
             panel1.TabIndex = 0;
             // 
             // panelIngresoPendiente
@@ -168,12 +168,19 @@ namespace UI
             // 
             // dgvDeudas
             // 
+            dgvDeudas.AllowUserToAddRows = false;
+            dgvDeudas.AllowUserToDeleteRows = false;
             dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+            dgvDeudas.BackgroundColor = Color.White;
             dgvDeudas.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvDeudas.Location = new Point(28, 275);
+            dgvDeudas.MultiSelect = false;
             dgvDeudas.Name = "dgvDeudas";
+            dgvDeudas.ReadOnly = true;
+            dgvDeudas.RowHeadersVisible = false;
             dgvDeudas.RowHeadersWidth = 51;
+            dgvDeudas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvDeudas.Size = new Size(1188, 228);
             dgvDeudas.TabIndex = 1;
             dgvDeudas.SelectionChanged += dgvDeudas_SelectionChanged;
@@ -219,7 +226,7 @@ namespace UI
             btnIrAPagarDeuda.FlatStyle = FlatStyle.Flat;
             btnIrAPagarDeuda.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnIrAPagarDeuda.ForeColor = Color.White;
-            btnIrAPagarDeuda.Location = new Point(541, 555);
+            btnIrAPagarDeuda.Location = new Point(354, 555);
             btnIrAPagarDeuda.Name = "btnIrAPagarDeuda";
             btnIrAPagarDeuda.Size = new Size(166, 29);
             btnIrAPagarDeuda.TabIndex = 6;
@@ -234,7 +241,7 @@ namespace UI
             btnDescargarReporte.FlatStyle = FlatStyle.Flat;
             btnDescargarReporte.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnDescargarReporte.ForeColor = Color.FromArgb(15, 23, 42);
-            btnDescargarReporte.Location = new Point(713, 555);
+            btnDescargarReporte.Location = new Point(526, 555);
             btnDescargarReporte.Name = "btnDescargarReporte";
             btnDescargarReporte.Size = new Size(267, 29);
             btnDescargarReporte.TabIndex = 7;
@@ -255,7 +262,7 @@ namespace UI
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ControlDark;
-            ClientSize = new Size(1563, 673);
+            ClientSize = new Size(1062, 673);
             Controls.Add(txtMontoPago);
             Controls.Add(btnDescargarReporte);
             Controls.Add(btnIrAPagarDeuda);

@@ -1,10 +1,10 @@
 using BLL;
 using CORE;
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
@@ -26,12 +26,11 @@ namespace UI
         public FrmModuloDeudas(int? clienteIdParaGestion)
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             _clienteIdParaGestion = clienteIdParaGestion;
             _navegacionInicialPendiente = clienteIdParaGestion.HasValue;
 
             // En el diseñador solo se muestran los tabs; la barra se cablea al ejecutar.
-            if (ThemeHost.IsDesignTime())
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
                 return;
 
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloDeudas);
@@ -49,7 +48,6 @@ namespace UI
                 return;
             }
 
-            ConfigurarTabControl();
             AplicarPermisosTabs();
 
             // Si solo puede ver historial (ej. rol CONSULTA), no abrir Gestión.
@@ -121,7 +119,7 @@ namespace UI
                 return;
             }
 
-            // Una sola pestaña: ocultar la franja de tabs para que se vea solo el historial.
+            // Una sola pestaña: ocultar la franja de tabs.
             if (tabControl.TabPages.Count == 1)
             {
                 tabControl.Appearance = TabAppearance.FlatButtons;
@@ -130,52 +128,6 @@ namespace UI
             }
 
             tabControl.SelectedIndexChanged += tabControl_SelectedIndexChanged;
-        }
-
-        // ===============================
-        // CONFIGURAR APARIENCIA PROFESIONAL
-        // ===============================
-        private void ConfigurarTabControl()
-        {
-            tabControl.Appearance = TabAppearance.FlatButtons;
-            tabControl.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            tabControl.ItemSize = new Size(250, 40);
-            tabControl.SizeMode = TabSizeMode.Fixed;
-            tabControl.DrawMode = TabDrawMode.OwnerDrawFixed;
-            tabControl.DrawItem += TabControl_DrawItem;
-        }
-
-        // ===============================
-        // DIBUJO PERSONALIZADO DE TABS
-        // ===============================
-        private void TabControl_DrawItem(object? sender, DrawItemEventArgs e)
-        {
-            if (e.Index < 0 || e.Index >= tabControl.TabPages.Count)
-                return;
-
-            Graphics g = e.Graphics;
-            TabPage tabPage = tabControl.TabPages[e.Index];
-            Rectangle tabBounds = tabControl.GetTabRect(e.Index);
-
-            // Color de fondo según estado
-            Color backColor = (e.State == DrawItemState.Selected)
-                ? AppTheme.Primary
-                : AppTheme.SurfaceElevated;
-
-            Color textColor = (e.State == DrawItemState.Selected)
-                ? AppTheme.TextOnPrimary
-                : AppTheme.TextPrimary;
-
-            // Dibujar fondo
-            using (SolidBrush brush = new SolidBrush(backColor))
-            {
-                g.FillRectangle(brush, tabBounds);
-            }
-
-            // Dibujar texto centrado
-            TextRenderer.DrawText(g, tabPage.Text, tabControl.Font,
-                tabBounds, textColor,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
 
         // ===============================
@@ -331,18 +283,43 @@ namespace UI
         }
 
         // ===============================
-        // LIMPIAR AL CERRAR - SOLO OCULTAR, NO CERRAR
+        // LIMPIAR AL CERRAR
         // ===============================
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // NO cerramos los formularios hijos, solo los ocultamos
-            // Esto evita el error "Cannot access a disposed object"
-            dashboardForm?.Hide();
-            gestionForm?.Hide();
-            crearForm?.Hide();
-            historialForm?.Hide();
+            // Liberar hijos de verdad: si solo se ocultan, siguen suscritos a
+            // AppEventos y al reabrir el módulo + cobrar aparecen errores de
+            // instancia / objeto desechado sobre formularios zombie.
+            LiberarHijo(ref dashboardForm);
+            LiberarHijo(ref gestionForm);
+            LiberarHijo(ref crearForm);
+            LiberarHijo(ref historialForm);
 
             base.OnFormClosing(e);
+        }
+
+        private static void LiberarHijo<T>(ref T? hijo) where T : Form
+        {
+            if (hijo == null)
+                return;
+
+            try
+            {
+                if (!hijo.IsDisposed)
+                {
+                    hijo.Hide();
+                    hijo.Close();
+                    hijo.Dispose();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // Ya liberado.
+            }
+            finally
+            {
+                hijo = null;
+            }
         }
     }
 }

@@ -312,7 +312,7 @@ namespace UI.DISEÑO
             cmbCategoria.FormattingEnabled = true;
             cmbCategoria.Location = new Point(227, 120);
             cmbCategoria.Name = "cmbCategoria";
-            cmbCategoria.Size = new Size(151, 28);
+            cmbCategoria.Size = new Size(194, 28);
             cmbCategoria.TabIndex = 24;
             // 
             // label1

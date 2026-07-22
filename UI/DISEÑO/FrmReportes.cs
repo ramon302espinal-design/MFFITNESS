@@ -3,7 +3,6 @@ using System;
 using System.Data;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
@@ -17,8 +16,7 @@ namespace UI
         public FrmReportes()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
-            if (ThemeHost.IsDesignTime())
+            if (DesignMode)
                 return;
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloReportes);
             AjustarContenidoTrasNavBar();

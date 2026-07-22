@@ -5,7 +5,6 @@ using CORE.Commands;
 using System;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
@@ -17,7 +16,6 @@ namespace UI
         public FrmDeudaDashboard()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
         }
         private decimal SafeDecimal(object? valor)
         {
@@ -62,6 +60,13 @@ namespace UI
             btnDescargarReporte.Enabled = true;
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            AppEventos.OnPagoRegistrado -= ActualizarDashboard;
+            AppEventos.OnDeudaModificada -= ActualizarDashboard;
+            base.OnFormClosing(e);
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             AppEventos.OnPagoRegistrado -= ActualizarDashboard;
@@ -72,6 +77,9 @@ namespace UI
         // 🔹 MÉTODO PRINCIPAL
         private void CargarTodo()
         {
+            if (IsDisposed || Disposing || !IsHandleCreated)
+                return;
+
             try
             {
                 dgvDeudas.DataSource = deudaBLL.ObtenerDeudas();
@@ -90,11 +98,22 @@ namespace UI
         // 🔥 ACTUALIZACIÓN SEGURA DESDE EVENTOS
         private void ActualizarDashboard()
         {
-            if (this.InvokeRequired)
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
             {
-                this.Invoke(new Action(ActualizarDashboard));
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(ActualizarDashboard));
+                }
+                catch (ObjectDisposedException) { }
                 return;
             }
+
+            if (!IsHandleCreated)
+                return;
 
             CargarTodo();
         }
@@ -114,14 +133,11 @@ namespace UI
         {
             try
             {
-                FrmCrearDeuda frm = new FrmCrearDeuda();
+                using var frm = new FrmCrearDeuda();
+                var owner = FindForm() ?? this;
 
-                var resultado = frm.ShowDialog();
-
-                if (resultado == DialogResult.OK)
-                {
-                    CargarTodo(); // 🔥 esto lo dejamos (doble seguridad)
-                }
+                if (frm.ShowDialog(owner) == DialogResult.OK)
+                    CargarTodo();
             }
             catch (Exception ex)
             {
@@ -228,7 +244,9 @@ namespace UI
 
                 using (FrmPagarDeudas frm = new FrmPagarDeudas(nombre, saldo, estado, null))
                 {
-                    if (frm.ShowDialog() != DialogResult.OK)
+                    // Owner = formulario top-level (módulo), no el embebido TopLevel=false
+                    var owner = FindForm() ?? this;
+                    if (frm.ShowDialog(owner) != DialogResult.OK)
                         return;
 
                     var result = DeudaCommandService.RegistrarPago(
@@ -271,10 +289,13 @@ namespace UI
 
         private void dgvDeudas_SelectionChanged(object sender, EventArgs e)
         {
-            if (dgvDeudas.CurrentRow == null) return;
+            if (IsDisposed || txtMontoPago == null || txtMontoPago.IsDisposed)
+                return;
+
+            if (dgvDeudas.CurrentRow == null || !dgvDeudas.Columns.Contains("Saldo"))
+                return;
 
             decimal saldo = SafeDecimal(dgvDeudas.CurrentRow.Cells["Saldo"].Value);
-
             txtMontoPago.Text = saldo.ToString("N2");
         }
 

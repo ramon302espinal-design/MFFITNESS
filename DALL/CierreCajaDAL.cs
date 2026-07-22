@@ -77,11 +77,17 @@ namespace DL
             return db.ExecuteQuery(query);
         }
 
-        public bool YaExisteCierreHoy(string turno)
+        public bool YaExisteCierreHoy(string turno, string usuario)
         {
             string query = @"SELECT COUNT(*) FROM CierreCaja 
-                             WHERE Fecha = CAST(GETDATE() AS DATE) AND Turno = @Turno";
-            SqlParameter[] p = { new SqlParameter("@Turno", turno) };
+                             WHERE Fecha = CAST(GETDATE() AS DATE)
+                               AND Turno = @Turno
+                               AND UPPER(LTRIM(RTRIM(Usuario))) = UPPER(LTRIM(RTRIM(@Usuario)))";
+            SqlParameter[] p =
+            {
+                new SqlParameter("@Turno", turno),
+                new SqlParameter("@Usuario", usuario.Trim())
+            };
             return Convert.ToInt32(db.ExecuteScalar(query, p)) > 0;
         }
 

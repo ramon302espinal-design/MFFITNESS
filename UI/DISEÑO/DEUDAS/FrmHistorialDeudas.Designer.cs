@@ -48,11 +48,31 @@
             // 
             // dgvHistorial
             // 
+            dgvHistorial.AllowUserToAddRows = false;
+            dgvHistorial.AllowUserToDeleteRows = false;
+            dgvHistorial.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
             dgvHistorial.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            dgvHistorial.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvHistorial.BackgroundColor = Color.White;
+            dgvHistorial.BorderStyle = BorderStyle.None;
+            dgvHistorial.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvHistorial.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 37, 38);
+            dgvHistorial.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvHistorial.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvHistorial.ColumnHeadersHeight = 35;
+            dgvHistorial.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            dgvHistorial.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+            dgvHistorial.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 122, 204);
+            dgvHistorial.DefaultCellStyle.SelectionForeColor = Color.White;
+            dgvHistorial.EnableHeadersVisualStyles = false;
             dgvHistorial.Location = new Point(20, 150);
+            dgvHistorial.MultiSelect = false;
             dgvHistorial.Name = "dgvHistorial";
+            dgvHistorial.ReadOnly = true;
+            dgvHistorial.RowHeadersVisible = false;
             dgvHistorial.RowHeadersWidth = 51;
+            dgvHistorial.RowTemplate.Height = 30;
+            dgvHistorial.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvHistorial.Size = new Size(1448, 622);
             dgvHistorial.TabIndex = 0;
             dgvHistorial.CellFormatting += dgvHistorial_CellFormatting;

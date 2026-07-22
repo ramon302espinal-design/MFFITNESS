@@ -58,8 +58,17 @@ namespace UI
             // dgvDeudas
             // 
             dgvDeudas.AllowUserToAddRows = false;
+            dgvDeudas.AllowUserToDeleteRows = false;
+            dgvDeudas.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
+            dgvDeudas.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(27, 146, 255);
+            dgvDeudas.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.White;
             dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+            dgvDeudas.BackgroundColor = Color.White;
+            dgvDeudas.BorderStyle = BorderStyle.None;
+            dgvDeudas.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvDeudas.ColumnHeadersDefaultCellStyle.BackColor = Color.Black;
+            dgvDeudas.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvDeudas.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle1.BackColor = SystemColors.Window;
@@ -67,12 +76,19 @@ namespace UI
             dataGridViewCellStyle1.ForeColor = SystemColors.ControlText;
             dataGridViewCellStyle1.SelectionBackColor = Color.FromArgb(27, 146, 255);
             dataGridViewCellStyle1.SelectionForeColor = Color.White;
-            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
+            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.False;
             dgvDeudas.DefaultCellStyle = dataGridViewCellStyle1;
             dgvDeudas.Dock = DockStyle.Top;
+            dgvDeudas.EnableHeadersVisualStyles = false;
             dgvDeudas.Location = new Point(0, 0);
+            dgvDeudas.MultiSelect = false;
             dgvDeudas.Name = "dgvDeudas";
+            dgvDeudas.ReadOnly = true;
+            dgvDeudas.RowHeadersVisible = false;
             dgvDeudas.RowHeadersWidth = 51;
+            dgvDeudas.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(27, 146, 255);
+            dgvDeudas.RowsDefaultCellStyle.SelectionForeColor = Color.White;
+            dgvDeudas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvDeudas.Size = new Size(1688, 402);
             dgvDeudas.TabIndex = 1;
             dgvDeudas.CellFormatting += dgvDeudas_CellFormatting;

@@ -4,7 +4,6 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -23,7 +22,6 @@ namespace UI.DISEÑO
         public FrmHistorialVentas(Form frm)
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             formularioAnterior = frm;
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloHistorial);
         }
@@ -48,7 +46,6 @@ namespace UI.DISEÑO
         public FrmHistorialVentas()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloHistorial);
         }
 

@@ -26,6 +26,9 @@ namespace CORE
 
         public static bool TienePermiso(string permiso)
         {
+            if (string.IsNullOrWhiteSpace(permiso) || Permisos == null)
+                return false;
+
             return Permisos.Contains(permiso);
         }
 

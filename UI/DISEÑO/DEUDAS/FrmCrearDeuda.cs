@@ -4,7 +4,6 @@ using CORE;
 using System;
 using System.Data;
 using System.Windows.Forms;
-using UI.Theme;
 
 namespace UI
 {
@@ -17,7 +16,6 @@ namespace UI
         public FrmCrearDeuda()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
         }
         private void txtMonto_KeyPress(object sender, KeyPressEventArgs e)
         {
@@ -123,6 +121,13 @@ namespace UI
                 MessageBox.Show(result.Message, "Éxito",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                // Embebido en el módulo: no cerrar (Close destruye la pestaña).
+                if (!TopLevel)
+                {
+                    LimpiarFormulario();
+                    return;
+                }
+
                 this.DialogResult = DialogResult.OK;
                 this.Close();
             }
@@ -136,7 +141,22 @@ namespace UI
         // ============================
         private void btnCancelar_Click(object sender, EventArgs e)
         {
+            if (!TopLevel)
+            {
+                LimpiarFormulario();
+                return;
+            }
+
             this.Close();
+        }
+
+        private void LimpiarFormulario()
+        {
+            txtConcepto.Clear();
+            txtMonto.Clear();
+            dtpVencimiento.Value = DateTime.Today.AddDays(30);
+            if (cbClientes.Items.Count > 0)
+                cbClientes.SelectedIndex = -1;
         }
     }
 }

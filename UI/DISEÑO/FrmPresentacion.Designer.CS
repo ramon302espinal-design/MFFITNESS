@@ -128,9 +128,9 @@ namespace UI.DISEÑO
             panelDashboard.Controls.Add(panelIngresosHoy);
             panelDashboard.Controls.Add(panelIngresosMes);
             panelDashboard.Dock = DockStyle.Fill;
-            panelDashboard.Location = new Point(268, 28);
+            panelDashboard.Location = new Point(268, 0);
             panelDashboard.Name = "panelDashboard";
-            panelDashboard.Size = new Size(1557, 701);
+            panelDashboard.Size = new Size(1012, 720);
             panelDashboard.TabIndex = 5;
             // 
             // panelClientesActivos
@@ -284,9 +284,9 @@ namespace UI.DISEÑO
             panel1.Controls.Add(btnPagar);
             panel1.Controls.Add(btnHistorial);
             panel1.Dock = DockStyle.Left;
-            panel1.Location = new Point(0, 28);
+            panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(268, 701);
+            panel1.Size = new Size(268, 720);
             panel1.TabIndex = 6;
             // 
             // btnDeudas
@@ -318,7 +318,7 @@ namespace UI.DISEÑO
             btnCerrarSesion.BackColor = SystemColors.AppWorkspace;
             btnCerrarSesion.Dock = DockStyle.Bottom;
             btnCerrarSesion.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            btnCerrarSesion.Location = new Point(0, 653);
+            btnCerrarSesion.Location = new Point(0, 672);
             btnCerrarSesion.Name = "btnCerrarSesion";
             btnCerrarSesion.Size = new Size(268, 48);
             btnCerrarSesion.TabIndex = 5;
@@ -347,7 +347,6 @@ namespace UI.DISEÑO
             Name = "FrmPresentacion";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "MFFITNESS";
-            WindowState = FormWindowState.Normal;
             Load += FrmPresentacion_Load;
             panelDashboard.ResumeLayout(false);
             panelClientesActivos.ResumeLayout(false);

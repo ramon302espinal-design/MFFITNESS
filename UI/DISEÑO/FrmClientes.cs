@@ -6,7 +6,6 @@ using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -27,16 +26,14 @@ namespace UI.DISEÑO
         public FrmClientes()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             _presentacion = null!;
         }
 
         public FrmClientes(FrmPresentacion presentacion)
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             _presentacion = presentacion;
-            if (ThemeHost.IsDesignTime())
+            if (DesignMode)
                 return;
 
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloClientes);
@@ -57,7 +54,7 @@ namespace UI.DISEÑO
 
         private void FrmClientes_Load(object sender, EventArgs e)
         {
-            if (ThemeHost.IsDesignTime() || DesignMode)
+            if (DesignMode)
                 return;
 
             txtFecha.MaxDate = DateTime.Today;
@@ -116,8 +113,6 @@ namespace UI.DISEÑO
             dgvClientes.AllowUserToAddRows = false;
             dgvClientes.AllowUserToDeleteRows = false;
             dgvClientes.RowHeadersVisible = false;
-
-            ThemeApplier.ApplyReadOnlyGridBehavior(dgvClientes);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

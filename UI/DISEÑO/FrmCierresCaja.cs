@@ -5,7 +5,6 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -20,7 +19,6 @@ namespace UI.DISEÑO
         public FrmCierresCaja(Form? formularioAnterior = null)
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             _formularioAnterior = formularioAnterior;
         }
 

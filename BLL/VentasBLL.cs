@@ -145,7 +145,7 @@ namespace BLL
             if (total <= 0)
                 return 0;
 
-            var caja = cajaDAL.ObtenerCajaAbierta();
+            var caja = cajaDAL.ObtenerCajaAbierta(usuarioActual);
 
             if (caja == null)
                 throw new Exception("No hay caja abierta para registrar la venta.");

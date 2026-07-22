@@ -162,9 +162,9 @@ namespace UI.DISEÑO
             // dgvEstado
             // 
             dgvEstado.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvEstado.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllHeaders;
             dgvEstado.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvEstado.Dock = DockStyle.Bottom;
-            dgvEstado.Location = new Point(0, 146);
+            dgvEstado.Location = new Point(0, 138);
             dgvEstado.Name = "dgvEstado";
             dgvEstado.RowHeadersWidth = 51;
             dgvEstado.Size = new Size(1062, 527);
@@ -192,7 +192,9 @@ namespace UI.DISEÑO
             // 
             // btnRenovar
             // 
-            btnRenovar.Location = new Point(331, 605);
+            btnRenovar.FlatStyle = FlatStyle.Flat;
+            btnRenovar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnRenovar.Location = new Point(770, 699);
             btnRenovar.Name = "btnRenovar";
             btnRenovar.Size = new Size(142, 46);
             btnRenovar.TabIndex = 21;
@@ -203,9 +205,11 @@ namespace UI.DISEÑO
             // btnDesactivar
             // 
             btnDesactivar.BackColor = Color.Red;
-            btnDesactivar.Location = new Point(534, 605);
+            btnDesactivar.FlatStyle = FlatStyle.Flat;
+            btnDesactivar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnDesactivar.Location = new Point(60, 699);
             btnDesactivar.Name = "btnDesactivar";
-            btnDesactivar.Size = new Size(126, 46);
+            btnDesactivar.Size = new Size(142, 46);
             btnDesactivar.TabIndex = 22;
             btnDesactivar.Text = "DESACTIVAR";
             btnDesactivar.UseVisualStyleBackColor = false;
@@ -235,7 +239,7 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1062, 673);
+            ClientSize = new Size(1062, 849);
             Controls.Add(txtBuscar);
             Controls.Add(lblBuscar);
             Controls.Add(btnDesactivar);
