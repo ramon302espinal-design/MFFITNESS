@@ -50,6 +50,12 @@
 		<Compile Update="DISEÑO\Controles\UcFichaSaludEditor.Designer.cs">
 			<DependentUpon>UcFichaSaludEditor.cs</DependentUpon>
 		</Compile>
+		<Compile Update="DISEÑO\Controles\UcFichaResumenMiembro.cs">
+			<SubType>UserControl</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\Controles\UcFichaResumenMiembro.Designer.cs">
+			<DependentUpon>UcFichaResumenMiembro.cs</DependentUpon>
+		</Compile>
 		<Compile Update="DISEÑO\FrmEstadoClientes.cs">
 			<SubType>Form</SubType>
 		</Compile>

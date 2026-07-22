@@ -130,21 +130,10 @@ namespace UI.DISEÑO
             txtBuscar = new TextBox();
             dgvClientes = new DataGridView();
             panelDetalleScroll = new Panel();
-            ucFichaMiembro = new UI.DISEÑO.Controles.UcFichaSaludEditor();
-            panelEdicion = new Panel();
-            lblEditTitulo = new Label();
-            lblDetalleHint = new Label();
-            lblEditId = new Label();
-            txtEditId = new TextBox();
-            lblEditNombre = new Label();
-            txtEditNombre = new TextBox();
-            lblEditTelefono = new Label();
-            txtEditTelefono = new TextBox();
-            lblEditFechaNac = new Label();
-            dtpEditFechaNac = new DateTimePicker();
-            lblEditDireccion = new Label();
-            txtEditDireccion = new TextBox();
+            ucFichaResumen = new UI.DISEÑO.Controles.UcFichaResumenMiembro();
             btnBack = new Button();
+            btnIrAPagar = new Button();
+            btnIrADeudas = new Button();
             layoutNavClientes.SuspendLayout();
             panelNav.SuspendLayout();
             tabControlClientes.SuspendLayout();
@@ -159,7 +148,6 @@ namespace UI.DISEÑO
             panelToolbarMiembros.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvClientes).BeginInit();
             panelDetalleScroll.SuspendLayout();
-            panelEdicion.SuspendLayout();
             SuspendLayout();
             // 
             // layoutNavClientes
@@ -175,8 +163,9 @@ namespace UI.DISEÑO
             layoutNavClientes.RowCount = 2;
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            layoutNavClientes.Size = new Size(1080, 720);
+            layoutNavClientes.Size = new Size(1513, 791);
             layoutNavClientes.TabIndex = 0;
+            layoutNavClientes.Paint += layoutNavClientes_Paint_1;
             // 
             // panelNav
             // 
@@ -194,7 +183,7 @@ namespace UI.DISEÑO
             panelNav.Location = new Point(0, 0);
             panelNav.Margin = new Padding(0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1080, 52);
+            panelNav.Size = new Size(1513, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -300,7 +289,7 @@ namespace UI.DISEÑO
             tabControlClientes.Margin = new Padding(0);
             tabControlClientes.Name = "tabControlClientes";
             tabControlClientes.SelectedIndex = 0;
-            tabControlClientes.Size = new Size(1080, 668);
+            tabControlClientes.Size = new Size(1513, 739);
             tabControlClientes.TabIndex = 1;
             tabControlClientes.SelectedIndexChanged += tabControlClientes_SelectedIndexChanged;
             // 
@@ -390,7 +379,7 @@ namespace UI.DISEÑO
             tabAgregar.Location = new Point(4, 34);
             tabAgregar.Name = "tabAgregar";
             tabAgregar.Padding = new Padding(24);
-            tabAgregar.Size = new Size(1072, 630);
+            tabAgregar.Size = new Size(1505, 701);
             tabAgregar.TabIndex = 0;
             tabAgregar.Text = "AGREGAR CLIENTES";
             // 
@@ -1409,10 +1398,11 @@ namespace UI.DISEÑO
             // 
             tabMiembros.BackColor = Color.White;
             tabMiembros.Controls.Add(layoutMiembros);
+            tabMiembros.ForeColor = Color.FromArgb(15, 23, 42);
             tabMiembros.Location = new Point(4, 34);
             tabMiembros.Name = "tabMiembros";
             tabMiembros.Padding = new Padding(16);
-            tabMiembros.Size = new Size(1072, 630);
+            tabMiembros.Size = new Size(1505, 701);
             tabMiembros.TabIndex = 1;
             tabMiembros.Text = "MIEMBROS";
             // 
@@ -1432,7 +1422,7 @@ namespace UI.DISEÑO
             layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Absolute, 64F));
             layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 38F));
             layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 62F));
-            layoutMiembros.Size = new Size(1040, 598);
+            layoutMiembros.Size = new Size(1473, 669);
             layoutMiembros.TabIndex = 0;
             // 
             // panelToolbarMiembros
@@ -1440,11 +1430,13 @@ namespace UI.DISEÑO
             panelToolbarMiembros.BackColor = Color.White;
             panelToolbarMiembros.Controls.Add(label6);
             panelToolbarMiembros.Controls.Add(txtBuscar);
+            panelToolbarMiembros.Controls.Add(btnIrAPagar);
+            panelToolbarMiembros.Controls.Add(btnIrADeudas);
             panelToolbarMiembros.Dock = DockStyle.Fill;
             panelToolbarMiembros.Location = new Point(0, 0);
             panelToolbarMiembros.Margin = new Padding(0);
             panelToolbarMiembros.Name = "panelToolbarMiembros";
-            panelToolbarMiembros.Size = new Size(1040, 64);
+            panelToolbarMiembros.Size = new Size(1473, 64);
             panelToolbarMiembros.TabIndex = 0;
             // 
             // label6
@@ -1465,7 +1457,7 @@ namespace UI.DISEÑO
             txtBuscar.Location = new Point(90, 14);
             txtBuscar.Name = "txtBuscar";
             txtBuscar.PlaceholderText = "Buscar por nombre, telefono...";
-            txtBuscar.Size = new Size(411, 32);
+            txtBuscar.Size = new Size(1000, 32);
             txtBuscar.TabIndex = 1;
             txtBuscar.TextChanged += txtBuscar_TextChanged;
             // 
@@ -1485,7 +1477,7 @@ namespace UI.DISEÑO
             dgvClientes.ReadOnly = true;
             dgvClientes.RowHeadersWidth = 51;
             dgvClientes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvClientes.Size = new Size(1040, 190);
+            dgvClientes.Size = new Size(1473, 217);
             dgvClientes.TabIndex = 1;
             dgvClientes.CellClick += dgvClientes_CellClick;
             dgvClientes.CellDoubleClick += dgvClientes_CellDoubleClick;
@@ -1493,173 +1485,25 @@ namespace UI.DISEÑO
             // 
             // panelDetalleScroll
             // 
-            panelDetalleScroll.AutoScroll = true;
-            panelDetalleScroll.AutoScrollMinSize = new Size(1400, 1750);
             panelDetalleScroll.BackColor = Color.White;
-            panelDetalleScroll.Controls.Add(ucFichaMiembro);
-            panelDetalleScroll.Controls.Add(panelEdicion);
+            panelDetalleScroll.Controls.Add(ucFichaResumen);
             panelDetalleScroll.Dock = DockStyle.Fill;
-            panelDetalleScroll.Location = new Point(0, 266);
+            panelDetalleScroll.Location = new Point(0, 293);
             panelDetalleScroll.Margin = new Padding(0);
             panelDetalleScroll.Name = "panelDetalleScroll";
-            panelDetalleScroll.Size = new Size(1040, 332);
+            panelDetalleScroll.Size = new Size(1473, 376);
             panelDetalleScroll.TabIndex = 2;
             // 
-            // ucFichaMiembro
+            // ucFichaResumen
             // 
-            ucFichaMiembro.Anchor = AnchorStyles.Top;
-            ucFichaMiembro.AutoScrollMinSize = new Size(1380, 1480);
-            ucFichaMiembro.BackColor = Color.White;
-            ucFichaMiembro.Font = new Font("Segoe UI", 10F);
-            ucFichaMiembro.Location = new Point(-40, 220);
-            ucFichaMiembro.Name = "ucFichaMiembro";
-            ucFichaMiembro.Size = new Size(1480, 1550);
-            ucFichaMiembro.TabIndex = 1;
-            // 
-            // panelEdicion
-            // 
-            panelEdicion.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            panelEdicion.AutoScroll = true;
-            panelEdicion.AutoScrollMinSize = new Size(1080, 720);
-            panelEdicion.BackColor = Color.FromArgb(248, 250, 252);
-            panelEdicion.BorderStyle = BorderStyle.FixedSingle;
-            panelEdicion.Controls.Add(lblEditTitulo);
-            panelEdicion.Controls.Add(lblDetalleHint);
-            panelEdicion.Controls.Add(lblEditId);
-            panelEdicion.Controls.Add(txtEditId);
-            panelEdicion.Controls.Add(lblEditNombre);
-            panelEdicion.Controls.Add(txtEditNombre);
-            panelEdicion.Controls.Add(lblEditTelefono);
-            panelEdicion.Controls.Add(txtEditTelefono);
-            panelEdicion.Controls.Add(lblEditFechaNac);
-            panelEdicion.Controls.Add(dtpEditFechaNac);
-            panelEdicion.Controls.Add(lblEditDireccion);
-            panelEdicion.Controls.Add(txtEditDireccion);
-            panelEdicion.Location = new Point(-20, 0);
-            panelEdicion.Name = "panelEdicion";
-            panelEdicion.Size = new Size(1400, 150);
-            panelEdicion.TabIndex = 0;
-            // 
-            // lblEditTitulo
-            // 
-            lblEditTitulo.AutoSize = true;
-            lblEditTitulo.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblEditTitulo.ForeColor = Color.FromArgb(15, 23, 42);
-            lblEditTitulo.Location = new Point(16, 12);
-            lblEditTitulo.Name = "lblEditTitulo";
-            lblEditTitulo.Size = new Size(223, 25);
-            lblEditTitulo.TabIndex = 0;
-            lblEditTitulo.Text = "DETALLE DEL MIEMBRO";
-            // 
-            // lblDetalleHint
-            // 
-            lblDetalleHint.AutoSize = true;
-            lblDetalleHint.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
-            lblDetalleHint.ForeColor = Color.FromArgb(100, 116, 139);
-            lblDetalleHint.Location = new Point(250, 16);
-            lblDetalleHint.Name = "lblDetalleHint";
-            lblDetalleHint.Size = new Size(238, 20);
-            lblDetalleHint.TabIndex = 1;
-            lblDetalleHint.Text = "Seleccione un miembro en el listado";
-            // 
-            // lblEditId
-            // 
-            lblEditId.AutoSize = true;
-            lblEditId.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblEditId.ForeColor = Color.FromArgb(15, 23, 42);
-            lblEditId.Location = new Point(16, 52);
-            lblEditId.Name = "lblEditId";
-            lblEditId.Size = new Size(28, 23);
-            lblEditId.TabIndex = 2;
-            lblEditId.Text = "ID";
-            // 
-            // txtEditId
-            // 
-            txtEditId.Font = new Font("Segoe UI", 11F);
-            txtEditId.Location = new Point(48, 48);
-            txtEditId.Name = "txtEditId";
-            txtEditId.ReadOnly = true;
-            txtEditId.Size = new Size(64, 32);
-            txtEditId.TabIndex = 3;
-            // 
-            // lblEditNombre
-            // 
-            lblEditNombre.AutoSize = true;
-            lblEditNombre.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblEditNombre.ForeColor = Color.FromArgb(15, 23, 42);
-            lblEditNombre.Location = new Point(128, 52);
-            lblEditNombre.Name = "lblEditNombre";
-            lblEditNombre.Size = new Size(83, 23);
-            lblEditNombre.TabIndex = 4;
-            lblEditNombre.Text = "NOMBRE";
-            // 
-            // txtEditNombre
-            // 
-            txtEditNombre.Font = new Font("Segoe UI", 11F);
-            txtEditNombre.Location = new Point(220, 48);
-            txtEditNombre.Name = "txtEditNombre";
-            txtEditNombre.Size = new Size(280, 32);
-            txtEditNombre.TabIndex = 5;
-            // 
-            // lblEditTelefono
-            // 
-            lblEditTelefono.AutoSize = true;
-            lblEditTelefono.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblEditTelefono.ForeColor = Color.FromArgb(15, 23, 42);
-            lblEditTelefono.Location = new Point(520, 52);
-            lblEditTelefono.Name = "lblEditTelefono";
-            lblEditTelefono.Size = new Size(95, 23);
-            lblEditTelefono.TabIndex = 6;
-            lblEditTelefono.Text = "TELEFONO";
-            // 
-            // txtEditTelefono
-            // 
-            txtEditTelefono.Font = new Font("Segoe UI", 11F);
-            txtEditTelefono.Location = new Point(624, 48);
-            txtEditTelefono.Name = "txtEditTelefono";
-            txtEditTelefono.Size = new Size(160, 32);
-            txtEditTelefono.TabIndex = 7;
-            // 
-            // lblEditFechaNac
-            // 
-            lblEditFechaNac.AutoSize = true;
-            lblEditFechaNac.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblEditFechaNac.ForeColor = Color.FromArgb(15, 23, 42);
-            lblEditFechaNac.Location = new Point(804, 52);
-            lblEditFechaNac.Name = "lblEditFechaNac";
-            lblEditFechaNac.Size = new Size(134, 23);
-            lblEditFechaNac.TabIndex = 8;
-            lblEditFechaNac.Text = "F. NACIMIENTO";
-            // 
-            // dtpEditFechaNac
-            // 
-            dtpEditFechaNac.CustomFormat = "dd-MMMM-yyyy";
-            dtpEditFechaNac.Font = new Font("Segoe UI", 11F);
-            dtpEditFechaNac.Format = DateTimePickerFormat.Custom;
-            dtpEditFechaNac.Location = new Point(948, 48);
-            dtpEditFechaNac.Name = "dtpEditFechaNac";
-            dtpEditFechaNac.Size = new Size(220, 32);
-            dtpEditFechaNac.TabIndex = 9;
-            // 
-            // lblEditDireccion
-            // 
-            lblEditDireccion.AutoSize = true;
-            lblEditDireccion.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblEditDireccion.ForeColor = Color.FromArgb(15, 23, 42);
-            lblEditDireccion.Location = new Point(16, 100);
-            lblEditDireccion.Name = "lblEditDireccion";
-            lblEditDireccion.Size = new Size(100, 23);
-            lblEditDireccion.TabIndex = 10;
-            lblEditDireccion.Text = "DIRECCION";
-            // 
-            // txtEditDireccion
-            // 
-            txtEditDireccion.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            txtEditDireccion.Font = new Font("Segoe UI", 11F);
-            txtEditDireccion.Location = new Point(128, 96);
-            txtEditDireccion.Name = "txtEditDireccion";
-            txtEditDireccion.Size = new Size(1139, 32);
-            txtEditDireccion.TabIndex = 11;
+            ucFichaResumen.AutoScroll = true;
+            ucFichaResumen.BackColor = Color.White;
+            ucFichaResumen.Dock = DockStyle.Fill;
+            ucFichaResumen.Font = new Font("Segoe UI", 9F);
+            ucFichaResumen.Location = new Point(0, 0);
+            ucFichaResumen.Name = "ucFichaResumen";
+            ucFichaResumen.Size = new Size(1473, 376);
+            ucFichaResumen.TabIndex = 0;
             // 
             // btnBack
             // 
@@ -1671,13 +1515,45 @@ namespace UI.DISEÑO
             btnBack.UseVisualStyleBackColor = true;
             btnBack.Visible = false;
             // 
+            // btnIrAPagar
+            // 
+            btnIrAPagar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnIrAPagar.BackColor = Color.FromArgb(22, 163, 74);
+            btnIrAPagar.FlatAppearance.BorderSize = 0;
+            btnIrAPagar.FlatStyle = FlatStyle.Flat;
+            btnIrAPagar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnIrAPagar.ForeColor = Color.White;
+            btnIrAPagar.Location = new Point(1120, 12);
+            btnIrAPagar.Name = "btnIrAPagar";
+            btnIrAPagar.Size = new Size(150, 36);
+            btnIrAPagar.TabIndex = 2;
+            btnIrAPagar.Text = "IR A COBRAR";
+            btnIrAPagar.UseVisualStyleBackColor = false;
+            btnIrAPagar.Click += btnIrAPagar_Click;
+            // 
+            // btnIrADeudas
+            // 
+            btnIrADeudas.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnIrADeudas.BackColor = Color.FromArgb(185, 28, 28);
+            btnIrADeudas.FlatAppearance.BorderSize = 0;
+            btnIrADeudas.FlatStyle = FlatStyle.Flat;
+            btnIrADeudas.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnIrADeudas.ForeColor = Color.White;
+            btnIrADeudas.Location = new Point(1280, 12);
+            btnIrADeudas.Name = "btnIrADeudas";
+            btnIrADeudas.Size = new Size(150, 36);
+            btnIrADeudas.TabIndex = 3;
+            btnIrADeudas.Text = "DEUDAS";
+            btnIrADeudas.UseVisualStyleBackColor = false;
+            btnIrADeudas.Click += btnIrADeudas_Click;
+            // 
             // FrmClientes
             // 
             AutoScaleMode = AutoScaleMode.None;
             AutoScroll = true;
             AutoScrollMinSize = new Size(1080, 720);
             BackColor = Color.White;
-            ClientSize = new Size(1062, 673);
+            ClientSize = new Size(1513, 791);
             Controls.Add(layoutNavClientes);
             Controls.Add(btnBack);
             Name = "FrmClientes";
@@ -1706,8 +1582,6 @@ namespace UI.DISEÑO
             panelToolbarMiembros.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvClientes).EndInit();
             panelDetalleScroll.ResumeLayout(false);
-            panelEdicion.ResumeLayout(false);
-            panelEdicion.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -1731,18 +1605,7 @@ namespace UI.DISEÑO
         private Panel panelToolbarMiembros;
         private DataGridView dgvClientes;
         private Panel panelDetalleScroll;
-        private Panel panelEdicion;
-        private Label lblEditTitulo;
-        private Label lblEditId;
-        private TextBox txtEditId;
-        private Label lblEditNombre;
-        private TextBox txtEditNombre;
-        private Label lblEditTelefono;
-        private TextBox txtEditTelefono;
-        private Label lblEditFechaNac;
-        private DateTimePicker dtpEditFechaNac;
-        private Label lblEditDireccion;
-        private TextBox txtEditDireccion;
+        private UI.DISEÑO.Controles.UcFichaResumenMiembro ucFichaResumen;
         private Label label1;
         private Label label3;
         private Label label4;
@@ -1842,8 +1705,6 @@ namespace UI.DISEÑO
         private ComboBox comboBox1;
         private Label label16;
         private ComboBox cmbsexo;
-        private Controles.UcFichaSaludEditor ucFichaMiembro;
-        private Label lblDetalleHint;
         private Button btnIrAPagar;
         private Button btnIrADeudas;
     }

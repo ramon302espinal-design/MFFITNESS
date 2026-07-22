@@ -330,5 +330,154 @@ namespace UI.DISEÑO
                 FechaIngreso = dtpFechaIngreso.Value.Date
             };
         }
+
+        private void PoblarFichaEnUi(ClienteFichaSaludDTO? ficha)
+        {
+            if (ficha is null)
+            {
+                LimpiarFichaSaludUi();
+                return;
+            }
+
+            txtEmergenciaNombre.Text = ficha.EmergenciaNombre ?? "";
+            txtEmergenciaParentesco.Text = ficha.EmergenciaParentesco ?? "";
+            txtEmergenciaTelefono.Text = ficha.EmergenciaTelefono ?? "";
+            txtEmergenciaTelefonoAlt.Text = ficha.EmergenciaTelefonoAlt ?? "";
+
+            _syncEnfermedades = true;
+            try
+            {
+                chkDiabetes.Checked = ficha.Diabetes;
+                chkHipertension.Checked = ficha.Hipertension;
+                chkAsma.Checked = ficha.Asma;
+                chkProblemasCardiacos.Checked = ficha.ProblemasCardiacos;
+                chkColesterolAlto.Checked = ficha.ColesterolAlto;
+                chkArtritis.Checked = ficha.Artritis;
+                chkHernia.Checked = ficha.Hernia;
+                chkEpilepsia.Checked = ficha.Epilepsia;
+                chkEmbarazo.Checked = ficha.Embarazo;
+                chkNingunaEnfermedad.Checked = ficha.NingunaEnfermedad;
+            }
+            finally
+            {
+                _syncEnfermedades = false;
+            }
+
+            txtEnfermedadOtra.Text = ficha.EnfermedadOtra ?? "";
+
+            chkLesionHombro.Checked = ficha.LesionHombro;
+            chkLesionRodilla.Checked = ficha.LesionRodilla;
+            chkLesionEspalda.Checked = ficha.LesionEspalda;
+            chkLesionCuello.Checked = ficha.LesionCuello;
+            chkLesionTobillo.Checked = ficha.LesionTobillo;
+            chkLesionCadera.Checked = ficha.LesionCadera;
+            txtLesionDescripcion.Text = ficha.LesionDescripcion ?? "";
+
+            if (ficha.TomaMedicamentos)
+                rbMedicamentosSi.Checked = true;
+            else
+                rbMedicamentosNo.Checked = true;
+            txtListaMedicamentos.Text = ficha.ListaMedicamentos ?? "";
+            ActualizarUiMedicamentos();
+            if (ficha.TomaMedicamentos)
+                txtListaMedicamentos.Text = ficha.ListaMedicamentos ?? "";
+
+            if (ficha.TieneAlergias)
+                rbAlergiasSi.Checked = true;
+            else
+                rbAlergiasNo.Checked = true;
+            txtAlergiasDescripcion.Text = ficha.AlergiasDescripcion ?? "";
+            ActualizarUiAlergias();
+            if (ficha.TieneAlergias)
+                txtAlergiasDescripcion.Text = ficha.AlergiasDescripcion ?? "";
+
+            if (ficha.TieneCirugias)
+                rbCirugiasSi.Checked = true;
+            else
+                rbCirugiasNo.Checked = true;
+            txtCirugiasDescripcion.Text = ficha.CirugiasDescripcion ?? "";
+            if (ficha.CirugiasFecha.HasValue)
+            {
+                DateTime fecha = ficha.CirugiasFecha.Value.Date;
+                if (fecha > dtpCirugiasFecha.MaxDate)
+                    fecha = dtpCirugiasFecha.MaxDate;
+                if (fecha < dtpCirugiasFecha.MinDate)
+                    fecha = dtpCirugiasFecha.MinDate;
+                dtpCirugiasFecha.Value = fecha;
+            }
+            else
+            {
+                dtpCirugiasFecha.Value = DateTime.Today;
+            }
+            ActualizarUiCirugias();
+            if (ficha.TieneCirugias)
+                txtCirugiasDescripcion.Text = ficha.CirugiasDescripcion ?? "";
+
+            chkObjPerderGrasa.Checked = ficha.ObjPerderGrasa;
+            chkObjGanarMasa.Checked = ficha.ObjGanarMasa;
+            chkObjTonificar.Checked = ficha.ObjTonificar;
+            chkObjMejorarCondicion.Checked = ficha.ObjMejorarCondicion;
+            chkObjRehabilitacion.Checked = ficha.ObjRehabilitacion;
+            chkObjSalud.Checked = ficha.ObjSalud;
+            chkObjCompetencia.Checked = ficha.ObjCompetencia;
+            chkObjOtro.Checked = ficha.ObjOtro;
+            txtObjOtroDescripcion.Text = ficha.ObjOtroDescripcion ?? "";
+            txtObjOtroDescripcion.Enabled = ficha.ObjOtro;
+
+            SeleccionarExperiencia(ficha.ExperienciaNivel);
+            SeleccionarHorario(ficha.HorarioPreferido);
+            txtHorarioVariadoDetalle.Text = ficha.HorarioVariadoDetalle ?? "";
+            ActualizarUiHorario();
+            if (rbHorVariado.Checked)
+                txtHorarioVariadoDetalle.Text = ficha.HorarioVariadoDetalle ?? "";
+
+            if (ficha.FechaIngreso.HasValue)
+            {
+                DateTime ingreso = ficha.FechaIngreso.Value.Date;
+                if (ingreso < dtpFechaIngreso.MinDate)
+                    ingreso = dtpFechaIngreso.MinDate;
+                if (ingreso > dtpFechaIngreso.MaxDate)
+                    ingreso = dtpFechaIngreso.MaxDate;
+                dtpFechaIngreso.Value = ingreso;
+            }
+            else
+            {
+                dtpFechaIngreso.Value = DateTime.Today;
+            }
+        }
+
+        private void SeleccionarExperiencia(string? nivel)
+        {
+            rbExpNunca.Checked = false;
+            rbExpMenos6.Checked = false;
+            rbExp1Ano.Checked = false;
+            rbExp2Anos.Checked = false;
+            rbExpMas5.Checked = false;
+
+            switch (nivel)
+            {
+                case "Nunca": rbExpNunca.Checked = true; break;
+                case "Menos6Meses": rbExpMenos6.Checked = true; break;
+                case "1Ano": rbExp1Ano.Checked = true; break;
+                case "2Anos": rbExp2Anos.Checked = true; break;
+                case "Mas5Anos": rbExpMas5.Checked = true; break;
+            }
+        }
+
+        private void SeleccionarHorario(string? horario)
+        {
+            rbHorManana.Checked = false;
+            rbHorTarde.Checked = false;
+            rbHorNoche.Checked = false;
+            rbHorVariado.Checked = false;
+
+            switch (horario)
+            {
+                case "Manana": rbHorManana.Checked = true; break;
+                case "Tarde": rbHorTarde.Checked = true; break;
+                case "Noche": rbHorNoche.Checked = true; break;
+                case "Variado": rbHorVariado.Checked = true; break;
+            }
+        }
     }
 }

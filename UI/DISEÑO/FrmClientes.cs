@@ -5,7 +5,6 @@ using System;
 using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
-using UI.DISEÑO.Controles;
 using UI.Helpers;
 using UI.Theme;
 
@@ -18,6 +17,8 @@ namespace UI.DISEÑO
         private ClienteBLL service => _service ??= new ClienteBLL();
         private readonly BindingSource _bsClientes = new();
         private int idSeleccionado = 0;
+        private bool _modoEdicion;
+        private int _idEdicion;
         private readonly int? _clienteIdPreseleccionado;
 
         private FrmPresentacion _presentacion;
@@ -42,21 +43,12 @@ namespace UI.DISEÑO
             btnBack.Visible = false;
             dgvClientes.DataSource = _bsClientes;
             ConfigurarGridClientes();
-            ConfigurarFechasEdicion();
             InicializarFichaSaludUi();
-            ucFichaMiembro.WireEventos();
-            ConfigurarDetalleMiembrosSoloLectura();
-            ActualizarBotonesMiembros();
-        }
 
-        private void ConfigurarDetalleMiembrosSoloLectura()
-        {
-            txtEditNombre.ReadOnly = true;
-            txtEditTelefono.ReadOnly = true;
-            txtEditDireccion.ReadOnly = true;
-            txtEditId.ReadOnly = true;
-            dtpEditFechaNac.Enabled = false;
-            ucFichaMiembro.SetSoloLectura(true);
+            ucFichaResumen.EditarInformacionClick += (_, _) => IniciarEdicionMiembro();
+            ucFichaResumen.CobrarClick += (_, _) => btnIrAPagar_Click(this, EventArgs.Empty);
+            ucFichaResumen.DeudasClick += (_, _) => btnIrADeudas_Click(this, EventArgs.Empty);
+            ucFichaResumen.Limpiar();
         }
 
         public FrmClientes(FrmPresentacion presentacion, int clienteIdPreseleccionado)
@@ -76,7 +68,6 @@ namespace UI.DISEÑO
             dtpFechaIngreso.Value = DateTime.Today;
 
             InicializarFichaSaludUi();
-            ucFichaMiembro.WireEventos();
             LimpiarFormularioAlta();
             CargarClientes();
             LimpiarFormularioEdicion();
@@ -88,20 +79,12 @@ namespace UI.DISEÑO
             }
         }
 
-        private void ConfigurarFechasEdicion()
-        {
-            dtpEditFechaNac.MaxDate = DateTime.Today;
-            dtpEditFechaNac.MinDate = new DateTime(1920, 1, 1);
-            dtpEditFechaNac.CustomFormat = "dd-MMMM-yyyy";
-            dtpEditFechaNac.Format = DateTimePickerFormat.Custom;
-        }
-
         private void tabControlClientes_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (tabControlClientes.SelectedTab == tabAgregar)
             {
-                // Alta limpia: nunca arrastra datos de un miembro seleccionado.
-                LimpiarFormularioAlta();
+                if (!_modoEdicion)
+                    LimpiarFormularioAlta();
             }
             else if (tabControlClientes.SelectedTab == tabMiembros)
             {
@@ -145,14 +128,18 @@ namespace UI.DISEÑO
         }
 
         // ===============================
-        // TAB AGREGAR — solo alta
+        // TAB AGREGAR — alta / edición
         // ===============================
         private void LimpiarFormularioAlta()
         {
+            SalirModoEdicion();
+
             txtNombre.Clear();
             txtDireccion.Clear();
             txtTelefono.Clear();
             txtId.Clear();
+            txtId.ReadOnly = true;
+            txtId.Visible = false;
 
             DateTime fechaNacDefault = DateTime.Today.AddYears(-18);
             if (fechaNacDefault < txtFecha.MinDate)
@@ -163,6 +150,13 @@ namespace UI.DISEÑO
             dtpFechaIngreso.Value = DateTime.Today;
             ActualizarEdad();
             LimpiarFichaSaludUi();
+        }
+
+        private void SalirModoEdicion()
+        {
+            _modoEdicion = false;
+            _idEdicion = 0;
+            btnAgregar.Text = "AGREGAR";
         }
 
         private bool ValidarAlta(out string mensaje)
@@ -200,6 +194,33 @@ namespace UI.DISEÑO
                 }
 
                 var ficha = ConstruirFichaDesdeUi();
+
+                if (_modoEdicion)
+                {
+                    var resultEdit = ClienteCommandService.EditarConFicha(
+                        _idEdicion,
+                        txtNombre.Text.Trim(),
+                        txtFecha.Value.Date,
+                        txtDireccion.Text.Trim(),
+                        txtTelefono.Text.Trim(),
+                        ficha
+                    );
+
+                    if (!resultEdit.Success)
+                    {
+                        MessageBox.Show(resultEdit.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    int idGuardado = _idEdicion;
+                    MessageBox.Show(resultEdit.Message, "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    SalirModoEdicion();
+                    LimpiarFormularioAlta();
+                    tabControlClientes.SelectedTab = tabMiembros;
+                    CargarClientes(idGuardado);
+                    return;
+                }
+
                 var result = ClienteCommandService.AgregarConFicha(
                     txtNombre.Text.Trim(),
                     txtFecha.Value.Date,
@@ -228,30 +249,12 @@ namespace UI.DISEÑO
         }
 
         // ===============================
-        // TAB MIEMBROS — editar / eliminar
+        // TAB MIEMBROS — resumen / acciones
         // ===============================
         private void LimpiarFormularioEdicion()
         {
             idSeleccionado = 0;
-            txtEditId.Clear();
-            txtEditNombre.Clear();
-            txtEditTelefono.Clear();
-            txtEditDireccion.Clear();
-
-            DateTime fechaNacDefault = DateTime.Today.AddYears(-18);
-            if (fechaNacDefault < dtpEditFechaNac.MinDate)
-                fechaNacDefault = dtpEditFechaNac.MinDate;
-            if (fechaNacDefault > dtpEditFechaNac.MaxDate)
-                fechaNacDefault = dtpEditFechaNac.MaxDate;
-            dtpEditFechaNac.Value = fechaNacDefault;
-
-            ucFichaMiembro.Limpiar();
-            ActualizarBotonesMiembros();
-        }
-
-        private void ActualizarBotonesMiembros()
-        {
-            // Detalle en solo lectura: sin GUARDAR / ELIMINAR.
+            ucFichaResumen.Limpiar();
         }
 
         private void CargarClientes(int? resaltarId = null)
@@ -272,6 +275,7 @@ namespace UI.DISEÑO
             }
 
             dgvClientes.ClearSelection();
+            LimpiarFormularioEdicion();
         }
 
         private void AplicarFiltroBusqueda()
@@ -314,39 +318,36 @@ namespace UI.DISEÑO
                 fila.Selected = true;
                 if (fila.Cells.Count > 0 && fila.Cells[0].Visible)
                     dgvClientes.CurrentCell = fila.Cells[0];
-                if (idSeleccionado != clienteId)
-                    CargarFilaEnEdicion(fila);
+                // Siempre recargar: tras GUARDAR CAMBIOS el Id puede ser el mismo.
+                CargarFichaResumen(fila);
                 break;
             }
         }
 
-        private void CargarFilaEnEdicion(DataGridViewRow fila)
+        private void CargarFichaResumen(DataGridViewRow fila)
         {
             if (!TryObtenerIdCliente(fila, out int id) || id <= 0)
+            {
+                LimpiarFormularioEdicion();
                 return;
+            }
 
             idSeleccionado = id;
-            txtEditId.Text = id.ToString();
-            txtEditNombre.Text = fila.Cells["Nombre"].Value?.ToString() ?? "";
-            txtEditTelefono.Text = fila.Cells["Telefono"].Value?.ToString() ?? "";
-            txtEditDireccion.Text = fila.Cells["Direccion"].Value?.ToString() ?? "";
+            string nombre = fila.Cells["Nombre"].Value?.ToString() ?? "";
+            string telefono = fila.Cells["Telefono"].Value?.ToString() ?? "";
+            string direccion = fila.Cells["Direccion"].Value?.ToString() ?? "";
 
+            DateTime? fechaNac = null;
             if (fila.Cells["FechaNacimiento"].Value != null
                 && fila.Cells["FechaNacimiento"].Value != DBNull.Value)
             {
-                DateTime fechaNac = Convert.ToDateTime(fila.Cells["FechaNacimiento"].Value).Date;
-                if (fechaNac < dtpEditFechaNac.MinDate)
-                    fechaNac = dtpEditFechaNac.MinDate;
-                if (fechaNac > dtpEditFechaNac.MaxDate)
-                    fechaNac = dtpEditFechaNac.MaxDate;
-                dtpEditFechaNac.Value = fechaNac;
+                fechaNac = Convert.ToDateTime(fila.Cells["FechaNacimiento"].Value).Date;
             }
 
+            DTO.ClienteFichaSaludDTO? ficha = null;
             try
             {
-                var ficha = service.ObtenerFichaSalud(id);
-                ucFichaMiembro.Cargar(ficha, id);
-                ucFichaMiembro.SetSoloLectura(true);
+                ficha = service.ObtenerFichaSalud(id);
             }
             catch (Exception ex)
             {
@@ -357,7 +358,87 @@ namespace UI.DISEÑO
                     MessageBoxIcon.Warning);
             }
 
-            ActualizarBotonesMiembros();
+            // Sexo no está en BD: siempre "No registrado" en resumen.
+            ucFichaResumen.Mostrar(id, nombre, telefono, direccion, fechaNac, sexo: null, ficha);
+        }
+
+        private void IniciarEdicionMiembro()
+        {
+            if (idSeleccionado <= 0)
+            {
+                MessageBox.Show(
+                    "Debe seleccionar un cliente.",
+                    "Aviso",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            DataGridViewRow? fila = null;
+            foreach (DataGridViewRow r in dgvClientes.Rows)
+            {
+                if (TryObtenerIdCliente(r, out int id) && id == idSeleccionado)
+                {
+                    fila = r;
+                    break;
+                }
+            }
+
+            if (fila == null)
+            {
+                MessageBox.Show(
+                    "No se encontró el cliente seleccionado en la lista.",
+                    "Aviso",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            txtId.Text = idSeleccionado.ToString();
+            txtId.ReadOnly = true;
+            txtId.Visible = true;
+            txtNombre.Text = fila.Cells["Nombre"].Value?.ToString() ?? "";
+            txtTelefono.Text = fila.Cells["Telefono"].Value?.ToString() ?? "";
+            txtDireccion.Text = fila.Cells["Direccion"].Value?.ToString() ?? "";
+
+            if (fila.Cells["FechaNacimiento"].Value != null
+                && fila.Cells["FechaNacimiento"].Value != DBNull.Value)
+            {
+                DateTime fechaNac = Convert.ToDateTime(fila.Cells["FechaNacimiento"].Value).Date;
+                if (fechaNac < txtFecha.MinDate)
+                    fechaNac = txtFecha.MinDate;
+                if (fechaNac > txtFecha.MaxDate)
+                    fechaNac = txtFecha.MaxDate;
+                txtFecha.Value = fechaNac;
+            }
+
+            ActualizarEdad();
+
+            // Sexo no persistido: dejar cmbsexo como está o limpiarlo.
+            if (cmbsexo.Items.Count > 0)
+                cmbsexo.SelectedIndex = -1;
+            cmbsexo.Text = "";
+
+            DTO.ClienteFichaSaludDTO? ficha = null;
+            try
+            {
+                ficha = service.ObtenerFichaSalud(idSeleccionado);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "No se pudo cargar la ficha de salud: " + ex.Message,
+                    "Ficha de salud",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+
+            PoblarFichaEnUi(ficha);
+
+            _modoEdicion = true;
+            _idEdicion = idSeleccionado;
+            btnAgregar.Text = "GUARDAR CAMBIOS";
+            tabControlClientes.SelectedTab = tabAgregar;
         }
 
         private void txtBuscar_TextChanged(object sender, EventArgs e)
@@ -368,13 +449,17 @@ namespace UI.DISEÑO
         private void dgvClientes_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-            CargarFilaEnEdicion(dgvClientes.Rows[e.RowIndex]);
+            CargarFichaResumen(dgvClientes.Rows[e.RowIndex]);
         }
 
         private void dgvClientes_SelectionChanged(object? sender, EventArgs e)
         {
             if (dgvClientes.CurrentRow == null || dgvClientes.CurrentRow.IsNewRow)
+            {
+                if (dgvClientes.SelectedRows.Count == 0)
+                    LimpiarFormularioEdicion();
                 return;
+            }
 
             if (!TryObtenerIdCliente(dgvClientes.CurrentRow, out int id) || id <= 0)
                 return;
@@ -382,7 +467,7 @@ namespace UI.DISEÑO
             if (id == idSeleccionado)
                 return;
 
-            CargarFilaEnEdicion(dgvClientes.CurrentRow);
+            CargarFichaResumen(dgvClientes.CurrentRow);
         }
 
         private void dgvClientes_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -401,7 +486,7 @@ namespace UI.DISEÑO
 
         private void btnIrAPagar_Click(object sender, EventArgs e)
         {
-            if (dgvClientes.CurrentRow == null || idSeleccionado <= 0)
+            if (idSeleccionado <= 0)
             {
                 MessageBox.Show(
                     "Debe seleccionar un cliente.",
@@ -412,14 +497,53 @@ namespace UI.DISEÑO
                 return;
             }
 
-            int id = Convert.ToInt32(ObtenerValorId(dgvClientes.CurrentRow));
-            string nombre = dgvClientes.CurrentRow.Cells["Nombre"].Value?.ToString() ?? "";
+            string nombre = "";
+            if (dgvClientes.CurrentRow != null
+                && TryObtenerIdCliente(dgvClientes.CurrentRow, out int idFila)
+                && idFila == idSeleccionado)
+            {
+                nombre = dgvClientes.CurrentRow.Cells["Nombre"].Value?.ToString() ?? "";
+            }
+            else if (ucFichaResumen.TieneMiembroCargado)
+            {
+                // Fallback: nombre ya está en el resumen vía grid previo; buscar en filas.
+                foreach (DataGridViewRow fila in dgvClientes.Rows)
+                {
+                    if (TryObtenerIdCliente(fila, out int id) && id == idSeleccionado)
+                    {
+                        nombre = fila.Cells["Nombre"].Value?.ToString() ?? "";
+                        break;
+                    }
+                }
+            }
 
-            FrmPagos frm = new FrmPagos(_presentacion, id, nombre);
+            FrmPagos frm = new FrmPagos(_presentacion, idSeleccionado, nombre);
+            frm.ShowDialog();
+        }
+
+        private void btnIrADeudas_Click(object sender, EventArgs e)
+        {
+            if (idSeleccionado <= 0)
+            {
+                MessageBox.Show(
+                    "Debe seleccionar un cliente.",
+                    "Aviso",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
+            using var frm = new UI.FrmModuloDeudas(idSeleccionado);
             frm.ShowDialog();
         }
 
         private void layoutNavClientes_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void layoutNavClientes_Paint_1(object sender, PaintEventArgs e)
         {
 
         }
