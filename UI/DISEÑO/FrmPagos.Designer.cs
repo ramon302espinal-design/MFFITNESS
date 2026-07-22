@@ -90,57 +90,59 @@ namespace UI.DISEÑO
             // 
             // cmbMembresia
             // 
+            cmbMembresia.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
             cmbMembresia.FormattingEnabled = true;
-            cmbMembresia.Location = new Point(13, 41);
+            cmbMembresia.Location = new Point(31, 98);
             cmbMembresia.Name = "cmbMembresia";
-            cmbMembresia.Size = new Size(151, 28);
+            cmbMembresia.Size = new Size(151, 43);
             cmbMembresia.TabIndex = 1;
             cmbMembresia.SelectedIndexChanged += cmbMembresia_SelectedIndexChanged;
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label1.Location = new Point(752, 30);
+            label1.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            label1.Location = new Point(686, 31);
             label1.Name = "label1";
-            label1.Size = new Size(102, 35);
+            label1.Size = new Size(139, 46);
             label1.TabIndex = 2;
             label1.Text = "PRECIO";
             // 
             // txtMonto
             // 
-            txtMonto.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            txtMonto.Location = new Point(867, 28);
+            txtMonto.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            txtMonto.Location = new Point(824, 28);
             txtMonto.Name = "txtMonto";
             txtMonto.ReadOnly = true;
-            txtMonto.Size = new Size(125, 41);
+            txtMonto.Size = new Size(218, 52);
             txtMonto.TabIndex = 3;
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            label2.Location = new Point(22, 13);
+            label2.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label2.Location = new Point(31, 60);
             label2.Name = "label2";
-            label2.Size = new Size(129, 28);
+            label2.Size = new Size(161, 35);
             label2.TabIndex = 4;
             label2.Text = "MEMBRESIA";
             // 
             // cmbCliente
             // 
+            cmbCliente.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
             cmbCliente.FormattingEnabled = true;
-            cmbCliente.Location = new Point(170, 41);
+            cmbCliente.Location = new Point(203, 98);
             cmbCliente.Name = "cmbCliente";
-            cmbCliente.Size = new Size(298, 28);
+            cmbCliente.Size = new Size(298, 43);
             cmbCliente.TabIndex = 5;
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            label3.Location = new Point(219, 13);
+            label3.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label3.Location = new Point(231, 60);
             label3.Name = "label3";
-            label3.Size = new Size(200, 28);
+            label3.Size = new Size(251, 35);
             label3.TabIndex = 6;
             label3.Text = "MIEMBRO A PAGAR";
             // 
@@ -157,30 +159,30 @@ namespace UI.DISEÑO
             // 
             // cmbProducto
             // 
-            cmbProducto.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            cmbProducto.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
             cmbProducto.FormattingEnabled = true;
-            cmbProducto.Location = new Point(88, 110);
+            cmbProducto.Location = new Point(88, 278);
             cmbProducto.Name = "cmbProducto";
-            cmbProducto.Size = new Size(125, 28);
+            cmbProducto.Size = new Size(198, 43);
             cmbProducto.TabIndex = 30;
             cmbProducto.Text = "PRODUCTOS";
             cmbProducto.SelectedIndexChanged += cmbProducto_SelectedIndexChanged;
             // 
             // numCantidad
             // 
-            numCantidad.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            numCantidad.Location = new Point(205, 223);
+            numCantidad.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            numCantidad.Location = new Point(750, 277);
             numCantidad.Name = "numCantidad";
-            numCantidad.Size = new Size(150, 27);
+            numCantidad.Size = new Size(150, 47);
             numCantidad.TabIndex = 31;
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            label4.Location = new Point(88, 221);
+            label4.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label4.Location = new Point(598, 284);
             label4.Name = "label4";
-            label4.Size = new Size(116, 28);
+            label4.Size = new Size(146, 35);
             label4.TabIndex = 32;
             label4.Text = "CANTIDAD";
             // 
@@ -189,10 +191,11 @@ namespace UI.DISEÑO
             tabProductos.Controls.Add(tabPago);
             tabProductos.Controls.Add(tabMembresia);
             tabProductos.Dock = DockStyle.Fill;
+            tabProductos.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
             tabProductos.Location = new Point(0, 52);
             tabProductos.Name = "tabProductos";
             tabProductos.SelectedIndex = 0;
-            tabProductos.Size = new Size(1602, 745);
+            tabProductos.Size = new Size(1246, 807);
             tabProductos.TabIndex = 33;
             // 
             // tabPago
@@ -208,20 +211,20 @@ namespace UI.DISEÑO
             tabPago.Controls.Add(cmbProducto);
             tabPago.Controls.Add(label4);
             tabPago.Controls.Add(numCantidad);
-            tabPago.Location = new Point(4, 29);
+            tabPago.Location = new Point(4, 37);
             tabPago.Name = "tabPago";
             tabPago.Padding = new Padding(3);
-            tabPago.Size = new Size(1594, 712);
+            tabPago.Size = new Size(1238, 766);
             tabPago.TabIndex = 0;
             tabPago.Text = "PRODUCTOS";
             tabPago.UseVisualStyleBackColor = true;
             // 
             // btnLimpiarCarrito
             // 
-            btnLimpiarCarrito.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnLimpiarCarrito.Location = new Point(727, 286);
+            btnLimpiarCarrito.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            btnLimpiarCarrito.Location = new Point(1063, 479);
             btnLimpiarCarrito.Name = "btnLimpiarCarrito";
-            btnLimpiarCarrito.Size = new Size(150, 35);
+            btnLimpiarCarrito.Size = new Size(150, 44);
             btnLimpiarCarrito.TabIndex = 40;
             btnLimpiarCarrito.Text = "LIMPIAR";
             btnLimpiarCarrito.UseVisualStyleBackColor = true;
@@ -230,29 +233,29 @@ namespace UI.DISEÑO
             // lblTotal
             // 
             lblTotal.AutoSize = true;
-            lblTotal.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            lblTotal.Location = new Point(167, 668);
+            lblTotal.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            lblTotal.Location = new Point(208, 708);
             lblTotal.Name = "lblTotal";
-            lblTotal.Size = new Size(24, 28);
+            lblTotal.Size = new Size(40, 46);
             lblTotal.TabIndex = 39;
             lblTotal.Text = "0";
             // 
             // label6
             // 
             label6.AutoSize = true;
-            label6.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            label6.Location = new Point(97, 668);
+            label6.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            label6.Location = new Point(88, 708);
             label6.Name = "label6";
-            label6.Size = new Size(72, 28);
+            label6.Size = new Size(123, 46);
             label6.TabIndex = 38;
             label6.Text = "TOTAL";
             // 
             // btnAgregarCarrito
             // 
-            btnAgregarCarrito.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnAgregarCarrito.Location = new Point(88, 286);
+            btnAgregarCarrito.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            btnAgregarCarrito.Location = new Point(904, 278);
             btnAgregarCarrito.Name = "btnAgregarCarrito";
-            btnAgregarCarrito.Size = new Size(150, 35);
+            btnAgregarCarrito.Size = new Size(153, 46);
             btnAgregarCarrito.TabIndex = 37;
             btnAgregarCarrito.Text = "AGREGAR";
             btnAgregarCarrito.UseVisualStyleBackColor = true;
@@ -262,11 +265,12 @@ namespace UI.DISEÑO
             // 
             dgvCarrito.AllowUserToAddRows = false;
             dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvCarrito.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvCarrito.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvCarrito.Location = new Point(88, 327);
             dgvCarrito.Name = "dgvCarrito";
             dgvCarrito.RowHeadersWidth = 51;
-            dgvCarrito.Size = new Size(798, 294);
+            dgvCarrito.Size = new Size(969, 375);
             dgvCarrito.TabIndex = 36;
             dgvCarrito.CellContentClick += dgvCarrito_CellContentClick;
             dgvCarrito.SelectionChanged += dgvCarrito_SelectionChanged;
@@ -274,11 +278,11 @@ namespace UI.DISEÑO
             // btnPagarProductos
             // 
             btnPagarProductos.BackColor = Color.FromArgb(22, 163, 74);
-            btnPagarProductos.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnPagarProductos.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             btnPagarProductos.ForeColor = Color.White;
-            btnPagarProductos.Location = new Point(736, 637);
+            btnPagarProductos.Location = new Point(837, 712);
             btnPagarProductos.Name = "btnPagarProductos";
-            btnPagarProductos.Size = new Size(150, 59);
+            btnPagarProductos.Size = new Size(220, 59);
             btnPagarProductos.TabIndex = 35;
             btnPagarProductos.Text = "COBRAR";
             btnPagarProductos.UseVisualStyleBackColor = false;
@@ -287,18 +291,19 @@ namespace UI.DISEÑO
             // label5
             // 
             label5.AutoSize = true;
-            label5.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            label5.Location = new Point(88, 161);
+            label5.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label5.Location = new Point(292, 282);
             label5.Name = "label5";
-            label5.Size = new Size(81, 28);
+            label5.Size = new Size(102, 35);
             label5.TabIndex = 34;
             label5.Text = "PRECIO";
             // 
             // txtPrecioProducto
             // 
-            txtPrecioProducto.Location = new Point(166, 163);
+            txtPrecioProducto.Font = new Font("Segoe UI", 15F);
+            txtPrecioProducto.Location = new Point(400, 280);
             txtPrecioProducto.Name = "txtPrecioProducto";
-            txtPrecioProducto.Size = new Size(125, 27);
+            txtPrecioProducto.Size = new Size(125, 41);
             txtPrecioProducto.TabIndex = 33;
             // 
             // tabMembresia
@@ -312,10 +317,10 @@ namespace UI.DISEÑO
             tabMembresia.Controls.Add(label2);
             tabMembresia.Controls.Add(txtMonto);
             tabMembresia.Controls.Add(cmbMembresia);
-            tabMembresia.Location = new Point(4, 29);
+            tabMembresia.Location = new Point(4, 37);
             tabMembresia.Name = "tabMembresia";
             tabMembresia.Padding = new Padding(3);
-            tabMembresia.Size = new Size(1594, 712);
+            tabMembresia.Size = new Size(1238, 766);
             tabMembresia.TabIndex = 1;
             tabMembresia.Text = "MEMBRESIA";
             tabMembresia.UseVisualStyleBackColor = true;
@@ -330,9 +335,9 @@ namespace UI.DISEÑO
             pnlFinanciamiento.Controls.Add(txtPagoInicial);
             pnlFinanciamiento.Controls.Add(lblSaldo);
             pnlFinanciamiento.Controls.Add(lblSaldoValor);
-            pnlFinanciamiento.Location = new Point(22, 178);
+            pnlFinanciamiento.Location = new Point(31, 376);
             pnlFinanciamiento.Name = "pnlFinanciamiento";
-            pnlFinanciamiento.Size = new Size(500, 170);
+            pnlFinanciamiento.Size = new Size(591, 225);
             pnlFinanciamiento.TabIndex = 9;
             pnlFinanciamiento.Visible = false;
             // 
@@ -342,9 +347,9 @@ namespace UI.DISEÑO
             lblFechaLimite.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblFechaLimite.Location = new Point(15, 115);
             lblFechaLimite.Name = "lblFechaLimite";
-            lblFechaLimite.Size = new Size(217, 25);
+            lblFechaLimite.Size = new Size(204, 25);
             lblFechaLimite.TabIndex = 4;
-            lblFechaLimite.Text = "Fecha L�mite de Pago:";
+            lblFechaLimite.Text = "Fecha Limite de Pago:";
             // 
             // dtpFechaVencimiento
             // 
@@ -403,7 +408,7 @@ namespace UI.DISEÑO
             chkFinanciamiento.AutoSize = true;
             chkFinanciamiento.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
             chkFinanciamiento.ForeColor = Color.FromArgb(33, 150, 243);
-            chkFinanciamiento.Location = new Point(22, 140);
+            chkFinanciamiento.Location = new Point(31, 338);
             chkFinanciamiento.Name = "chkFinanciamiento";
             chkFinanciamiento.Size = new Size(185, 32);
             chkFinanciamiento.TabIndex = 8;
@@ -425,7 +430,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1602, 52);
+            panelNav.Size = new Size(1246, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -502,7 +507,7 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1602, 797);
+            ClientSize = new Size(1246, 859);
             Controls.Add(tabProductos);
             Controls.Add(panelNav);
             Name = "FrmPagos";
