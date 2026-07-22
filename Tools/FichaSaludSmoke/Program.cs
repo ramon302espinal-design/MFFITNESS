@@ -42,6 +42,7 @@ try
         new DateTime(1995, 3, 15),
         "Calle Test 123",
         "8091112233",
+        "Masculino",
         ficha);
 }
 catch (Exception ex)

@@ -18,12 +18,21 @@ namespace UI.DISEÑO
                 return;
 
             WireFichaEventos();
+            InicializarCmbSexo();
             dtpCirugiasFecha.MaxDate = DateTime.Today;
             if (dtpCirugiasFecha.Value.Date > DateTime.Today)
                 dtpCirugiasFecha.Value = DateTime.Today;
 
             ActualizarEdad();
             _fichaUiLista = true;
+        }
+
+        private void InicializarCmbSexo()
+        {
+            cmbsexo.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbsexo.Items.Clear();
+            cmbsexo.Items.AddRange(new object[] { "Masculino", "Femenino", "Otro" });
+            cmbsexo.SelectedIndex = -1;
         }
 
         private void WireFichaEventos()

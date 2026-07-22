@@ -24,6 +24,7 @@ namespace BLL.Commands
             DateTime fechaNacimiento,
             string direccion,
             string telefono,
+            string? sexo,
             ClienteFichaSaludDTO ficha)
         {
             try
@@ -34,6 +35,7 @@ namespace BLL.Commands
                     fechaNacimiento,
                     direccion.Trim(),
                     telefono.Trim(),
+                    string.IsNullOrWhiteSpace(sexo) ? null : sexo.Trim(),
                     ficha);
                 return CommandResult.Ok("Cliente agregado correctamente.", id);
             }
@@ -43,12 +45,18 @@ namespace BLL.Commands
             }
         }
 
-        public static CommandResult Editar(int id, string nombre, DateTime fechaNacimiento, string direccion, string telefono)
+        public static CommandResult Editar(int id, string nombre, DateTime fechaNacimiento, string direccion, string telefono, string? sexo = null)
         {
             try
             {
                 var bll = new ClienteBLL();
-                bll.Editar(id, nombre.Trim(), fechaNacimiento.Date, direccion.Trim(), telefono.Trim());
+                bll.Editar(
+                    id,
+                    nombre.Trim(),
+                    fechaNacimiento.Date,
+                    direccion.Trim(),
+                    telefono.Trim(),
+                    string.IsNullOrWhiteSpace(sexo) ? null : sexo.Trim());
                 return CommandResult.Ok("Cliente actualizado correctamente.");
             }
             catch (Exception ex)
@@ -63,6 +71,7 @@ namespace BLL.Commands
             DateTime fechaNacimiento,
             string direccion,
             string telefono,
+            string? sexo,
             ClienteFichaSaludDTO ficha)
         {
             try
@@ -74,6 +83,7 @@ namespace BLL.Commands
                     fechaNacimiento.Date,
                     direccion.Trim(),
                     telefono.Trim(),
+                    string.IsNullOrWhiteSpace(sexo) ? null : sexo.Trim(),
                     ficha);
                 return CommandResult.Ok("Cliente y ficha actualizados correctamente.");
             }

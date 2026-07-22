@@ -18,9 +18,9 @@ namespace BLL
         }
 
         public int AgregarConId(string nombre, DateTime fechaNacimiento,
-                            string direccion, string telefono)
+                            string direccion, string telefono, string? sexo = null)
         {
-            return clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono);
+            return clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono, sexo);
         }
 
         /// <summary>
@@ -31,6 +31,7 @@ namespace BLL
             DateTime fechaNacimiento,
             string direccion,
             string telefono,
+            string? sexo,
             ClienteFichaSaludDTO ficha)
         {
             if (ficha == null)
@@ -39,7 +40,7 @@ namespace BLL
             if (!ClienteFichaSaludValidator.Validar(ficha, out string errorFicha))
                 throw new Exception(errorFicha);
 
-            int id = clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono);
+            int id = clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono, sexo);
             try
             {
                 ficha.ClienteId = id;
@@ -54,9 +55,9 @@ namespace BLL
         }
 
         public void Editar(int id, string nombre, DateTime fechaNacimiento,
-                           string direccion, string telefono)
+                           string direccion, string telefono, string? sexo = null)
         {
-            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono);
+            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono, sexo);
         }
 
         /// <summary>
@@ -68,6 +69,7 @@ namespace BLL
             DateTime fechaNacimiento,
             string direccion,
             string telefono,
+            string? sexo,
             ClienteFichaSaludDTO ficha)
         {
             if (id <= 0)
@@ -78,7 +80,7 @@ namespace BLL
             if (!ClienteFichaSaludValidator.Validar(ficha, out string errorFicha))
                 throw new Exception(errorFicha);
 
-            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono);
+            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono, sexo);
             ficha.ClienteId = id;
             fichaDAL.Guardar(ficha);
         }

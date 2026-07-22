@@ -132,8 +132,6 @@ namespace UI.DISEÑO
             panelDetalleScroll = new Panel();
             ucFichaResumen = new UI.DISEÑO.Controles.UcFichaResumenMiembro();
             btnBack = new Button();
-            btnIrAPagar = new Button();
-            btnIrADeudas = new Button();
             layoutNavClientes.SuspendLayout();
             panelNav.SuspendLayout();
             tabControlClientes.SuspendLayout();
@@ -296,8 +294,9 @@ namespace UI.DISEÑO
             // tabAgregar
             // 
             tabAgregar.AutoScroll = true;
-            tabAgregar.AutoScrollMinSize = new Size(1200, 1400);
+            tabAgregar.AutoScrollMinSize = new Size(1200, 1350);
             tabAgregar.BackColor = Color.White;
+            tabAgregar.Controls.Add(txtLesionDescripcion);
             tabAgregar.Controls.Add(cmbsexo);
             tabAgregar.Controls.Add(label16);
             tabAgregar.Controls.Add(label15);
@@ -385,7 +384,9 @@ namespace UI.DISEÑO
             // 
             // cmbsexo
             // 
+            cmbsexo.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbsexo.FormattingEnabled = true;
+            cmbsexo.Items.AddRange(new object[] { "Masculino", "Femenino", "Otro" });
             cmbsexo.Location = new Point(71, 346);
             cmbsexo.Name = "cmbsexo";
             cmbsexo.Size = new Size(151, 33);
@@ -448,7 +449,7 @@ namespace UI.DISEÑO
             // 
             label14.AutoSize = true;
             label14.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            label14.ForeColor = Color.Red;
+            label14.ForeColor = Color.FromArgb(15, 23, 42);
             label14.Location = new Point(749, 53);
             label14.Name = "label14";
             label14.Size = new Size(183, 30);
@@ -564,7 +565,7 @@ namespace UI.DISEÑO
             btnAgregar.FlatStyle = FlatStyle.Flat;
             btnAgregar.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnAgregar.ForeColor = Color.White;
-            btnAgregar.Location = new Point(812, 1293);
+            btnAgregar.Location = new Point(812, 1265);
             btnAgregar.Name = "btnAgregar";
             btnAgregar.Size = new Size(177, 55);
             btnAgregar.TabIndex = 12;
@@ -784,7 +785,7 @@ namespace UI.DISEÑO
             // 
             lblLesiones.AutoSize = true;
             lblLesiones.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            lblLesiones.ForeColor = Color.Red;
+            lblLesiones.ForeColor = Color.FromArgb(15, 23, 42);
             lblLesiones.Location = new Point(749, 235);
             lblLesiones.Name = "lblLesiones";
             lblLesiones.Size = new Size(113, 30);
@@ -871,8 +872,8 @@ namespace UI.DISEÑO
             // 
             lblMedicamentos.AutoSize = true;
             lblMedicamentos.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            lblMedicamentos.ForeColor = Color.Red;
-            lblMedicamentos.Location = new Point(749, 390);
+            lblMedicamentos.ForeColor = Color.FromArgb(15, 23, 42);
+            lblMedicamentos.Location = new Point(749, 386);
             lblMedicamentos.Name = "lblMedicamentos";
             lblMedicamentos.Size = new Size(189, 30);
             lblMedicamentos.TabIndex = 48;
@@ -881,27 +882,26 @@ namespace UI.DISEÑO
             // panelMedicamentos
             // 
             panelMedicamentos.BackColor = Color.Transparent;
-            panelMedicamentos.Controls.Add(txtLesionDescripcion);
             panelMedicamentos.Controls.Add(rbMedicamentosSi);
             panelMedicamentos.Controls.Add(rbMedicamentosNo);
-            panelMedicamentos.Location = new Point(662, 426);
+            panelMedicamentos.Location = new Point(680, 426);
             panelMedicamentos.Name = "panelMedicamentos";
-            panelMedicamentos.Size = new Size(200, 36);
+            panelMedicamentos.Size = new Size(170, 36);
             panelMedicamentos.TabIndex = 49;
             // 
             // txtLesionDescripcion
             // 
             txtLesionDescripcion.Font = new Font("Segoe UI", 11F);
-            txtLesionDescripcion.Location = new Point(0, 0);
+            txtLesionDescripcion.Location = new Point(771, 340);
             txtLesionDescripcion.Name = "txtLesionDescripcion";
-            txtLesionDescripcion.Size = new Size(450, 32);
+            txtLesionDescripcion.Size = new Size(389, 32);
             txtLesionDescripcion.TabIndex = 47;
             // 
             // rbMedicamentosSi
             // 
             rbMedicamentosSi.AutoSize = true;
             rbMedicamentosSi.Font = new Font("Segoe UI", 10F);
-            rbMedicamentosSi.Location = new Point(0, 4);
+            rbMedicamentosSi.Location = new Point(26, 4);
             rbMedicamentosSi.Name = "rbMedicamentosSi";
             rbMedicamentosSi.Size = new Size(44, 27);
             rbMedicamentosSi.TabIndex = 0;
@@ -913,7 +913,7 @@ namespace UI.DISEÑO
             rbMedicamentosNo.AutoSize = true;
             rbMedicamentosNo.Checked = true;
             rbMedicamentosNo.Font = new Font("Segoe UI", 10F);
-            rbMedicamentosNo.Location = new Point(70, 4);
+            rbMedicamentosNo.Location = new Point(96, 4);
             rbMedicamentosNo.Name = "rbMedicamentosNo";
             rbMedicamentosNo.Size = new Size(54, 27);
             rbMedicamentosNo.TabIndex = 1;
@@ -946,7 +946,7 @@ namespace UI.DISEÑO
             // 
             lblAlergias.AutoSize = true;
             lblAlergias.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            lblAlergias.ForeColor = Color.Red;
+            lblAlergias.ForeColor = Color.FromArgb(15, 23, 42);
             lblAlergias.Location = new Point(749, 545);
             lblAlergias.Name = "lblAlergias";
             lblAlergias.Size = new Size(115, 30);
@@ -955,19 +955,20 @@ namespace UI.DISEÑO
             // 
             // panelAlergias
             // 
+            panelAlergias.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             panelAlergias.BackColor = Color.Transparent;
             panelAlergias.Controls.Add(rbAlergiasSi);
             panelAlergias.Controls.Add(rbAlergiasNo);
             panelAlergias.Location = new Point(662, 581);
             panelAlergias.Name = "panelAlergias";
-            panelAlergias.Size = new Size(200, 36);
+            panelAlergias.Size = new Size(163, 36);
             panelAlergias.TabIndex = 53;
             // 
             // rbAlergiasSi
             // 
             rbAlergiasSi.AutoSize = true;
             rbAlergiasSi.Font = new Font("Segoe UI", 10F);
-            rbAlergiasSi.Location = new Point(0, 4);
+            rbAlergiasSi.Location = new Point(18, 4);
             rbAlergiasSi.Name = "rbAlergiasSi";
             rbAlergiasSi.Size = new Size(44, 27);
             rbAlergiasSi.TabIndex = 0;
@@ -979,7 +980,7 @@ namespace UI.DISEÑO
             rbAlergiasNo.AutoSize = true;
             rbAlergiasNo.Checked = true;
             rbAlergiasNo.Font = new Font("Segoe UI", 10F);
-            rbAlergiasNo.Location = new Point(70, 4);
+            rbAlergiasNo.Location = new Point(94, 3);
             rbAlergiasNo.Name = "rbAlergiasNo";
             rbAlergiasNo.Size = new Size(54, 27);
             rbAlergiasNo.TabIndex = 1;
@@ -1012,7 +1013,7 @@ namespace UI.DISEÑO
             // 
             lblCirugias.AutoSize = true;
             lblCirugias.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            lblCirugias.ForeColor = Color.Red;
+            lblCirugias.ForeColor = Color.FromArgb(15, 23, 42);
             lblCirugias.Location = new Point(749, 700);
             lblCirugias.Name = "lblCirugias";
             lblCirugias.Size = new Size(114, 30);
@@ -1033,7 +1034,7 @@ namespace UI.DISEÑO
             // 
             rbCirugiasSi.AutoSize = true;
             rbCirugiasSi.Font = new Font("Segoe UI", 10F);
-            rbCirugiasSi.Location = new Point(0, 4);
+            rbCirugiasSi.Location = new Point(25, 4);
             rbCirugiasSi.Name = "rbCirugiasSi";
             rbCirugiasSi.Size = new Size(44, 27);
             rbCirugiasSi.TabIndex = 0;
@@ -1045,7 +1046,7 @@ namespace UI.DISEÑO
             rbCirugiasNo.AutoSize = true;
             rbCirugiasNo.Checked = true;
             rbCirugiasNo.Font = new Font("Segoe UI", 10F);
-            rbCirugiasNo.Location = new Point(70, 4);
+            rbCirugiasNo.Location = new Point(95, 4);
             rbCirugiasNo.Name = "rbCirugiasNo";
             rbCirugiasNo.Size = new Size(54, 27);
             rbCirugiasNo.TabIndex = 1;
@@ -1058,7 +1059,7 @@ namespace UI.DISEÑO
             lblCirugiasDescripcion.AutoSize = true;
             lblCirugiasDescripcion.Enabled = false;
             lblCirugiasDescripcion.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblCirugiasDescripcion.Location = new Point(662, 778);
+            lblCirugiasDescripcion.Location = new Point(662, 786);
             lblCirugiasDescripcion.Name = "lblCirugiasDescripcion";
             lblCirugiasDescripcion.Size = new Size(103, 23);
             lblCirugiasDescripcion.TabIndex = 58;
@@ -1068,7 +1069,7 @@ namespace UI.DISEÑO
             // 
             txtCirugiasDescripcion.Enabled = false;
             txtCirugiasDescripcion.Font = new Font("Segoe UI", 11F);
-            txtCirugiasDescripcion.Location = new Point(772, 774);
+            txtCirugiasDescripcion.Location = new Point(772, 783);
             txtCirugiasDescripcion.Name = "txtCirugiasDescripcion";
             txtCirugiasDescripcion.PlaceholderText = "Describa la cirugía...";
             txtCirugiasDescripcion.Size = new Size(450, 32);
@@ -1079,7 +1080,7 @@ namespace UI.DISEÑO
             lblCirugiasFecha.AutoSize = true;
             lblCirugiasFecha.Enabled = false;
             lblCirugiasFecha.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblCirugiasFecha.Location = new Point(662, 818);
+            lblCirugiasFecha.Location = new Point(662, 832);
             lblCirugiasFecha.Name = "lblCirugiasFecha";
             lblCirugiasFecha.Size = new Size(55, 23);
             lblCirugiasFecha.TabIndex = 60;
@@ -1091,7 +1092,7 @@ namespace UI.DISEÑO
             dtpCirugiasFecha.Enabled = false;
             dtpCirugiasFecha.Font = new Font("Segoe UI", 11F);
             dtpCirugiasFecha.Format = DateTimePickerFormat.Custom;
-            dtpCirugiasFecha.Location = new Point(772, 814);
+            dtpCirugiasFecha.Location = new Point(721, 828);
             dtpCirugiasFecha.MinDate = new DateTime(1950, 1, 1, 0, 0, 0, 0);
             dtpCirugiasFecha.Name = "dtpCirugiasFecha";
             dtpCirugiasFecha.Size = new Size(220, 32);
@@ -1112,7 +1113,7 @@ namespace UI.DISEÑO
             // 
             lblObjetivoFitness.AutoSize = true;
             lblObjetivoFitness.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            lblObjetivoFitness.ForeColor = Color.Red;
+            lblObjetivoFitness.ForeColor = Color.FromArgb(15, 23, 42);
             lblObjetivoFitness.Location = new Point(720, 870);
             lblObjetivoFitness.Name = "lblObjetivoFitness";
             lblObjetivoFitness.Size = new Size(208, 30);
@@ -1232,7 +1233,7 @@ namespace UI.DISEÑO
             // 
             lblExperiencia.AutoSize = true;
             lblExperiencia.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            lblExperiencia.ForeColor = Color.Red;
+            lblExperiencia.ForeColor = Color.FromArgb(15, 23, 42);
             lblExperiencia.Location = new Point(749, 1025);
             lblExperiencia.Name = "lblExperiencia";
             lblExperiencia.Size = new Size(151, 30);
@@ -1316,7 +1317,7 @@ namespace UI.DISEÑO
             // 
             lblHorarioPreferido.AutoSize = true;
             lblHorarioPreferido.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            lblHorarioPreferido.ForeColor = Color.Red;
+            lblHorarioPreferido.ForeColor = Color.FromArgb(15, 23, 42);
             lblHorarioPreferido.Location = new Point(720, 1145);
             lblHorarioPreferido.Name = "lblHorarioPreferido";
             lblHorarioPreferido.Size = new Size(237, 30);
@@ -1430,8 +1431,6 @@ namespace UI.DISEÑO
             panelToolbarMiembros.BackColor = Color.White;
             panelToolbarMiembros.Controls.Add(label6);
             panelToolbarMiembros.Controls.Add(txtBuscar);
-            panelToolbarMiembros.Controls.Add(btnIrAPagar);
-            panelToolbarMiembros.Controls.Add(btnIrADeudas);
             panelToolbarMiembros.Dock = DockStyle.Fill;
             panelToolbarMiembros.Location = new Point(0, 0);
             panelToolbarMiembros.Margin = new Padding(0);
@@ -1514,38 +1513,6 @@ namespace UI.DISEÑO
             btnBack.TabIndex = 0;
             btnBack.UseVisualStyleBackColor = true;
             btnBack.Visible = false;
-            // 
-            // btnIrAPagar
-            // 
-            btnIrAPagar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnIrAPagar.BackColor = Color.FromArgb(22, 163, 74);
-            btnIrAPagar.FlatAppearance.BorderSize = 0;
-            btnIrAPagar.FlatStyle = FlatStyle.Flat;
-            btnIrAPagar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnIrAPagar.ForeColor = Color.White;
-            btnIrAPagar.Location = new Point(1120, 12);
-            btnIrAPagar.Name = "btnIrAPagar";
-            btnIrAPagar.Size = new Size(150, 36);
-            btnIrAPagar.TabIndex = 2;
-            btnIrAPagar.Text = "IR A COBRAR";
-            btnIrAPagar.UseVisualStyleBackColor = false;
-            btnIrAPagar.Click += btnIrAPagar_Click;
-            // 
-            // btnIrADeudas
-            // 
-            btnIrADeudas.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnIrADeudas.BackColor = Color.FromArgb(185, 28, 28);
-            btnIrADeudas.FlatAppearance.BorderSize = 0;
-            btnIrADeudas.FlatStyle = FlatStyle.Flat;
-            btnIrADeudas.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnIrADeudas.ForeColor = Color.White;
-            btnIrADeudas.Location = new Point(1280, 12);
-            btnIrADeudas.Name = "btnIrADeudas";
-            btnIrADeudas.Size = new Size(150, 36);
-            btnIrADeudas.TabIndex = 3;
-            btnIrADeudas.Text = "DEUDAS";
-            btnIrADeudas.UseVisualStyleBackColor = false;
-            btnIrADeudas.Click += btnIrADeudas_Click;
             // 
             // FrmClientes
             // 
@@ -1702,10 +1669,8 @@ namespace UI.DISEÑO
         private RadioButton rbHorNoche;
         private RadioButton rbHorVariado;
         private TextBox txtHorarioVariadoDetalle;
-        private ComboBox comboBox1;
         private Label label16;
         private ComboBox cmbsexo;
-        private Button btnIrAPagar;
-        private Button btnIrADeudas;
+        
     }
 }

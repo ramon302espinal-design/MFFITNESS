@@ -17,8 +17,6 @@ namespace UI.DISEÑO.Controles
         {
             panelAcciones = new Panel();
             btnEditarInformacion = new Button();
-            btnCobrarFicha = new Button();
-            btnDeudasFicha = new Button();
             grpDatosGenerales = new GroupBox();
             lblCapId = new Label();
             lblIdValor = new Label();
@@ -74,8 +72,6 @@ namespace UI.DISEÑO.Controles
             // 
             panelAcciones.BackColor = Color.White;
             panelAcciones.Controls.Add(btnEditarInformacion);
-            panelAcciones.Controls.Add(btnCobrarFicha);
-            panelAcciones.Controls.Add(btnDeudasFicha);
             panelAcciones.Dock = DockStyle.Top;
             panelAcciones.Location = new Point(0, 0);
             panelAcciones.Name = "panelAcciones";
@@ -94,38 +90,8 @@ namespace UI.DISEÑO.Controles
             btnEditarInformacion.Name = "btnEditarInformacion";
             btnEditarInformacion.Size = new Size(220, 36);
             btnEditarInformacion.TabIndex = 0;
-            btnEditarInformacion.Text = "✏️  Editar Información";
+            btnEditarInformacion.Text = "Editar Información";
             btnEditarInformacion.UseVisualStyleBackColor = false;
-            // 
-            // btnCobrarFicha
-            // 
-            btnCobrarFicha.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnCobrarFicha.BackColor = Color.FromArgb(22, 163, 74);
-            btnCobrarFicha.FlatAppearance.BorderSize = 0;
-            btnCobrarFicha.FlatStyle = FlatStyle.Flat;
-            btnCobrarFicha.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnCobrarFicha.ForeColor = Color.White;
-            btnCobrarFicha.Location = new Point(1100, 8);
-            btnCobrarFicha.Name = "btnCobrarFicha";
-            btnCobrarFicha.Size = new Size(140, 36);
-            btnCobrarFicha.TabIndex = 1;
-            btnCobrarFicha.Text = "IR A COBRAR";
-            btnCobrarFicha.UseVisualStyleBackColor = false;
-            // 
-            // btnDeudasFicha
-            // 
-            btnDeudasFicha.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnDeudasFicha.BackColor = Color.FromArgb(185, 28, 28);
-            btnDeudasFicha.FlatAppearance.BorderSize = 0;
-            btnDeudasFicha.FlatStyle = FlatStyle.Flat;
-            btnDeudasFicha.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnDeudasFicha.ForeColor = Color.White;
-            btnDeudasFicha.Location = new Point(1250, 8);
-            btnDeudasFicha.Name = "btnDeudasFicha";
-            btnDeudasFicha.Size = new Size(130, 36);
-            btnDeudasFicha.TabIndex = 2;
-            btnDeudasFicha.Text = "DEUDAS";
-            btnDeudasFicha.UseVisualStyleBackColor = false;
             // 
             // grpDatosGenerales
             // 
@@ -691,8 +657,6 @@ namespace UI.DISEÑO.Controles
 
         private Panel panelAcciones;
         private Button btnEditarInformacion;
-        private Button btnCobrarFicha;
-        private Button btnDeudasFicha;
         private GroupBox grpDatosGenerales;
         private Label lblCapId;
         private Label lblIdValor;

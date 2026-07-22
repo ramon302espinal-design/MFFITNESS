@@ -46,8 +46,6 @@ namespace UI.DISEÑO
             InicializarFichaSaludUi();
 
             ucFichaResumen.EditarInformacionClick += (_, _) => IniciarEdicionMiembro();
-            ucFichaResumen.CobrarClick += (_, _) => btnIrAPagar_Click(this, EventArgs.Empty);
-            ucFichaResumen.DeudasClick += (_, _) => btnIrADeudas_Click(this, EventArgs.Empty);
             ucFichaResumen.Limpiar();
         }
 
@@ -149,6 +147,7 @@ namespace UI.DISEÑO
             txtFecha.Value = fechaNacDefault;
             dtpFechaIngreso.Value = DateTime.Today;
             ActualizarEdad();
+            LimpiarCmbSexo();
             LimpiarFichaSaludUi();
         }
 
@@ -180,7 +179,48 @@ namespace UI.DISEÑO
                 return false;
             }
 
+            if (cmbsexo.SelectedIndex < 0 || cmbsexo.SelectedItem == null)
+            {
+                mensaje = "Seleccione el sexo del cliente.";
+                return false;
+            }
+
             return true;
+        }
+
+        private string? ObtenerSexoSeleccionado()
+        {
+            if (cmbsexo.SelectedItem == null)
+                return null;
+            string sexo = cmbsexo.SelectedItem.ToString()?.Trim() ?? "";
+            return string.IsNullOrEmpty(sexo) ? null : sexo;
+        }
+
+        private void LimpiarCmbSexo()
+        {
+            if (cmbsexo.Items.Count > 0)
+                cmbsexo.SelectedIndex = -1;
+            cmbsexo.Text = "";
+        }
+
+        private void EstablecerSexoEnCombo(string? sexo)
+        {
+            LimpiarCmbSexo();
+            if (string.IsNullOrWhiteSpace(sexo))
+                return;
+
+            string valor = sexo.Trim();
+            for (int i = 0; i < cmbsexo.Items.Count; i++)
+            {
+                if (string.Equals(cmbsexo.Items[i]?.ToString(), valor, StringComparison.OrdinalIgnoreCase))
+                {
+                    cmbsexo.SelectedIndex = i;
+                    return;
+                }
+            }
+
+            cmbsexo.Items.Add(valor);
+            cmbsexo.SelectedItem = valor;
         }
 
         private void btnAgregar_Click(object sender, EventArgs e)
@@ -194,6 +234,7 @@ namespace UI.DISEÑO
                 }
 
                 var ficha = ConstruirFichaDesdeUi();
+                string? sexo = ObtenerSexoSeleccionado();
 
                 if (_modoEdicion)
                 {
@@ -203,6 +244,7 @@ namespace UI.DISEÑO
                         txtFecha.Value.Date,
                         txtDireccion.Text.Trim(),
                         txtTelefono.Text.Trim(),
+                        sexo,
                         ficha
                     );
 
@@ -226,6 +268,7 @@ namespace UI.DISEÑO
                     txtFecha.Value.Date,
                     txtDireccion.Text.Trim(),
                     txtTelefono.Text.Trim(),
+                    sexo,
                     ficha
                 );
 
@@ -267,6 +310,9 @@ namespace UI.DISEÑO
 
             _bsClientes.DataSource = service.ObtenerClientes();
             AplicarFiltroBusqueda();
+
+            if (dgvClientes.Columns.Contains("Sexo"))
+                dgvClientes.Columns["Sexo"].Visible = false;
 
             if (resaltarId.HasValue && resaltarId.Value > 0)
             {
@@ -336,6 +382,9 @@ namespace UI.DISEÑO
             string nombre = fila.Cells["Nombre"].Value?.ToString() ?? "";
             string telefono = fila.Cells["Telefono"].Value?.ToString() ?? "";
             string direccion = fila.Cells["Direccion"].Value?.ToString() ?? "";
+            string? sexo = null;
+            if (dgvClientes.Columns.Contains("Sexo"))
+                sexo = fila.Cells["Sexo"].Value?.ToString();
 
             DateTime? fechaNac = null;
             if (fila.Cells["FechaNacimiento"].Value != null
@@ -358,8 +407,7 @@ namespace UI.DISEÑO
                     MessageBoxIcon.Warning);
             }
 
-            // Sexo no está en BD: siempre "No registrado" en resumen.
-            ucFichaResumen.Mostrar(id, nombre, telefono, direccion, fechaNac, sexo: null, ficha);
+            ucFichaResumen.Mostrar(id, nombre, telefono, direccion, fechaNac, sexo, ficha);
         }
 
         private void IniciarEdicionMiembro()
@@ -414,10 +462,10 @@ namespace UI.DISEÑO
 
             ActualizarEdad();
 
-            // Sexo no persistido: dejar cmbsexo como está o limpiarlo.
-            if (cmbsexo.Items.Count > 0)
-                cmbsexo.SelectedIndex = -1;
-            cmbsexo.Text = "";
+            string? sexo = null;
+            if (dgvClientes.Columns.Contains("Sexo"))
+                sexo = fila.Cells["Sexo"].Value?.ToString();
+            EstablecerSexoEnCombo(sexo);
 
             DTO.ClienteFichaSaludDTO? ficha = null;
             try
@@ -484,60 +532,6 @@ namespace UI.DISEÑO
             frmHistorial.ShowDialog();
         }
 
-        private void btnIrAPagar_Click(object sender, EventArgs e)
-        {
-            if (idSeleccionado <= 0)
-            {
-                MessageBox.Show(
-                    "Debe seleccionar un cliente.",
-                    "Aviso",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
-                );
-                return;
-            }
-
-            string nombre = "";
-            if (dgvClientes.CurrentRow != null
-                && TryObtenerIdCliente(dgvClientes.CurrentRow, out int idFila)
-                && idFila == idSeleccionado)
-            {
-                nombre = dgvClientes.CurrentRow.Cells["Nombre"].Value?.ToString() ?? "";
-            }
-            else if (ucFichaResumen.TieneMiembroCargado)
-            {
-                // Fallback: nombre ya está en el resumen vía grid previo; buscar en filas.
-                foreach (DataGridViewRow fila in dgvClientes.Rows)
-                {
-                    if (TryObtenerIdCliente(fila, out int id) && id == idSeleccionado)
-                    {
-                        nombre = fila.Cells["Nombre"].Value?.ToString() ?? "";
-                        break;
-                    }
-                }
-            }
-
-            FrmPagos frm = new FrmPagos(_presentacion, idSeleccionado, nombre);
-            frm.ShowDialog();
-        }
-
-        private void btnIrADeudas_Click(object sender, EventArgs e)
-        {
-            if (idSeleccionado <= 0)
-            {
-                MessageBox.Show(
-                    "Debe seleccionar un cliente.",
-                    "Aviso",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
-                );
-                return;
-            }
-
-            using var frm = new UI.FrmModuloDeudas(idSeleccionado);
-            frm.ShowDialog();
-        }
-
         private void layoutNavClientes_Paint(object sender, PaintEventArgs e)
         {
 
@@ -547,5 +541,7 @@ namespace UI.DISEÑO
         {
 
         }
+
+      
     }
 }

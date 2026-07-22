@@ -15,8 +15,6 @@ namespace UI.DISEÑO.Controles
         private bool _tieneMiembro;
 
         public event EventHandler? EditarInformacionClick;
-        public event EventHandler? CobrarClick;
-        public event EventHandler? DeudasClick;
 
         public bool TieneMiembroCargado => _tieneMiembro;
         public int ClienteIdCargado => _clienteId;
@@ -26,8 +24,6 @@ namespace UI.DISEÑO.Controles
             InitializeComponent();
 
             btnEditarInformacion.Click += (_, _) => EditarInformacionClick?.Invoke(this, EventArgs.Empty);
-            btnCobrarFicha.Click += (_, _) => CobrarClick?.Invoke(this, EventArgs.Empty);
-            btnDeudasFicha.Click += (_, _) => DeudasClick?.Invoke(this, EventArgs.Empty);
 
             Limpiar();
         }
