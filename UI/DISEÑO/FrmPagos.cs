@@ -418,8 +418,8 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                // Con financiamiento marcado no interceptar: el cliente vencido/sin plan
-                // debe poder financiar desde este formulario (no solo renovar al contado).
+                // Con financiamiento: vencido/desactivado/sin plan puede activarse a crédito.
+                // Sin financiamiento: ofrecer renovación al contado si aplica.
                 if (!chkFinanciamiento.Checked && IntentarRedirigirRenovacion(clienteId))
                     return;
 
@@ -493,15 +493,6 @@ namespace UI.DISEÑO
                     }
 
                     CORE.AppEventos.PagoRegistrado();
-
-                    historialBLL.Registrar(
-                        clienteId,
-                        "PAGO",
-                        planId,
-                        pagoInicial,
-                        usuario,
-                        $"Financiamiento - Inicial: ${pagoInicial:N2}, Saldo: ${saldo:N2}"
-                    );
 
                     _presentacion?.CargarDashboard();
                     MessageBox.Show(

@@ -33,7 +33,7 @@ namespace UI.DISEÑO
 
             lblMF.ForeColor = AppTheme.TextOnPrimary;
             lblFitness.ForeColor = AppTheme.TextOnPrimary;
-            lblSubtitulo.ForeColor = Color.FromArgb(230, 240, 255);
+            
             lblUsuario.ForeColor = AppTheme.TextPrimary;
             lblContraseña.ForeColor = AppTheme.TextPrimary;
 

@@ -28,6 +28,7 @@ namespace UI.DISEÑO
             btnNavBack = new Button();
             tabControlClientes = new TabControl();
             tabAgregar = new TabPage();
+            txtLesionDescripcion = new TextBox();
             cmbsexo = new ComboBox();
             label16 = new Label();
             label15 = new Label();
@@ -75,10 +76,10 @@ namespace UI.DISEÑO
             chkLesionCuello = new CheckBox();
             chkLesionTobillo = new CheckBox();
             chkLesionCadera = new CheckBox();
+            checkBox1 = new CheckBox();
             lblLesionDescripcion = new Label();
             lblMedicamentos = new Label();
             panelMedicamentos = new Panel();
-            txtLesionDescripcion = new TextBox();
             rbMedicamentosSi = new RadioButton();
             rbMedicamentosNo = new RadioButton();
             lblListaMedicamentos = new Label();
@@ -161,7 +162,7 @@ namespace UI.DISEÑO
             layoutNavClientes.RowCount = 2;
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            layoutNavClientes.Size = new Size(1513, 791);
+            layoutNavClientes.Size = new Size(1080, 720);
             layoutNavClientes.TabIndex = 0;
             layoutNavClientes.Paint += layoutNavClientes_Paint_1;
             // 
@@ -181,7 +182,7 @@ namespace UI.DISEÑO
             panelNav.Location = new Point(0, 0);
             panelNav.Margin = new Padding(0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1513, 52);
+            panelNav.Size = new Size(1080, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -287,7 +288,7 @@ namespace UI.DISEÑO
             tabControlClientes.Margin = new Padding(0);
             tabControlClientes.Name = "tabControlClientes";
             tabControlClientes.SelectedIndex = 0;
-            tabControlClientes.Size = new Size(1513, 739);
+            tabControlClientes.Size = new Size(1080, 668);
             tabControlClientes.TabIndex = 1;
             tabControlClientes.SelectedIndexChanged += tabControlClientes_SelectedIndexChanged;
             // 
@@ -344,6 +345,7 @@ namespace UI.DISEÑO
             tabAgregar.Controls.Add(chkLesionCuello);
             tabAgregar.Controls.Add(chkLesionTobillo);
             tabAgregar.Controls.Add(chkLesionCadera);
+            tabAgregar.Controls.Add(checkBox1);
             tabAgregar.Controls.Add(lblLesionDescripcion);
             tabAgregar.Controls.Add(lblMedicamentos);
             tabAgregar.Controls.Add(panelMedicamentos);
@@ -378,9 +380,19 @@ namespace UI.DISEÑO
             tabAgregar.Location = new Point(4, 34);
             tabAgregar.Name = "tabAgregar";
             tabAgregar.Padding = new Padding(24);
-            tabAgregar.Size = new Size(1505, 701);
+            tabAgregar.Size = new Size(1072, 630);
             tabAgregar.TabIndex = 0;
             tabAgregar.Text = "AGREGAR CLIENTES";
+            // 
+            // txtLesionDescripcion
+            // 
+            txtLesionDescripcion.Enabled = false;
+            txtLesionDescripcion.Font = new Font("Segoe UI", 11F);
+            txtLesionDescripcion.Location = new Point(771, 340);
+            txtLesionDescripcion.Name = "txtLesionDescripcion";
+            txtLesionDescripcion.PlaceholderText = "Describa la lesión...";
+            txtLesionDescripcion.Size = new Size(389, 32);
+            txtLesionDescripcion.TabIndex = 47;
             // 
             // cmbsexo
             // 
@@ -858,6 +870,17 @@ namespace UI.DISEÑO
             chkLesionCadera.Text = "Cadera";
             chkLesionCadera.UseVisualStyleBackColor = true;
             // 
+            // checkBox1
+            // 
+            checkBox1.AutoSize = true;
+            checkBox1.Font = new Font("Segoe UI", 10F);
+            checkBox1.Location = new Point(662, 342);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new Size(67, 27);
+            checkBox1.TabIndex = 46;
+            checkBox1.Text = "Otro";
+            checkBox1.UseVisualStyleBackColor = true;
+            // 
             // lblLesionDescripcion
             // 
             lblLesionDescripcion.AutoSize = true;
@@ -867,6 +890,7 @@ namespace UI.DISEÑO
             lblLesionDescripcion.Size = new Size(103, 23);
             lblLesionDescripcion.TabIndex = 46;
             lblLesionDescripcion.Text = "Descripción";
+            lblLesionDescripcion.Visible = false;
             // 
             // lblMedicamentos
             // 
@@ -888,14 +912,6 @@ namespace UI.DISEÑO
             panelMedicamentos.Name = "panelMedicamentos";
             panelMedicamentos.Size = new Size(170, 36);
             panelMedicamentos.TabIndex = 49;
-            // 
-            // txtLesionDescripcion
-            // 
-            txtLesionDescripcion.Font = new Font("Segoe UI", 11F);
-            txtLesionDescripcion.Location = new Point(771, 340);
-            txtLesionDescripcion.Name = "txtLesionDescripcion";
-            txtLesionDescripcion.Size = new Size(389, 32);
-            txtLesionDescripcion.TabIndex = 47;
             // 
             // rbMedicamentosSi
             // 
@@ -961,7 +977,7 @@ namespace UI.DISEÑO
             panelAlergias.Controls.Add(rbAlergiasNo);
             panelAlergias.Location = new Point(662, 581);
             panelAlergias.Name = "panelAlergias";
-            panelAlergias.Size = new Size(163, 36);
+            panelAlergias.Size = new Size(0, 36);
             panelAlergias.TabIndex = 53;
             // 
             // rbAlergiasSi
@@ -1520,12 +1536,12 @@ namespace UI.DISEÑO
             AutoScroll = true;
             AutoScrollMinSize = new Size(1080, 720);
             BackColor = Color.White;
-            ClientSize = new Size(1513, 791);
+            ClientSize = new Size(1062, 673);
             Controls.Add(layoutNavClientes);
             Controls.Add(btnBack);
             Name = "FrmClientes";
             StartPosition = FormStartPosition.CenterParent;
-            Text = "Clientes";
+            Text = "MIEMBROS";
             WindowState = FormWindowState.Maximized;
             Load += FrmClientes_Load;
             layoutNavClientes.ResumeLayout(false);
@@ -1621,6 +1637,7 @@ namespace UI.DISEÑO
         private CheckBox chkLesionCuello;
         private CheckBox chkLesionTobillo;
         private CheckBox chkLesionCadera;
+        private CheckBox checkBox1;
         private Label lblLesionDescripcion;
         private TextBox txtLesionDescripcion;
         private Label lblMedicamentos;

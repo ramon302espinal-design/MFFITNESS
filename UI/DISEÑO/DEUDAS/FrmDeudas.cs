@@ -226,11 +226,24 @@ namespace UI
         // ===============================
         private void CargarDeudas()
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (InvokeRequired)
             {
-                BeginInvoke(new Action(CargarDeudas));
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(CargarDeudas));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
                 return;
             }
+
+            if (dgvDeudas == null || dgvDeudas.IsDisposed || !IsHandleCreated)
+                return;
 
             try
             {
@@ -267,6 +280,9 @@ namespace UI
 
                 FormatearGrid();
             }
+            catch (ObjectDisposedException)
+            {
+            }
             catch (Exception ex)
             {
                 MessageBox.Show("Error cargando deudas: " + ex.Message);
@@ -294,6 +310,9 @@ namespace UI
         // ===============================
         private void AplicarFiltros()
         {
+            if (IsDisposed || Disposing || _bsDeudas == null)
+                return;
+
             var filtros = new System.Collections.Generic.List<string>();
 
             string filtroCombo = cmbFiltro?.SelectedItem?.ToString() ?? "Todas";
@@ -310,11 +329,17 @@ namespace UI
                     break;
             }
 
-            var termino = txtBuscar.Text.Trim();
+            var termino = txtBuscar?.Text?.Trim() ?? string.Empty;
             if (!string.IsNullOrEmpty(termino))
                 filtros.Add("(" + BusquedaGridHelper.ConstruirFiltroDeudas(termino) + ")");
 
-            _bsDeudas.Filter = filtros.Count > 0 ? string.Join(" AND ", filtros) : null;
+            try
+            {
+                _bsDeudas.Filter = filtros.Count > 0 ? string.Join(" AND ", filtros) : null;
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         private void txtBuscar_TextChanged(object sender, EventArgs e)

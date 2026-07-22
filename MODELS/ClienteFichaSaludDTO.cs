@@ -30,6 +30,7 @@ namespace DTO
         public bool LesionCuello { get; set; }
         public bool LesionTobillo { get; set; }
         public bool LesionCadera { get; set; }
+        public bool LesionOtro { get; set; }
         public string? LesionDescripcion { get; set; }
 
         public bool TomaMedicamentos { get; set; }

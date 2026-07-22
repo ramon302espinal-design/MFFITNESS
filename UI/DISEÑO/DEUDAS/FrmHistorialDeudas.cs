@@ -103,11 +103,25 @@ namespace UI
         // ===============================
         private void CargarHistorial()
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (InvokeRequired)
             {
-                BeginInvoke(new Action(CargarHistorial));
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(CargarHistorial));
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Formulario cerrado mientras el evento global aún notificaba.
+                }
                 return;
             }
+
+            if (!PuedeUsarGrid())
+                return;
 
             try
             {
@@ -115,12 +129,23 @@ namespace UI
                 EnriquecerHistorialFinanciamiento(dtHistorialCompleto);
                 AplicarFiltros();
             }
+            catch (ObjectDisposedException)
+            {
+                // Ignorar: el grid ya no está vivo (módulo cerrado / tab reciclado).
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error al cargar historial: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private bool PuedeUsarGrid() =>
+            !IsDisposed
+            && !Disposing
+            && IsHandleCreated
+            && dgvHistorial != null
+            && !dgvHistorial.IsDisposed;
 
         // ===============================
         // MÉTODO PÚBLICO PARA REFRESCAR DESDE MÓDULO PRINCIPAL
@@ -195,12 +220,15 @@ namespace UI
         // ===============================
         private void AplicarFiltros()
         {
+            if (!PuedeUsarGrid())
+                return;
+
             if (dtHistorialCompleto == null || dtHistorialCompleto.Rows.Count == 0)
             {
                 dgvHistorial.DataSource = null;
-                lblTotalDeudas.Text = "Total Deudas: $0.00";
-                lblTotalPagos.Text = "Total Pagos: $0.00";
-                lblBalance.Text = "Balance: $0.00";
+                if (!lblTotalDeudas.IsDisposed) lblTotalDeudas.Text = "Total Deudas: $0.00";
+                if (!lblTotalPagos.IsDisposed) lblTotalPagos.Text = "Total Pagos: $0.00";
+                if (!lblBalance.IsDisposed) lblBalance.Text = "Balance: $0.00";
                 return;
             }
 
@@ -232,6 +260,10 @@ namespace UI
                 FormatearColumnas();
                 CalcularTotales();
             }
+            catch (ObjectDisposedException)
+            {
+                // Ignorar: UI ya no disponible.
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error al aplicar filtros: {ex.Message}", "Error", 
@@ -244,7 +276,7 @@ namespace UI
         // ===============================
         private void FormatearColumnas()
         {
-            if (dgvHistorial.Columns.Count == 0) return;
+            if (!PuedeUsarGrid() || dgvHistorial.Columns.Count == 0) return;
 
             DataGridViewHelper.HideColumn(dgvHistorial, "Id");
             DataGridViewHelper.HideColumn(dgvHistorial, "DeudaId");

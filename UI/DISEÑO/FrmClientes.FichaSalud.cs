@@ -66,6 +66,16 @@ namespace UI.DISEÑO
                     txtObjOtroDescripcion.Clear();
             };
 
+            void OnLesionChanged(object? s, EventArgs e) => ActualizarUiLesion();
+            chkLesionHombro.CheckedChanged += OnLesionChanged;
+            chkLesionRodilla.CheckedChanged += OnLesionChanged;
+            chkLesionEspalda.CheckedChanged += OnLesionChanged;
+            chkLesionCuello.CheckedChanged += OnLesionChanged;
+            chkLesionTobillo.CheckedChanged += OnLesionChanged;
+            chkLesionCadera.CheckedChanged += OnLesionChanged;
+            checkBox1.CheckedChanged += OnLesionChanged;
+            ActualizarUiLesion();
+
             rbHorVariado.CheckedChanged += (_, _) => ActualizarUiHorario();
             rbHorManana.CheckedChanged += (_, _) => ActualizarUiHorario();
             rbHorTarde.CheckedChanged += (_, _) => ActualizarUiHorario();
@@ -189,6 +199,19 @@ namespace UI.DISEÑO
                 txtHorarioVariadoDetalle.Clear();
         }
 
+        private bool AlgunaLesionMarcada() =>
+            chkLesionHombro.Checked || chkLesionRodilla.Checked || chkLesionEspalda.Checked
+            || chkLesionCuello.Checked || chkLesionTobillo.Checked || chkLesionCadera.Checked
+            || checkBox1.Checked;
+
+        private void ActualizarUiLesion()
+        {
+            bool alguna = AlgunaLesionMarcada();
+            txtLesionDescripcion.Enabled = alguna;
+            if (!alguna)
+                txtLesionDescripcion.Clear();
+        }
+
         private void TxtFecha_ValueChanged(object? sender, EventArgs e) => ActualizarEdad();
 
         private void ActualizarEdad()
@@ -235,7 +258,9 @@ namespace UI.DISEÑO
             chkLesionCuello.Checked = false;
             chkLesionTobillo.Checked = false;
             chkLesionCadera.Checked = false;
+            checkBox1.Checked = false;
             txtLesionDescripcion.Clear();
+            txtLesionDescripcion.Enabled = false;
 
             rbMedicamentosNo.Checked = true;
             ActualizarUiMedicamentos();
@@ -316,6 +341,7 @@ namespace UI.DISEÑO
                 LesionCuello = chkLesionCuello.Checked,
                 LesionTobillo = chkLesionTobillo.Checked,
                 LesionCadera = chkLesionCadera.Checked,
+                LesionOtro = checkBox1.Checked,
                 LesionDescripcion = txtLesionDescripcion.Text,
                 TomaMedicamentos = rbMedicamentosSi.Checked,
                 ListaMedicamentos = txtListaMedicamentos.Text,
@@ -380,7 +406,11 @@ namespace UI.DISEÑO
             chkLesionCuello.Checked = ficha.LesionCuello;
             chkLesionTobillo.Checked = ficha.LesionTobillo;
             chkLesionCadera.Checked = ficha.LesionCadera;
+            checkBox1.Checked = ficha.LesionOtro;
             txtLesionDescripcion.Text = ficha.LesionDescripcion ?? "";
+            ActualizarUiLesion();
+            if (AlgunaLesionMarcada())
+                txtLesionDescripcion.Text = ficha.LesionDescripcion ?? "";
 
             if (ficha.TomaMedicamentos)
                 rbMedicamentosSi.Checked = true;

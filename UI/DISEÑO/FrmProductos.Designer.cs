@@ -113,7 +113,7 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(4, 29);
             tabProductos.Name = "tabProductos";
             tabProductos.Padding = new Padding(3);
-            tabProductos.Size = new Size(1658, 846);
+            tabProductos.Size = new Size(1054, 588);
             tabProductos.TabIndex = 0;
             tabProductos.Text = "REGISTRO DE PRODUCTOS";
             tabProductos.UseVisualStyleBackColor = true;
@@ -423,7 +423,7 @@ namespace UI.DISEÑO
             tabControl1.Location = new Point(0, 52);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(1666, 879);
+            tabControl1.Size = new Size(1062, 621);
             tabControl1.SizeMode = TabSizeMode.FillToRight;
             tabControl1.TabIndex = 18;
             // 
@@ -442,7 +442,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1666, 52);
+            panelNav.Size = new Size(1062, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -536,18 +536,18 @@ namespace UI.DISEÑO
             btnBack.Name = "btnBack";
             btnBack.Size = new Size(43, 35);
             btnBack.TabIndex = 0;
-            btnBack.Text = "";
             btnBack.UseVisualStyleBackColor = true;
             // 
             // FrmProductos
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1666, 931);
+            ClientSize = new Size(1062, 673);
             Controls.Add(tabControl1);
             Controls.Add(panelNav);
             Name = "FrmProductos";
-            Text = "Inventario";
+            RightToLeft = RightToLeft.No;
+            Text = "INVENTARIO";
             WindowState = FormWindowState.Maximized;
             Load += FrmProductos_Load;
             tabProductos.ResumeLayout(false);
