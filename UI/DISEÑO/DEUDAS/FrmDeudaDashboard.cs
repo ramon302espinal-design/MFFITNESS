@@ -72,12 +72,6 @@ namespace UI
         // 🔹 MÉTODO PRINCIPAL
         private void CargarTodo()
         {
-            if (IsDisposed || Disposing || !IsHandleCreated)
-                return;
-
-            if (dgvDeudas == null || dgvDeudas.IsDisposed)
-                return;
-
             try
             {
                 dgvDeudas.DataSource = deudaBLL.ObtenerDeudas();
@@ -86,9 +80,6 @@ namespace UI
                 lblDeudasActivas.Text = deudaBLL.DeudasActivas().ToString();
                 lblDeudasVencidas.Text = deudaBLL.DeudasVencidas().ToString();
                 lblIngresoPendiente.Text = deudaBLL.IngresoPendiente().ToString("N2");
-            }
-            catch (ObjectDisposedException)
-            {
             }
             catch (Exception ex)
             {
@@ -99,19 +90,9 @@ namespace UI
         // 🔥 ACTUALIZACIÓN SEGURA DESDE EVENTOS
         private void ActualizarDashboard()
         {
-            if (IsDisposed || Disposing)
-                return;
-
-            if (InvokeRequired)
+            if (this.InvokeRequired)
             {
-                try
-                {
-                    if (IsHandleCreated)
-                        BeginInvoke(new Action(ActualizarDashboard));
-                }
-                catch (ObjectDisposedException)
-                {
-                }
+                this.Invoke(new Action(ActualizarDashboard));
                 return;
             }
 
@@ -152,9 +133,6 @@ namespace UI
         {
             try
             {
-                if (IsDisposed || dgvDeudas == null || dgvDeudas.IsDisposed)
-                    return;
-
                 if (dgvDeudas.CurrentRow == null)
                 {
                     MessageBox.Show("Selecciona una deuda");
@@ -194,15 +172,12 @@ namespace UI
                     return;
                 }
 
+                // 🔥 EVENTO GLOBAL
+                AppEventos.PagoRegistrado();
+
                 MessageBox.Show(result.Message, "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // Un solo refresco local; AppEventos notifica a otros módulos vivos.
-                AppEventos.PagoRegistrado();
-                CargarTodo();
-                txtMontoPago.Clear();
-            }
-            catch (ObjectDisposedException)
-            {
+                CargarTodo(); // 🔥 lo mantenemos
             }
             catch (Exception ex)
             {

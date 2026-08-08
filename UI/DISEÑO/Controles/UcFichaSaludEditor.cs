@@ -51,15 +51,6 @@ namespace UI.DISEÑO.Controles
                     txtObjOtroDescripcion.Clear();
             };
 
-            void OnLesionChanged(object? s, EventArgs e) => ActualizarUiLesion();
-            chkLesionHombro.CheckedChanged += OnLesionChanged;
-            chkLesionRodilla.CheckedChanged += OnLesionChanged;
-            chkLesionEspalda.CheckedChanged += OnLesionChanged;
-            chkLesionCuello.CheckedChanged += OnLesionChanged;
-            chkLesionTobillo.CheckedChanged += OnLesionChanged;
-            chkLesionCadera.CheckedChanged += OnLesionChanged;
-            chkLesionOtro.CheckedChanged += OnLesionChanged;
-
             rbHorVariado.CheckedChanged += (_, _) => ActualizarUiHorario();
             rbHorManana.CheckedChanged += (_, _) => ActualizarUiHorario();
             rbHorTarde.CheckedChanged += (_, _) => ActualizarUiHorario();
@@ -73,7 +64,6 @@ namespace UI.DISEÑO.Controles
             ActualizarUiAlergias();
             ActualizarUiCirugias();
             ActualizarUiHorario();
-            ActualizarUiLesion();
 
             _eventosWiriados = true;
         }
@@ -114,9 +104,7 @@ namespace UI.DISEÑO.Controles
             chkLesionCuello.Checked = false;
             chkLesionTobillo.Checked = false;
             chkLesionCadera.Checked = false;
-            chkLesionOtro.Checked = false;
             txtLesionDescripcion.Clear();
-            txtLesionDescripcion.Enabled = false;
 
             rbMedicamentosNo.Checked = true;
             ActualizarUiMedicamentos();
@@ -199,11 +187,7 @@ namespace UI.DISEÑO.Controles
             chkLesionCuello.Checked = ficha.LesionCuello;
             chkLesionTobillo.Checked = ficha.LesionTobillo;
             chkLesionCadera.Checked = ficha.LesionCadera;
-            chkLesionOtro.Checked = ficha.LesionOtro;
             txtLesionDescripcion.Text = ficha.LesionDescripcion ?? "";
-            ActualizarUiLesion();
-            if (AlgunaLesionMarcada())
-                txtLesionDescripcion.Text = ficha.LesionDescripcion ?? "";
 
             if (ficha.TomaMedicamentos)
                 rbMedicamentosSi.Checked = true;
@@ -344,7 +328,6 @@ namespace UI.DISEÑO.Controles
                 LesionCuello = chkLesionCuello.Checked,
                 LesionTobillo = chkLesionTobillo.Checked,
                 LesionCadera = chkLesionCadera.Checked,
-                LesionOtro = chkLesionOtro.Checked,
                 LesionDescripcion = txtLesionDescripcion.Text,
                 TomaMedicamentos = rbMedicamentosSi.Checked,
                 ListaMedicamentos = txtListaMedicamentos.Text,
@@ -485,20 +468,6 @@ namespace UI.DISEÑO.Controles
             txtHorarioVariadoDetalle.Enabled = variado || _soloLectura;
             if (!variado && !_soloLectura)
                 txtHorarioVariadoDetalle.Clear();
-            AplicarSoloLecturaSiCorresponde();
-        }
-
-        private bool AlgunaLesionMarcada() =>
-            chkLesionHombro.Checked || chkLesionRodilla.Checked || chkLesionEspalda.Checked
-            || chkLesionCuello.Checked || chkLesionTobillo.Checked || chkLesionCadera.Checked
-            || chkLesionOtro.Checked;
-
-        private void ActualizarUiLesion()
-        {
-            bool alguna = AlgunaLesionMarcada();
-            txtLesionDescripcion.Enabled = alguna || _soloLectura;
-            if (!alguna && !_soloLectura)
-                txtLesionDescripcion.Clear();
             AplicarSoloLecturaSiCorresponde();
         }
 

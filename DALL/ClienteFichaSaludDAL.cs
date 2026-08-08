@@ -47,7 +47,6 @@ BEGIN
         LesionCuello BIT NOT NULL CONSTRAINT DF_CFS_Cuello DEFAULT(0),
         LesionTobillo BIT NOT NULL CONSTRAINT DF_CFS_Tobillo DEFAULT(0),
         LesionCadera BIT NOT NULL CONSTRAINT DF_CFS_Cadera DEFAULT(0),
-        LesionOtro BIT NOT NULL CONSTRAINT DF_CFS_LesionOtro DEFAULT(0),
         LesionDescripcion NVARCHAR(500) NULL,
         TomaMedicamentos BIT NOT NULL CONSTRAINT DF_CFS_TomaMeds DEFAULT(0),
         ListaMedicamentos NVARCHAR(500) NULL,
@@ -73,7 +72,6 @@ BEGIN
     );
 END");
 
-                AsegurarColumna("LesionOtro", "BIT NOT NULL CONSTRAINT DF_CFS_LesionOtro DEFAULT(0)");
                 AsegurarColumna("TieneAlergias", "BIT NOT NULL CONSTRAINT DF_CFS_Alergias DEFAULT(0)");
                 AsegurarColumna("AlergiasDescripcion", "NVARCHAR(500) NULL");
                 AsegurarColumna("TieneCirugias", "BIT NOT NULL CONSTRAINT DF_CFS_Cirugias DEFAULT(0)");
@@ -136,7 +134,6 @@ WHEN MATCHED THEN UPDATE SET
     LesionCuello = @LesionCuello,
     LesionTobillo = @LesionTobillo,
     LesionCadera = @LesionCadera,
-    LesionOtro = @LesionOtro,
     LesionDescripcion = @LesionDescripcion,
     TomaMedicamentos = @TomaMedicamentos,
     ListaMedicamentos = @ListaMedicamentos,
@@ -164,7 +161,7 @@ WHEN NOT MATCHED THEN INSERT
     ClienteId, EmergenciaNombre, EmergenciaParentesco, EmergenciaTelefono, EmergenciaTelefonoAlt,
     Diabetes, Hipertension, Asma, ProblemasCardiacos, ColesterolAlto, Artritis, Hernia, Epilepsia, Embarazo,
     NingunaEnfermedad, EnfermedadOtra,
-    LesionHombro, LesionRodilla, LesionEspalda, LesionCuello, LesionTobillo, LesionCadera, LesionOtro, LesionDescripcion,
+    LesionHombro, LesionRodilla, LesionEspalda, LesionCuello, LesionTobillo, LesionCadera, LesionDescripcion,
     TomaMedicamentos, ListaMedicamentos,
     TieneAlergias, AlergiasDescripcion, TieneCirugias, CirugiasDescripcion, CirugiasFecha,
     ObjPerderGrasa, ObjGanarMasa, ObjTonificar, ObjMejorarCondicion, ObjRehabilitacion, ObjSalud, ObjCompetencia, ObjOtro, ObjOtroDescripcion,
@@ -176,7 +173,7 @@ VALUES
     @ClienteId, @EmergenciaNombre, @EmergenciaParentesco, @EmergenciaTelefono, @EmergenciaTelefonoAlt,
     @Diabetes, @Hipertension, @Asma, @ProblemasCardiacos, @ColesterolAlto, @Artritis, @Hernia, @Epilepsia, @Embarazo,
     @NingunaEnfermedad, @EnfermedadOtra,
-    @LesionHombro, @LesionRodilla, @LesionEspalda, @LesionCuello, @LesionTobillo, @LesionCadera, @LesionOtro, @LesionDescripcion,
+    @LesionHombro, @LesionRodilla, @LesionEspalda, @LesionCuello, @LesionTobillo, @LesionCadera, @LesionDescripcion,
     @TomaMedicamentos, @ListaMedicamentos,
     @TieneAlergias, @AlergiasDescripcion, @TieneCirugias, @CirugiasDescripcion, @CirugiasFecha,
     @ObjPerderGrasa, @ObjGanarMasa, @ObjTonificar, @ObjMejorarCondicion, @ObjRehabilitacion, @ObjSalud, @ObjCompetencia, @ObjOtro, @ObjOtroDescripcion,
@@ -224,7 +221,6 @@ WHERE ClienteId = @ClienteId";
                 LesionCuello = Bit(r, "LesionCuello"),
                 LesionTobillo = Bit(r, "LesionTobillo"),
                 LesionCadera = Bit(r, "LesionCadera"),
-                LesionOtro = Bit(r, "LesionOtro"),
                 LesionDescripcion = r["LesionDescripcion"]?.ToString(),
                 TomaMedicamentos = Bit(r, "TomaMedicamentos"),
                 ListaMedicamentos = r["ListaMedicamentos"]?.ToString(),
@@ -284,7 +280,6 @@ WHERE ClienteId = @ClienteId";
             new SqlParameter("@LesionCuello", f.LesionCuello),
             new SqlParameter("@LesionTobillo", f.LesionTobillo),
             new SqlParameter("@LesionCadera", f.LesionCadera),
-            new SqlParameter("@LesionOtro", f.LesionOtro),
             new SqlParameter("@LesionDescripcion", (object?)NullIfEmpty(f.LesionDescripcion) ?? DBNull.Value),
             new SqlParameter("@TomaMedicamentos", f.TomaMedicamentos),
             new SqlParameter("@ListaMedicamentos", (object?)NullIfEmpty(f.ListaMedicamentos) ?? DBNull.Value),

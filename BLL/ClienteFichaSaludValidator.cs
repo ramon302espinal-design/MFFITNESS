@@ -66,8 +66,7 @@ namespace BLL
 
             bool algunaLesion =
                 ficha.LesionHombro || ficha.LesionRodilla || ficha.LesionEspalda
-                || ficha.LesionCuello || ficha.LesionTobillo || ficha.LesionCadera
-                || ficha.LesionOtro;
+                || ficha.LesionCuello || ficha.LesionTobillo || ficha.LesionCadera;
 
             if (algunaLesion && string.IsNullOrWhiteSpace(ficha.LesionDescripcion))
             {

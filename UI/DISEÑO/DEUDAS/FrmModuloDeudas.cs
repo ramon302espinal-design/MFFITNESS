@@ -331,38 +331,18 @@ namespace UI
         }
 
         // ===============================
-        // LIMPIAR AL CERRAR — desuscribir AppEventos de formularios hijos
+        // LIMPIAR AL CERRAR - SOLO OCULTAR, NO CERRAR
         // ===============================
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            CerrarFormularioHijo(ref dashboardForm);
-            CerrarFormularioHijo(ref gestionForm);
-            CerrarFormularioHijo(ref crearForm);
-            CerrarFormularioHijo(ref historialForm);
+            // NO cerramos los formularios hijos, solo los ocultamos
+            // Esto evita el error "Cannot access a disposed object"
+            dashboardForm?.Hide();
+            gestionForm?.Hide();
+            crearForm?.Hide();
+            historialForm?.Hide();
 
             base.OnFormClosing(e);
-        }
-
-        private static void CerrarFormularioHijo<T>(ref T? form) where T : Form
-        {
-            if (form == null)
-                return;
-
-            try
-            {
-                if (!form.IsDisposed)
-                {
-                    form.Close(); // dispara OnFormClosed → se desuscribe de AppEventos
-                    form.Dispose();
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            finally
-            {
-                form = null;
-            }
         }
     }
 }

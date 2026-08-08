@@ -63,7 +63,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1062, 52);
+            panelNav.Size = new Size(1573, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -157,17 +157,16 @@ namespace UI.DISEÑO
             btnBack.Name = "btnBack";
             btnBack.Size = new Size(43, 35);
             btnBack.TabIndex = 0;
+            btnBack.Text = "";
             btnBack.UseVisualStyleBackColor = true;
             // 
             // dgvEstado
             // 
-            dgvEstado.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvEstado.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvEstado.Dock = DockStyle.Bottom;
-            dgvEstado.Location = new Point(0, 146);
+            dgvEstado.Location = new Point(0, 143);
             dgvEstado.Name = "dgvEstado";
             dgvEstado.RowHeadersWidth = 51;
-            dgvEstado.Size = new Size(1062, 527);
+            dgvEstado.Size = new Size(1530, 527);
             dgvEstado.TabIndex = 0;
             dgvEstado.CellDoubleClick += dgvEstado_CellDoubleClick;
             dgvEstado.CellFormatting += dgvEstado_CellFormatting;
@@ -186,15 +185,15 @@ namespace UI.DISEÑO
             btnAtras.Name = "btnAtras";
             btnAtras.Size = new Size(44, 45);
             btnAtras.TabIndex = 20;
-            btnAtras.Text = "◀️";
+            btnAtras.Text = "?";
             btnAtras.UseVisualStyleBackColor = false;
             btnAtras.Visible = false;
             // 
             // btnRenovar
             // 
-            btnRenovar.Location = new Point(331, 605);
+            btnRenovar.Location = new Point(7, 676);
             btnRenovar.Name = "btnRenovar";
-            btnRenovar.Size = new Size(142, 46);
+            btnRenovar.Size = new Size(94, 29);
             btnRenovar.TabIndex = 21;
             btnRenovar.Text = "RENOVAR";
             btnRenovar.UseVisualStyleBackColor = true;
@@ -202,53 +201,47 @@ namespace UI.DISEÑO
             // 
             // btnDesactivar
             // 
-            btnDesactivar.BackColor = Color.Red;
-            btnDesactivar.Location = new Point(534, 605);
+            btnDesactivar.Location = new Point(903, 676);
             btnDesactivar.Name = "btnDesactivar";
-            btnDesactivar.Size = new Size(126, 46);
+            btnDesactivar.Size = new Size(126, 29);
             btnDesactivar.TabIndex = 22;
             btnDesactivar.Text = "DESACTIVAR";
-            btnDesactivar.UseVisualStyleBackColor = false;
-            btnDesactivar.BackColorChanged += FrmEstadoClientes_Load;
+            btnDesactivar.UseVisualStyleBackColor = true;
             btnDesactivar.Click += btnDesactivar_Click;
             // 
             // lblBuscar
             // 
-            lblBuscar.Anchor = AnchorStyles.None;
             lblBuscar.AutoSize = true;
-            lblBuscar.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            lblBuscar.Location = new Point(285, 78);
+            lblBuscar.Location = new Point(12, 99);
             lblBuscar.Name = "lblBuscar";
-            lblBuscar.Size = new Size(100, 35);
+            lblBuscar.Size = new Size(55, 20);
             lblBuscar.TabIndex = 25;
             lblBuscar.Text = "Buscar:";
             // 
             // txtBuscar
             // 
-            txtBuscar.Anchor = AnchorStyles.None;
-            txtBuscar.Font = new Font("Segoe UI", 15F);
-            txtBuscar.Location = new Point(381, 80);
+            txtBuscar.Font = new Font("Segoe UI", 10F);
+            txtBuscar.Location = new Point(73, 94);
             txtBuscar.Name = "txtBuscar";
             txtBuscar.PlaceholderText = "Nombre, plan, estado...";
-            txtBuscar.Size = new Size(491, 41);
+            txtBuscar.Size = new Size(360, 30);
             txtBuscar.TabIndex = 26;
-            txtBuscar.TabStop = false;
             txtBuscar.TextChanged += txtBuscar_TextChanged;
             // 
             // FrmEstadoClientes
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1062, 673);
+            ClientSize = new Size(1573, 717);
             Controls.Add(txtBuscar);
             Controls.Add(lblBuscar);
             Controls.Add(btnDesactivar);
             Controls.Add(btnRenovar);
             Controls.Add(btnAtras);
-            Controls.Add(panelNav);
             Controls.Add(dgvEstado);
+            Controls.Add(panelNav);
             Name = "FrmEstadoClientes";
-            Text = "ESTADO Y RENOVACION";
+            Text = "FrmEstadoClientes";
             WindowState = FormWindowState.Maximized;
             Load += FrmEstadoClientes_Load;
             panelNav.ResumeLayout(false);

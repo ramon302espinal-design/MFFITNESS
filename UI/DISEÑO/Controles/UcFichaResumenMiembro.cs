@@ -257,7 +257,6 @@ namespace UI.DISEÑO.Controles
             if (ficha.LesionCuello) zonas.Add("Cuello");
             if (ficha.LesionTobillo) zonas.Add("Tobillo");
             if (ficha.LesionCadera) zonas.Add("Cadera");
-            if (ficha.LesionOtro) zonas.Add("Otro");
 
             bool tieneDesc = !string.IsNullOrWhiteSpace(ficha.LesionDescripcion);
             if (zonas.Count == 0 && !tieneDesc)

@@ -27,7 +27,6 @@ BEGIN
         LesionCuello BIT NOT NULL CONSTRAINT DF_CFS_Cuello DEFAULT(0),
         LesionTobillo BIT NOT NULL CONSTRAINT DF_CFS_Tobillo DEFAULT(0),
         LesionCadera BIT NOT NULL CONSTRAINT DF_CFS_Cadera DEFAULT(0),
-        LesionOtro BIT NOT NULL CONSTRAINT DF_CFS_LesionOtro DEFAULT(0),
         LesionDescripcion NVARCHAR(500) NULL,
         TomaMedicamentos BIT NOT NULL CONSTRAINT DF_CFS_TomaMeds DEFAULT(0),
         ListaMedicamentos NVARCHAR(500) NULL,
@@ -42,8 +41,6 @@ BEGIN
 END
 GO
 
-IF COL_LENGTH('dbo.ClienteFichaSalud', 'LesionOtro') IS NULL
-    ALTER TABLE dbo.ClienteFichaSalud ADD LesionOtro BIT NOT NULL CONSTRAINT DF_CFS_LesionOtro DEFAULT(0);
 IF COL_LENGTH('dbo.ClienteFichaSalud', 'TieneAlergias') IS NULL
     ALTER TABLE dbo.ClienteFichaSalud ADD TieneAlergias BIT NOT NULL CONSTRAINT DF_CFS_Alergias DEFAULT(0);
 IF COL_LENGTH('dbo.ClienteFichaSalud', 'AlergiasDescripcion') IS NULL

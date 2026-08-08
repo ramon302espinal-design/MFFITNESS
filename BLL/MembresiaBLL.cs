@@ -103,8 +103,8 @@ namespace BLL
             && dal.TieneMembresiaVencida(clienteId);
 
         /// <summary>
-        /// True si el cliente ya tiene membresía ACTIVA (pagada o financiada vigente).
-        /// El financiamiento (activación a crédito) aplica a VENCIDO / DESACTIVADO / sin plan.
+        /// True si el cliente tiene membresía activa (pagada o no).
+        /// El financiamiento no aplica a clientes que ya tienen plan vigente.
         /// </summary>
         public bool ClienteNoElegibleParaFinanciamiento(int clienteId, out string motivo)
         {
@@ -129,8 +129,7 @@ namespace BLL
             motivo =
                 $"{nombre} ya tiene una membresía activa/paga ({plan}).\n\n" +
                 $"Vence: {vence}\n\n" +
-                "El financiamiento solo aplica a clientes sin membresía vigente\n" +
-                "(vencidos, desactivados o sin plan).\n" +
+                "El financiamiento solo aplica a clientes sin membresía vigente.\n" +
                 "Use renovación o espere a que el plan actual venza.";
             return true;
         }
@@ -276,13 +275,9 @@ namespace BLL
             var txService = new CajaTransaccionService();
             var deudaDAL = new DeudaDAL();
             var pagoDAL = new PagoDAL();
-            var historialDAL = new HistorialMembresiaDAL();
             string conceptoCaja = $"Pago Cliente {clienteId} - {conceptoPago}";
-            string notaHistorial =
-                $"Financiamiento - Inicial: ${pagoInicial:N2}, Saldo: ${saldo:N2}";
 
-            // Membresía + deuda (+ pago inicial/caja) + historial en una sola TX.
-            // El historial PAGO anula SALIDA (DESACTIVADO → ACTIVO en Estado Clientes).
+            // Membresía + deuda (+ pago inicial/caja) en una sola transacción SQL.
             txService.Ejecutar((conn, tx) =>
             {
                 result.MembresiaId = dal.CrearMembresiaConId(
@@ -335,16 +330,6 @@ namespace BLL
                         conceptoCaja,
                         usuario);
                 }
-
-                historialDAL.Registrar(
-                    conn,
-                    tx,
-                    clienteId,
-                    "PAGO",
-                    planId,
-                    pagoInicial,
-                    usuario,
-                    notaHistorial);
             });
 
             if (result.DeudaId > 0)

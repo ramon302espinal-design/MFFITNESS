@@ -48,18 +48,6 @@ namespace UI.DISEÑO
 
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloEstado);
             AjustarContenidoTrasNavBar();
-            ConfigurarGridEstado();
-        }
-
-        private void ConfigurarGridEstado()
-        {
-            dgvEstado.AutoGenerateColumns = true;
-            dgvEstado.AllowUserToAddRows = false;
-            dgvEstado.AllowUserToDeleteRows = false;
-            dgvEstado.ReadOnly = true;
-            // AllCells dispara CellFormatting en cada paint y rompe durante rebind.
-            dgvEstado.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
-            dgvEstado.RowTemplate.Height = 32;
         }
 
         /// <summary>
@@ -119,22 +107,12 @@ namespace UI.DISEÑO
         // ===============================
         private void FrmEstadoClientes_Load(object? sender, EventArgs e)
         {
-               
+
             CargarEstado();
 
             timerActualizacion.Interval = 30000;
             timerActualizacion.Tick += TimerActualizacion_Tick;
             timerActualizacion.Start();
-
-
-            // 🔴 Forzamos el color rojo para el botón de desactivar
-            btnDesactivar.BackColor = Color.Red;
-            btnDesactivar.ForeColor = Color.White; // Opcional: texto blanco para buen contraste
-
-            
-
-
-
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -164,17 +142,10 @@ namespace UI.DISEÑO
             try
             {
                 cargando = true;
-                dgvEstado.SuspendLayout();
-                dgvEstado.CellFormatting -= dgvEstado_CellFormatting;
 
                 membresiaBLL.ActualizarVencimientos();
 
-                DataTable tabla = estadoBLL.ObtenerEstadoClientes()
-                    ?? throw new InvalidOperationException("No se pudo obtener el estado de clientes.");
-
-                AsegurarColumnasEstado(tabla);
-
-                _bsEstado.DataSource = tabla;
+                _bsEstado.DataSource = estadoBLL.ObtenerEstadoClientes();
                 dgvEstado.DataSource = _bsEstado;
                 AplicarFiltroBusqueda();
                 FormatearGrid();
@@ -186,26 +157,7 @@ namespace UI.DISEÑO
             }
             finally
             {
-                dgvEstado.CellFormatting -= dgvEstado_CellFormatting;
-                dgvEstado.CellFormatting += dgvEstado_CellFormatting;
-                dgvEstado.ResumeLayout();
                 cargando = false;
-            }
-        }
-
-        private static void AsegurarColumnasEstado(DataTable tabla)
-        {
-            string[] requeridas =
-            {
-                "ID", "Nombre", "Membresia", "FechaInicio", "FechaFin", "Estado",
-                "EstadoDeuda", "SaldoPendiente", "MontoFinanciado", "VencimientoDeuda"
-            };
-
-            foreach (string col in requeridas)
-            {
-                if (!tabla.Columns.Contains(col))
-                    throw new InvalidOperationException(
-                        $"La consulta de estado no devolvió la columna '{col}'.");
             }
         }
 
@@ -380,31 +332,23 @@ namespace UI.DISEÑO
         // ===============================
         // COLORES
         // ===============================
-        private void dgvEstado_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        private void dgvEstado_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (cargando || e.RowIndex < 0 || e.ColumnIndex < 0)
-                return;
+            if (e.RowIndex < 0) return;
 
-            if (dgvEstado.Columns.Count == 0 || e.RowIndex >= dgvEstado.Rows.Count)
-                return;
-
-            DataGridViewRow fila = dgvEstado.Rows[e.RowIndex];
-            if (fila.IsNewRow)
-                return;
-
-            string estado = ObtenerValorCelda(fila, "Estado").ToUpperInvariant();
+            string estado = dgvEstado.Rows[e.RowIndex].Cells["Estado"]?.Value?.ToString()?.ToUpper() ?? "";
 
             if (estado == "VENCIDO")
-                fila.DefaultCellStyle.BackColor = Color.LightCoral;
-            else if (estado == "ACTIVO")
-                fila.DefaultCellStyle.BackColor = Color.LightGreen;
-            else if (estado == "DESACTIVADO" || estado == "SIN MEMBRESIA")
-                fila.DefaultCellStyle.BackColor = Color.LightGray;
+                dgvEstado.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightCoral;
 
-            string colName = dgvEstado.Columns[e.ColumnIndex].Name;
+            else if (estado == "ACTIVO")
+                dgvEstado.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightGreen;
+
+            else if (estado == "DESACTIVADO" || estado == "SIN MEMBRESIA")
+                dgvEstado.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightGray;
 
             // Etiquetas legibles en la columna Estado (datos internos: VENCIDO / DESACTIVADO)
-            if (string.Equals(colName, "Estado", StringComparison.OrdinalIgnoreCase))
+            if (e.ColumnIndex >= 0 && dgvEstado.Columns[e.ColumnIndex].Name == "Estado")
             {
                 if (estado == "VENCIDO")
                 {
@@ -419,18 +363,21 @@ namespace UI.DISEÑO
             }
 
             // Fechas solo dd/MM/yyyy (evita desalineación por hora/offset)
-            if ((string.Equals(colName, "FechaInicio", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(colName, "FechaFin", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(colName, "VencimientoDeuda", StringComparison.OrdinalIgnoreCase))
-                && e.Value != null && e.Value != DBNull.Value
-                && e.Value is DateTime dt)
+            if (e.ColumnIndex >= 0)
             {
-                e.Value = dt.ToString("dd/MM/yyyy");
-                e.FormattingApplied = true;
-                e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                string colName = dgvEstado.Columns[e.ColumnIndex].Name;
+                if ((colName == "FechaInicio" || colName == "FechaFin" || colName == "VencimientoDeuda")
+                    && e.Value != null && e.Value != DBNull.Value
+                    && e.Value is DateTime dt)
+                {
+                    e.Value = dt.ToString("dd/MM/yyyy");
+                    e.FormattingApplied = true;
+                    e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
             }
 
-            if (string.Equals(colName, "EstadoDeuda", StringComparison.OrdinalIgnoreCase))
+            // 🆕 RESALTAR DEUDAS ACTIVAS EN COLUMNA ESPECÍFICA
+            if (e.ColumnIndex >= 0 && dgvEstado.Columns[e.ColumnIndex].Name == "EstadoDeuda")
             {
                 string estadoDeuda = e.Value?.ToString() ?? "";
                 if (estadoDeuda == "ACTIVA")
@@ -441,13 +388,17 @@ namespace UI.DISEÑO
                 }
             }
 
-            if (string.Equals(colName, "SaldoPendiente", StringComparison.OrdinalIgnoreCase))
+            // 🆕 RESALTAR SALDO PENDIENTE > 0
+            if (e.ColumnIndex >= 0 && dgvEstado.Columns[e.ColumnIndex].Name == "SaldoPendiente")
             {
-                if (e.Value != null && decimal.TryParse(e.Value.ToString(), out decimal saldo) && saldo > 0)
+                if (e.Value != null && decimal.TryParse(e.Value.ToString(), out decimal saldo))
                 {
-                    e.CellStyle.BackColor = Color.MistyRose;
-                    e.CellStyle.ForeColor = Color.DarkRed;
-                    e.CellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
+                    if (saldo > 0)
+                    {
+                        e.CellStyle.BackColor = Color.MistyRose;
+                        e.CellStyle.ForeColor = Color.DarkRed;
+                        e.CellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
+                    }
                 }
             }
         }

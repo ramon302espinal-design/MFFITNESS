@@ -61,7 +61,7 @@ namespace UI
             panel1.Dock = DockStyle.Top;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(1563, 200);
+            panel1.Size = new Size(1611, 200);
             panel1.TabIndex = 0;
             // 
             // panelIngresoPendiente
@@ -174,7 +174,7 @@ namespace UI
             dgvDeudas.Location = new Point(28, 275);
             dgvDeudas.Name = "dgvDeudas";
             dgvDeudas.RowHeadersWidth = 51;
-            dgvDeudas.Size = new Size(1188, 228);
+            dgvDeudas.Size = new Size(1349, 228);
             dgvDeudas.TabIndex = 1;
             dgvDeudas.SelectionChanged += dgvDeudas_SelectionChanged;
             // 
@@ -244,10 +244,9 @@ namespace UI
             // 
             // txtMontoPago
             // 
-            txtMontoPago.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            txtMontoPago.Location = new Point(1236, 354);
+            txtMontoPago.Location = new Point(1429, 390);
             txtMontoPago.Name = "txtMontoPago";
-            txtMontoPago.Size = new Size(226, 52);
+            txtMontoPago.Size = new Size(125, 27);
             txtMontoPago.TabIndex = 8;
             // 
             // FrmDeudaDashboard
@@ -255,7 +254,7 @@ namespace UI
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ControlDark;
-            ClientSize = new Size(1563, 673);
+            ClientSize = new Size(1611, 768);
             Controls.Add(txtMontoPago);
             Controls.Add(btnDescargarReporte);
             Controls.Add(btnIrAPagarDeuda);
@@ -265,7 +264,7 @@ namespace UI
             Controls.Add(dgvDeudas);
             Controls.Add(panel1);
             Name = "FrmDeudaDashboard";
-            Text = "DEUDAS ";
+            Text = "FrmDeudaDashboard";
             WindowState = FormWindowState.Maximized;
             Load += FrmDeudaDashboard_Load;
             panel1.ResumeLayout(false);

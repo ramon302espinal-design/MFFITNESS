@@ -44,7 +44,6 @@ namespace UI.DISEÑO.Controles
             chkLesionCuello = new CheckBox();
             chkLesionTobillo = new CheckBox();
             chkLesionCadera = new CheckBox();
-            chkLesionOtro = new CheckBox();
             lblLesionDescripcion = new Label();
             txtLesionDescripcion = new TextBox();
             lblMedicamentos = new Label();
@@ -136,7 +135,6 @@ namespace UI.DISEÑO.Controles
             Controls.Add(chkLesionCuello);
             Controls.Add(chkLesionTobillo);
             Controls.Add(chkLesionCadera);
-            Controls.Add(chkLesionOtro);
             Controls.Add(lblLesionDescripcion);
             Controls.Add(txtLesionDescripcion);
             Controls.Add(lblMedicamentos);
@@ -474,17 +472,6 @@ namespace UI.DISEÑO.Controles
             chkLesionCadera.Text = "Cadera";
             chkLesionCadera.UseVisualStyleBackColor = true;
             // 
-            // chkLesionOtro
-            // 
-            chkLesionOtro.AutoSize = true;
-            chkLesionOtro.Font = new Font("Segoe UI", 10F);
-            chkLesionOtro.Location = new Point(20, 474);
-            chkLesionOtro.Name = "chkLesionOtro";
-            chkLesionOtro.Size = new Size(67, 27);
-            chkLesionOtro.TabIndex = 29;
-            chkLesionOtro.Text = "Otro";
-            chkLesionOtro.UseVisualStyleBackColor = true;
-            // 
             // lblLesionDescripcion
             // 
             lblLesionDescripcion.AutoSize = true;
@@ -494,16 +481,13 @@ namespace UI.DISEÑO.Controles
             lblLesionDescripcion.Size = new Size(103, 23);
             lblLesionDescripcion.TabIndex = 29;
             lblLesionDescripcion.Text = "Descripción";
-            lblLesionDescripcion.Visible = false;
             // 
             // txtLesionDescripcion
             // 
-            txtLesionDescripcion.Enabled = false;
             txtLesionDescripcion.Font = new Font("Segoe UI", 11F);
-            txtLesionDescripcion.Location = new Point(100, 472);
+            txtLesionDescripcion.Location = new Point(140, 472);
             txtLesionDescripcion.Name = "txtLesionDescripcion";
-            txtLesionDescripcion.PlaceholderText = "Describa la lesión...";
-            txtLesionDescripcion.Size = new Size(680, 32);
+            txtLesionDescripcion.Size = new Size(640, 32);
             txtLesionDescripcion.TabIndex = 30;
             // 
             // lblMedicamentos
@@ -1087,7 +1071,6 @@ namespace UI.DISEÑO.Controles
         private CheckBox chkLesionCuello;
         private CheckBox chkLesionTobillo;
         private CheckBox chkLesionCadera;
-        private CheckBox chkLesionOtro;
         private Label lblLesionDescripcion;
         private TextBox txtLesionDescripcion;
         private Label lblMedicamentos;

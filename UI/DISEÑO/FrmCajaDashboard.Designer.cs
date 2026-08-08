@@ -85,7 +85,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1062, 52);
+            panelNav.Size = new Size(1513, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -179,6 +179,7 @@ namespace UI.DISEÑO
             btnBack.Name = "btnBack";
             btnBack.Size = new Size(43, 35);
             btnBack.TabIndex = 0;
+            btnBack.Text = "";
             btnBack.UseVisualStyleBackColor = true;
             // 
             // panelTop
@@ -189,7 +190,7 @@ namespace UI.DISEÑO
             panelTop.Dock = DockStyle.Top;
             panelTop.Location = new Point(0, 52);
             panelTop.Name = "panelTop";
-            panelTop.Size = new Size(1062, 65);
+            panelTop.Size = new Size(1513, 65);
             panelTop.TabIndex = 1;
             // 
             // lblEstadoCaja
@@ -255,7 +256,7 @@ namespace UI.DISEÑO
             panelIndicadores.Dock = DockStyle.Top;
             panelIndicadores.Location = new Point(0, 117);
             panelIndicadores.Name = "panelIndicadores";
-            panelIndicadores.Size = new Size(1062, 150);
+            panelIndicadores.Size = new Size(1513, 150);
             panelIndicadores.TabIndex = 1;
             // 
             // panel1
@@ -360,7 +361,7 @@ namespace UI.DISEÑO
             panelBotones.ForeColor = Color.Black;
             panelBotones.Location = new Point(0, 267);
             panelBotones.Name = "panelBotones";
-            panelBotones.Size = new Size(1062, 406);
+            panelBotones.Size = new Size(1513, 466);
             panelBotones.TabIndex = 2;
             // 
             // btnCierresCaja
@@ -418,13 +419,13 @@ namespace UI.DISEÑO
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveBorder;
-            ClientSize = new Size(1062, 673);
+            ClientSize = new Size(1513, 733);
             Controls.Add(panelBotones);
             Controls.Add(panelIndicadores);
             Controls.Add(panelTop);
             Controls.Add(panelNav);
             Name = "FrmCajaDashboard";
-            Text = "CAJA";
+            Text = "FrmCajaDashboard";
             WindowState = FormWindowState.Maximized;
             Load += FrmCajaDashboard_Load;
             panelNav.ResumeLayout(false);
