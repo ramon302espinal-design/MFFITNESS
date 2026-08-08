@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Media;
 using System.Windows.Forms;
 using BLL.Models;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -49,7 +48,7 @@ namespace UI.DISEÑO
 
             _totalAPagar = totalAPagar;
             InitializeComponent();
-            if (ThemeHost.IsDesignTime())
+            if (DesignMode)
                 return;
 
             ConfigurarTagsYEventos();
@@ -60,28 +59,10 @@ namespace UI.DISEÑO
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            if (ThemeHost.IsDesignTime() || DesignMode)
+            if (DesignMode)
                 return;
 
-            ThemeApplier.ApplyRoundedRegion(this, 18);
-            ThemeApplier.ApplyRoundedRegion(cardTotal, 18);
-            ThemeApplier.ApplyRoundedRegion(cardCambio, 20);
-            ThemeApplier.ApplyRoundedRegion(btnCerrar, 12);
-            ThemeApplier.ApplyRoundedRegion(btnVistaPrevia, 12);
-            ThemeApplier.ApplyRoundedRegion(btnPagar, 15);
-            ThemeApplier.ApplyRoundedRegion(pnlMontoInput, 12);
-
-            foreach (Button billete in ObtenerBilletes())
-                ThemeApplier.ApplyRoundedRegion(billete, 12);
-
             txtMontoRecibido.Focus();
-        }
-
-        protected override void OnResize(EventArgs e)
-        {
-            base.OnResize(e);
-            if (IsHandleCreated && !IsDisposed)
-                ThemeApplier.ApplyRoundedRegion(this, 18);
         }
 
         #region Cableado
@@ -106,11 +87,6 @@ namespace UI.DISEÑO
             btnPagar.Click += (_, _) => ProcesarPago();
             btnCerrar.Click += (_, _) => CerrarSinProcesar();
             btnVistaPrevia.Click += btnVistaPrevia_Click;
-
-            btnPagar.MouseEnter += (_, _) => btnPagar.BackColor = CobrarButtonStyle.VerdeHover;
-            btnPagar.MouseLeave += (_, _) => btnPagar.BackColor = CobrarButtonStyle.Verde;
-            btnPagar.MouseDown += (_, _) => btnPagar.BackColor = Color.FromArgb(21, 128, 61);
-            btnPagar.MouseUp += (_, _) => btnPagar.BackColor = CobrarButtonStyle.VerdeHover;
 
             btnCerrar.MouseEnter += (_, _) => btnCerrar.BackColor = Color.FromArgb(0xF1, 0xF5, 0xF9);
             btnCerrar.MouseLeave += (_, _) => btnCerrar.BackColor = Color.Transparent;
@@ -634,8 +610,7 @@ namespace UI.DISEÑO
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using var brush = new SolidBrush(ColorPrincipal);
-            using var path = ThemeApplier.CreateRoundedPath(new Rectangle(0, 0, panel.Width - 1, panel.Height - 1), 20);
-            e.Graphics.FillPath(brush, path);
+            e.Graphics.FillRectangle(brush, panel.ClientRectangle);
         }
 
         private void InputBorder_Paint(object? sender, PaintEventArgs e)
@@ -645,9 +620,7 @@ namespace UI.DISEÑO
 
             Color borde = txtMontoRecibido.Focused ? ColorPrincipal : ColorBorde;
             using var pen = new Pen(borde, txtMontoRecibido.Focused ? 2f : 1f);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var path = ThemeApplier.CreateRoundedPath(new Rectangle(0, 0, panel.Width - 1, panel.Height - 1), 12);
-            e.Graphics.DrawPath(pen, path);
+            e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
         }
 
         #endregion

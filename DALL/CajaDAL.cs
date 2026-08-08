@@ -8,33 +8,48 @@ namespace DL
     {
         private DBHelper db = new DBHelper();
 
-        public DataRow? ObtenerCajaAbierta()
+        public DataRow? ObtenerCajaAbierta(string usuario)
         {
+            if (string.IsNullOrWhiteSpace(usuario))
+                return null;
+
             string query = @"
             SELECT TOP 1 * 
             FROM Caja 
             WHERE Estado = 'ABIERTA'
+              AND UPPER(LTRIM(RTRIM(Usuario))) = UPPER(LTRIM(RTRIM(@Usuario)))
             ORDER BY Id DESC";
 
-            DataTable dt = db.ExecuteQuery(query);
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Usuario", usuario.Trim())
+            };
 
+            DataTable dt = db.ExecuteQuery(query, parametros);
             return dt.Rows.Count > 0 ? dt.Rows[0] : null;
         }
-        public DataRow? ObtenerCajaAbierta(SqlConnection conn, SqlTransaction tx)
+
+        public DataRow? ObtenerCajaAbierta(SqlConnection conn, SqlTransaction tx, string usuario)
         {
-                    string query = @"
+            if (string.IsNullOrWhiteSpace(usuario))
+                return null;
+
+            string query = @"
             SELECT TOP 1 * 
             FROM Caja 
             WHERE Estado = 'ABIERTA'
+              AND UPPER(LTRIM(RTRIM(Usuario))) = UPPER(LTRIM(RTRIM(@Usuario)))
             ORDER BY Id DESC";
 
             using (SqlCommand cmd = new SqlCommand(query, conn, tx))
-            using (SqlDataAdapter da = new SqlDataAdapter(cmd))
             {
-                DataTable dt = new DataTable();
-                da.Fill(dt);
-
-                return dt.Rows.Count > 0 ? dt.Rows[0] : null;
+                cmd.Parameters.AddWithValue("@Usuario", usuario.Trim());
+                using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+                {
+                    DataTable dt = new DataTable();
+                    da.Fill(dt);
+                    return dt.Rows.Count > 0 ? dt.Rows[0] : null;
+                }
             }
         }
         // ===============================

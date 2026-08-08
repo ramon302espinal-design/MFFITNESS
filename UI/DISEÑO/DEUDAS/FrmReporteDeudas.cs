@@ -4,7 +4,6 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using UI.Theme;
 
 namespace UI
 {
@@ -18,7 +17,6 @@ namespace UI
         public FrmReporteDeudas()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
         }
 
         private void FrmReporteDeudas_Load(object sender, EventArgs e)

@@ -6,7 +6,6 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Linq;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
@@ -19,7 +18,6 @@ namespace UI
         public FrmHistorialDeudas()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
         }
 
         private void FrmHistorialDeudas_Load(object sender, EventArgs e)
@@ -51,6 +49,13 @@ namespace UI
             AppEventos.OnPagoRegistrado += CargarHistorial;
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            AppEventos.OnDeudaModificada -= CargarHistorial;
+            AppEventos.OnPagoRegistrado -= CargarHistorial;
+            base.OnFormClosing(e);
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             AppEventos.OnDeudaModificada -= CargarHistorial;
@@ -63,25 +68,7 @@ namespace UI
         // ===============================
         private void ConfigurarGrid()
         {
-            dgvHistorial.BorderStyle = BorderStyle.None;
-            dgvHistorial.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
-            dgvHistorial.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            dgvHistorial.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 122, 204);
-            dgvHistorial.DefaultCellStyle.SelectionForeColor = Color.White;
-            dgvHistorial.BackgroundColor = Color.White;
-            dgvHistorial.EnableHeadersVisualStyles = false;
-            dgvHistorial.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 37, 38);
-            dgvHistorial.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvHistorial.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvHistorial.ColumnHeadersHeight = 35;
-            dgvHistorial.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            dgvHistorial.RowTemplate.Height = 30;
-            dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvHistorial.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvHistorial.MultiSelect = false;
-            dgvHistorial.ReadOnly = true;
-            dgvHistorial.AllowUserToAddRows = false;
-            dgvHistorial.AllowUserToDeleteRows = false;
+            // Estilos visuales del grid viven en el Designer.
         }
 
         // ===============================
@@ -103,11 +90,22 @@ namespace UI
         // ===============================
         private void CargarHistorial()
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (InvokeRequired)
             {
-                BeginInvoke(new Action(CargarHistorial));
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(CargarHistorial));
+                }
+                catch (ObjectDisposedException) { }
                 return;
             }
+
+            if (!IsHandleCreated)
+                return;
 
             try
             {

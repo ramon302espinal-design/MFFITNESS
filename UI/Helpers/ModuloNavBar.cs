@@ -5,7 +5,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using UI.DISEÑO;
-using UI.Theme;
 
 using FrmReportesUi = UI.FrmReportes;
 
@@ -148,8 +147,6 @@ namespace UI.Helpers
 
                     btn.Location = new Point(x, BtnY);
                     btn.BringToFront();
-                    if (string.Equals(name, "btnNavPagar", StringComparison.OrdinalIgnoreCase))
-                        CobrarButtonStyle.Apply(btn);
                     x += Math.Max(btn.Width, 90) + Gap;
                 }
             }
@@ -164,6 +161,10 @@ namespace UI.Helpers
             WireClick(panelNav, host, "btnNavPagar", () => AbrirPos(host));
             WireClick(panelNav, host, "btnNavDeudas", () =>
             {
+                // Si ya estamos en Deudas, no abrir otra instancia modal encima.
+                if (host is UI.FrmModuloDeudas)
+                    return;
+
                 using var frm = new UI.FrmModuloDeudas();
                 frm.ShowDialog(host);
             });
@@ -397,10 +398,24 @@ namespace UI.Helpers
         private static void AbrirPos(Form host)
         {
             var presentacion = ObtenerPresentacion();
+
+            // Evitar abrir POS encima de un FrmPagos ya abierto
+            foreach (Form abierto in Application.OpenForms)
+            {
+                if (abierto is FrmPagos pagos && !pagos.IsDisposed)
+                {
+                    pagos.Focus();
+                    return;
+                }
+            }
+
             using Form frm = presentacion != null
                 ? new FrmPagos(presentacion)
                 : new FrmPagos(host);
-            frm.ShowDialog(host);
+
+            // Owner top-level: Presentacion si existe (mejor que un módulo modal anidado)
+            Form owner = presentacion ?? host;
+            frm.ShowDialog(owner);
             presentacion?.CargarDashboard();
         }
 

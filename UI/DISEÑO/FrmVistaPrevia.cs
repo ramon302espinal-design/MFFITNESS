@@ -2,7 +2,6 @@ using System;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.Windows.Forms;
-using UI.Theme;
 
 namespace UI
 {
@@ -16,7 +15,6 @@ namespace UI
         public FrmVistaPrevia()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             printDocument = new PrintDocument();
             printDocument.PrintPage += PrintDocument_PrintPage;
         }
@@ -28,7 +26,7 @@ namespace UI
 
         private void FrmVistaPrevia_Load(object sender, EventArgs e)
         {
-            if (ThemeHost.IsDesignTime())
+            if (DesignMode)
                 return;
             txtVistaPrevia.Text = contenido;
         }

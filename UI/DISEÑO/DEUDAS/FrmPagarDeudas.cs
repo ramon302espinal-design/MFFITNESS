@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using UI.Theme;
 
 namespace UI
 {
@@ -20,7 +19,6 @@ namespace UI
         public FrmPagarDeudas()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
         }
 
         public FrmPagarDeudas(string nombre, decimal saldoActual, string estadoActual, DateTime? ultimoPagoFecha)

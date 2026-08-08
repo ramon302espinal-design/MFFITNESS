@@ -63,7 +63,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1573, 52);
+            panelNav.Size = new Size(1062, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -157,16 +157,17 @@ namespace UI.DISEÑO
             btnBack.Name = "btnBack";
             btnBack.Size = new Size(43, 35);
             btnBack.TabIndex = 0;
-            btnBack.Text = "";
             btnBack.UseVisualStyleBackColor = true;
             // 
             // dgvEstado
             // 
+            dgvEstado.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvEstado.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllHeaders;
             dgvEstado.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvEstado.Location = new Point(0, 143);
+            dgvEstado.Location = new Point(0, 138);
             dgvEstado.Name = "dgvEstado";
             dgvEstado.RowHeadersWidth = 51;
-            dgvEstado.Size = new Size(1530, 527);
+            dgvEstado.Size = new Size(1062, 527);
             dgvEstado.TabIndex = 0;
             dgvEstado.CellDoubleClick += dgvEstado_CellDoubleClick;
             dgvEstado.CellFormatting += dgvEstado_CellFormatting;
@@ -185,15 +186,17 @@ namespace UI.DISEÑO
             btnAtras.Name = "btnAtras";
             btnAtras.Size = new Size(44, 45);
             btnAtras.TabIndex = 20;
-            btnAtras.Text = "?";
+            btnAtras.Text = "◀️";
             btnAtras.UseVisualStyleBackColor = false;
             btnAtras.Visible = false;
             // 
             // btnRenovar
             // 
-            btnRenovar.Location = new Point(7, 676);
+            btnRenovar.FlatStyle = FlatStyle.Flat;
+            btnRenovar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnRenovar.Location = new Point(770, 699);
             btnRenovar.Name = "btnRenovar";
-            btnRenovar.Size = new Size(94, 29);
+            btnRenovar.Size = new Size(142, 46);
             btnRenovar.TabIndex = 21;
             btnRenovar.Text = "RENOVAR";
             btnRenovar.UseVisualStyleBackColor = true;
@@ -201,12 +204,16 @@ namespace UI.DISEÑO
             // 
             // btnDesactivar
             // 
-            btnDesactivar.Location = new Point(903, 676);
+            btnDesactivar.BackColor = Color.Red;
+            btnDesactivar.FlatStyle = FlatStyle.Flat;
+            btnDesactivar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnDesactivar.Location = new Point(60, 699);
             btnDesactivar.Name = "btnDesactivar";
-            btnDesactivar.Size = new Size(126, 29);
+            btnDesactivar.Size = new Size(142, 46);
             btnDesactivar.TabIndex = 22;
             btnDesactivar.Text = "DESACTIVAR";
-            btnDesactivar.UseVisualStyleBackColor = true;
+            btnDesactivar.UseVisualStyleBackColor = false;
+            btnDesactivar.BackColorChanged += FrmEstadoClientes_Load;
             btnDesactivar.Click += btnDesactivar_Click;
             // 
             // lblBuscar
@@ -232,16 +239,16 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1573, 717);
+            ClientSize = new Size(1062, 849);
             Controls.Add(txtBuscar);
             Controls.Add(lblBuscar);
             Controls.Add(btnDesactivar);
             Controls.Add(btnRenovar);
             Controls.Add(btnAtras);
-            Controls.Add(dgvEstado);
             Controls.Add(panelNav);
+            Controls.Add(dgvEstado);
             Name = "FrmEstadoClientes";
-            Text = "FrmEstadoClientes";
+            Text = "ESTADO Y RENOVACION";
             WindowState = FormWindowState.Maximized;
             Load += FrmEstadoClientes_Load;
             panelNav.ResumeLayout(false);

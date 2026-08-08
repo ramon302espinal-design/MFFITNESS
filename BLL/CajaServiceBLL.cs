@@ -30,7 +30,8 @@ namespace BLL
         public (decimal ingresos, decimal egresos, decimal sistema, decimal diferencia)
 CerrarCajaConCuadre(decimal TotalContado)
         {
-            DataRow caja = cajaDAL.ObtenerCajaAbierta();
+            string usuario = ResolveUsuario();
+            DataRow? caja = cajaDAL.ObtenerCajaAbierta(usuario);
 
             if (caja == null)
                 throw new Exception("No hay caja abierta.");
@@ -41,8 +42,8 @@ CerrarCajaConCuadre(decimal TotalContado)
 
             if (!AppConfig.ModoPrueba)
             {
-                if (cierreDAL.YaExisteCierreHoy(turno))
-                    throw new Exception($"Ya se cerró el turno {turno}.");
+                if (cierreDAL.YaExisteCierreHoy(turno, usuario))
+                    throw new Exception($"Ya se cerró el turno {turno} para este usuario.");
             }
 
             decimal ingresos = cierreDAL.ObtenerTotalPorCaja(cajaId, "INGRESO");
@@ -59,7 +60,7 @@ CerrarCajaConCuadre(decimal TotalContado)
                 sistema,
                 TotalContado,
                 diferencia,
-                ResolveUsuario()
+                usuario
             );
 
             cajaDAL.CerrarCaja(cajaId);

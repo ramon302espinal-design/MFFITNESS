@@ -206,7 +206,7 @@ namespace UI.DISEÑO
             txtEmergenciaNombre.Clear();
             txtEmergenciaParentesco.Clear();
             txtEmergenciaTelefono.Clear();
-            txtEmergenciaTelefonoAlt.Clear();
+            
 
             _syncEnfermedades = true;
             try
@@ -298,7 +298,7 @@ namespace UI.DISEÑO
                 EmergenciaNombre = txtEmergenciaNombre.Text,
                 EmergenciaParentesco = txtEmergenciaParentesco.Text,
                 EmergenciaTelefono = txtEmergenciaTelefono.Text,
-                EmergenciaTelefonoAlt = txtEmergenciaTelefonoAlt.Text,
+               
                 Diabetes = chkDiabetes.Checked,
                 Hipertension = chkHipertension.Checked,
                 Asma = chkAsma.Checked,
@@ -351,7 +351,7 @@ namespace UI.DISEÑO
             txtEmergenciaNombre.Text = ficha.EmergenciaNombre ?? "";
             txtEmergenciaParentesco.Text = ficha.EmergenciaParentesco ?? "";
             txtEmergenciaTelefono.Text = ficha.EmergenciaTelefono ?? "";
-            txtEmergenciaTelefonoAlt.Text = ficha.EmergenciaTelefonoAlt ?? "";
+           
 
             _syncEnfermedades = true;
             try

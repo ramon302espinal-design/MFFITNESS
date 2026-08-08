@@ -302,7 +302,7 @@ namespace BLL
                         clienteId,
                         result.MembresiaId,
                         planId,
-                        $"Saldo plan {plan.Nombre}",
+                        $"Plan {plan.Nombre}",
                         saldo,
                         fechaVencimientoDeuda!.Value.Date,
                         usuario,

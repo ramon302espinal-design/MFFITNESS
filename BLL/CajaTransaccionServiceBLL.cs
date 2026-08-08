@@ -36,7 +36,7 @@ namespace BLL.Services
         {
             CajaDAL cajaDAL = new CajaDAL();
 
-            var caja = cajaDAL.ObtenerCajaAbierta(conn, tx);
+            var caja = cajaDAL.ObtenerCajaAbierta(conn, tx, usuario);
 
             if (caja == null)
                 throw new Exception("No hay caja abierta.");

@@ -5,7 +5,6 @@ using BLL;
 using BLL.Commands;
 using CORE;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
@@ -26,7 +25,6 @@ namespace UI
         public FrmDeudas(int? clienteIdPreseleccionado)
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
 
             if (clienteIdPreseleccionado.HasValue)
             {
@@ -36,7 +34,11 @@ namespace UI
         }
         private void dgvDeudas_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (dgvDeudas.Rows.Count == 0 || e.RowIndex < 0) return;
+            if (IsDisposed || dgvDeudas.Rows.Count == 0 || e.RowIndex < 0)
+                return;
+
+            if (e.ColumnIndex < 0 || e.ColumnIndex >= dgvDeudas.Columns.Count)
+                return;
 
             if (e.CellStyle == null)
                 e.CellStyle = new DataGridViewCellStyle(dgvDeudas.DefaultCellStyle);
@@ -195,29 +197,8 @@ namespace UI
         // ===============================
         private void ConfigurarGrid()
         {
+            // Estilos visuales del grid viven en el Designer.
             dgvDeudas.AutoGenerateColumns = true;
-            dgvDeudas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvDeudas.MultiSelect = false;
-            dgvDeudas.ReadOnly = true;
-            dgvDeudas.AllowUserToAddRows = false;
-            dgvDeudas.AllowUserToDeleteRows = false;
-            dgvDeudas.RowHeadersVisible = false;
-            dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvDeudas.BorderStyle = BorderStyle.None;
-            dgvDeudas.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
-            dgvDeudas.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-
-            dgvDeudas.DefaultCellStyle.SelectionBackColor = ColorSeleccionGrid;
-            dgvDeudas.DefaultCellStyle.SelectionForeColor = Color.White;
-            dgvDeudas.RowsDefaultCellStyle.SelectionBackColor = ColorSeleccionGrid;
-            dgvDeudas.RowsDefaultCellStyle.SelectionForeColor = Color.White;
-            dgvDeudas.AlternatingRowsDefaultCellStyle.SelectionBackColor = ColorSeleccionGrid;
-            dgvDeudas.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.White;
-            dgvDeudas.BackgroundColor = Color.White;
-            dgvDeudas.EnableHeadersVisualStyles = false;
-            dgvDeudas.ColumnHeadersDefaultCellStyle.BackColor = Color.Black;
-            dgvDeudas.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-
             dgvDeudas.DataSource = _bsDeudas;
         }
 
@@ -226,11 +207,22 @@ namespace UI
         // ===============================
         private void CargarDeudas()
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (InvokeRequired)
             {
-                BeginInvoke(new Action(CargarDeudas));
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(CargarDeudas));
+                }
+                catch (ObjectDisposedException) { }
                 return;
             }
+
+            if (!IsHandleCreated)
+                return;
 
             try
             {
@@ -494,8 +486,10 @@ namespace UI
         // ===============================
         private void btnNuevaDeuda_Click(object sender, EventArgs e)
         {
-            FrmCrearDeuda frm = new FrmCrearDeuda();
-            frm.ShowDialog();
+            using var frm = new FrmCrearDeuda();
+            var owner = FindForm() ?? this;
+            if (frm.ShowDialog(owner) == DialogResult.OK)
+                CargarDeudas();
         }
 
         // ===============================
@@ -526,7 +520,7 @@ namespace UI
                 var row = dgvDeudas.CurrentRow;
 
                 string nombre = row.Cells["Nombre"].Value?.ToString() ?? "Cliente";
-                decimal saldo = Convert.ToDecimal(row.Cells["Saldo"].Value);
+                decimal saldo = Convert.ToDecimal(row.Cells["Saldo"].Value ?? 0);
                 string estado = row.Cells["Estado"].Value?.ToString() ?? "ACTIVA";
 
                 // 🔥 VALIDAR SI YA ESTÁ PAGADA
@@ -545,9 +539,10 @@ namespace UI
                 // 🔥 Por ahora sin último pago (lo puedes mejorar luego)
                 DateTime? ultimoPago = null;
 
-                FrmPagarDeudas frm = new FrmPagarDeudas(nombre, saldo, estado, ultimoPago);
+                using var frm = new FrmPagarDeudas(nombre, saldo, estado, ultimoPago);
+                var owner = FindForm() ?? this;
 
-                if (frm.ShowDialog() == DialogResult.OK)
+                if (frm.ShowDialog(owner) == DialogResult.OK)
                 {
                     var result = DeudaCommandService.RegistrarPago(
                         deudaId, frm.Monto, frm.Metodo, Sesion.Usuario);
@@ -584,8 +579,9 @@ namespace UI
         // ===============================
         private void btnVerHistorial_Click(object sender, EventArgs e)
         {
-            FrmHistorialDeudas frm = new FrmHistorialDeudas();
-            frm.ShowDialog();
+            using var frm = new FrmHistorialDeudas();
+            var owner = FindForm() ?? this;
+            frm.ShowDialog(owner);
         }
 
         // ===============================
@@ -661,6 +657,13 @@ namespace UI
         // ===============================
         // LIMPIAR EVENTO (CRÍTICO)
         // ===============================
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            AppEventos.OnPagoRegistrado -= CargarDeudas;
+            AppEventos.OnDeudaModificada -= CargarDeudas;
+            base.OnFormClosing(e);
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             AppEventos.OnPagoRegistrado -= CargarDeudas;

@@ -4,7 +4,6 @@ using CORE;
 using CORE.Commands;
 using System;
 using System.Windows.Forms;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -16,7 +15,6 @@ namespace UI.DISEÑO
         public FrmRegistrarGasto()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             cmbTipoMovimiento?.Items.AddRange(new string[] { "Ingreso", "Egreso", "Apertura" });
             if (cmbTipoMovimiento != null && cmbTipoMovimiento.Items.Count > 0)
                 cmbTipoMovimiento.SelectedIndex = 0;

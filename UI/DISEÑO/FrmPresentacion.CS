@@ -221,6 +221,12 @@ namespace UI.DISEÑO
                     btnPagar.Visible = true;
                     btnCaja.Visible = true;
                     btnHistorial.Visible = true;
+                    if (EsUsuarioCajaOperativa())
+                    {
+                        btnAgregarCliente.Visible = true;
+                        btnProductoStock.Visible = true;
+                        btnEstado.Visible = true;
+                    }
                     break;
                 case "CONSULTA":
                     btnEstado.Visible = true;
@@ -234,10 +240,11 @@ namespace UI.DISEÑO
 
             // 🔥 PERMISOS ADICIONALES GRANULARES
             // Control de visibilidad de Deudas según permisos específicos
-            if (Sesion.TienePermiso("VER_DEUDAS") || 
-                Sesion.TienePermiso("1003") || 
+            if (Sesion.TienePermiso("VER_DEUDAS") ||
+                Sesion.TienePermiso("1003") ||
                 Sesion.TienePermiso("VER_HISTORIAL_DEUDAS") ||
-                rol == "ADMIN")
+                rol == "ADMIN" ||
+                EsUsuarioCajaOperativa())
             {
                 btnDeudas.Visible = true;
             }
@@ -246,10 +253,25 @@ namespace UI.DISEÑO
                 btnDeudas.Visible = false;
             }
 
-            // Los 4 paneles KPI siempre visibles; el permiso solo oculta montos.
+            // Los 4 paneles KPI: Caja1/2/3 no ven Ingresos Hoy ni Ingresos Mensual.
             _puedeVerIngresos = Sesion.TienePermiso("VER_INGRESOS") || rol == "ADMIN";
-            panelIngresosHoy.Visible = true;
-            panelIngresosMes.Visible = true;
+            bool ocultarKpisCaja = EsUsuarioCajaOperativa();
+            panelIngresosHoy.Visible = !ocultarKpisCaja;
+            panelIngresosMes.Visible = !ocultarKpisCaja;
+            panelClientesVencidos.Visible = true;
+        }
+
+        /// <summary>
+        /// Usuarios operativos de caja (caja1, caja2, caja3): misma vista KPI y módulos.
+        /// </summary>
+        private static bool EsUsuarioCajaOperativa()
+        {
+            string usuario = (Sesion.Usuario ?? string.Empty)
+                .Trim()
+                .Replace(" ", "", StringComparison.Ordinal)
+                .ToUpperInvariant();
+
+            return usuario is "CAJA1" or "CAJA2" or "CAJ2" or "CAJA3";
         }
 
         private void MostrarTodos()
@@ -268,10 +290,94 @@ namespace UI.DISEÑO
         // ===============================
         private void btnCerrarSesion_Click(object sender, EventArgs e)
         {
-            Sesion.CerrarSesion();   // limpiar sesión
-            this.Hide();             // ocultar FrmPresentacion
-            Application.OpenForms[0]?.Show(); // Mostrar FrmLogin (siempre es el primer formulario)
+            if (!ConfirmarSalidaConRevisionCaja())
+                return;
 
+            Sesion.CerrarSesion();
+            this.Hide();
+            Application.OpenForms[0]?.Show();
+        }
+
+        /// <summary>
+        /// Si el usuario tiene caja abierta, ofrece cuadre antes de salir.
+        /// Sí = cuadre y salir; No = salir dejando su caja abierta; Cancelar = quedarse.
+        /// </summary>
+        private bool ConfirmarSalidaConRevisionCaja()
+        {
+            var cajaBll = new CajaBLL();
+            if (!cajaBll.ObtenerEstadoCaja())
+                return true;
+
+            DialogResult decision = MessageBox.Show(
+                "Aún no has cerrado caja.\n¿Deseas hacer el cuadre para salir?",
+                "Caja abierta",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+
+            if (decision == DialogResult.Cancel)
+                return false;
+
+            if (decision == DialogResult.No)
+                return true;
+
+            return EjecutarCuadreCajaParaSalir(cajaBll);
+        }
+
+        private bool EjecutarCuadreCajaParaSalir(CajaBLL cajaBll)
+        {
+            try
+            {
+                var cajaService = new CajaServiceBLL();
+                decimal ingresos = cajaBll.IngresosHoy();
+                decimal egresos = cajaBll.EgresosHoy();
+                decimal sistema = ingresos - egresos;
+
+                string input = Microsoft.VisualBasic.Interaction.InputBox(
+                    $"SISTEMA: {sistema:C}\n\nIngrese dinero contado:",
+                    "Cuadre de Caja",
+                    "0");
+
+                if (string.IsNullOrWhiteSpace(input))
+                    return false;
+
+                if (!decimal.TryParse(input, out decimal contado) || contado < 0)
+                {
+                    MessageBox.Show("Monto inválido.", "Cuadre de Caja",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
+                decimal diferencia = contado - sistema;
+                string estado = diferencia == 0 ? "CUADRE PERFECTO" : "DIFERENCIA";
+
+                DialogResult confirm = MessageBox.Show(
+                    $"SISTEMA: {sistema:C}\n" +
+                    $"CONTADO: {contado:C}\n" +
+                    $"DIFERENCIA: {diferencia:C}\n\n" +
+                    $"{estado}\n\n¿Confirmar cierre y salir?",
+                    "Confirmar Cierre",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (confirm != DialogResult.Yes)
+                    return false;
+
+                var resultado = cajaService.CerrarCajaConCuadre(contado);
+                MessageBox.Show(
+                    $"Caja cerrada correctamente.\n\nSistema: {resultado.sistema:C}\nDiferencia: {resultado.diferencia:C}",
+                    "Caja",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                AppEventos.CajaCambiada();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo cerrar la caja: " + ex.Message,
+                    "Caja", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
         }
 
         private void btnAgregarCliente_Click(object sender, EventArgs e)
@@ -459,8 +565,12 @@ namespace UI.DISEÑO
             {
                 // ✅ ABRIR MÓDULO UNIFICADO DE DEUDAS
                 // (Permisos ya validados en AplicarPermisos y en FrmModuloDeudas_Load)
-                FrmModuloDeudas frm = new FrmModuloDeudas();
-                frm.ShowDialog();
+                // using: al cerrar se Dispose y se liberan los hijos embebidos
+                // (evita instancias zombie suscritas a AppEventos).
+                using (FrmModuloDeudas frm = new FrmModuloDeudas())
+                {
+                    frm.ShowDialog(this);
+                }
 
                 // 🔥 ACTUALIZACIÓN CORE: Refrescar dashboard al cerrar el módulo de deudas
                 CargarDashboard();

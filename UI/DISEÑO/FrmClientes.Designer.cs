@@ -28,6 +28,8 @@ namespace UI.DISEÑO
             btnNavBack = new Button();
             tabControlClientes = new TabControl();
             tabAgregar = new TabPage();
+            chkNinguna = new CheckBox();
+            txtLesionDescripcion = new TextBox();
             cmbsexo = new ComboBox();
             label16 = new Label();
             label15 = new Label();
@@ -36,11 +38,9 @@ namespace UI.DISEÑO
             chkDiabetes = new CheckBox();
             label14 = new Label();
             label13 = new Label();
-            txtEmergenciaTelefonoAlt = new TextBox();
             txtEmergenciaTelefono = new TextBox();
             txtEmergenciaParentesco = new TextBox();
             txtEmergenciaNombre = new TextBox();
-            label12 = new Label();
             label11 = new Label();
             label10 = new Label();
             label9 = new Label();
@@ -78,7 +78,6 @@ namespace UI.DISEÑO
             lblLesionDescripcion = new Label();
             lblMedicamentos = new Label();
             panelMedicamentos = new Panel();
-            txtLesionDescripcion = new TextBox();
             rbMedicamentosSi = new RadioButton();
             rbMedicamentosNo = new RadioButton();
             lblListaMedicamentos = new Label();
@@ -161,7 +160,7 @@ namespace UI.DISEÑO
             layoutNavClientes.RowCount = 2;
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
             layoutNavClientes.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            layoutNavClientes.Size = new Size(1513, 791);
+            layoutNavClientes.Size = new Size(1080, 720);
             layoutNavClientes.TabIndex = 0;
             layoutNavClientes.Paint += layoutNavClientes_Paint_1;
             // 
@@ -181,7 +180,7 @@ namespace UI.DISEÑO
             panelNav.Location = new Point(0, 0);
             panelNav.Margin = new Padding(0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1513, 52);
+            panelNav.Size = new Size(1080, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -287,7 +286,7 @@ namespace UI.DISEÑO
             tabControlClientes.Margin = new Padding(0);
             tabControlClientes.Name = "tabControlClientes";
             tabControlClientes.SelectedIndex = 0;
-            tabControlClientes.Size = new Size(1513, 739);
+            tabControlClientes.Size = new Size(1080, 668);
             tabControlClientes.TabIndex = 1;
             tabControlClientes.SelectedIndexChanged += tabControlClientes_SelectedIndexChanged;
             // 
@@ -296,6 +295,7 @@ namespace UI.DISEÑO
             tabAgregar.AutoScroll = true;
             tabAgregar.AutoScrollMinSize = new Size(1200, 1350);
             tabAgregar.BackColor = Color.White;
+            tabAgregar.Controls.Add(chkNinguna);
             tabAgregar.Controls.Add(txtLesionDescripcion);
             tabAgregar.Controls.Add(cmbsexo);
             tabAgregar.Controls.Add(label16);
@@ -305,11 +305,9 @@ namespace UI.DISEÑO
             tabAgregar.Controls.Add(chkDiabetes);
             tabAgregar.Controls.Add(label14);
             tabAgregar.Controls.Add(label13);
-            tabAgregar.Controls.Add(txtEmergenciaTelefonoAlt);
             tabAgregar.Controls.Add(txtEmergenciaTelefono);
             tabAgregar.Controls.Add(txtEmergenciaParentesco);
             tabAgregar.Controls.Add(txtEmergenciaNombre);
-            tabAgregar.Controls.Add(label12);
             tabAgregar.Controls.Add(label11);
             tabAgregar.Controls.Add(label10);
             tabAgregar.Controls.Add(label9);
@@ -378,9 +376,28 @@ namespace UI.DISEÑO
             tabAgregar.Location = new Point(4, 34);
             tabAgregar.Name = "tabAgregar";
             tabAgregar.Padding = new Padding(24);
-            tabAgregar.Size = new Size(1505, 701);
+            tabAgregar.Size = new Size(1072, 630);
             tabAgregar.TabIndex = 0;
             tabAgregar.Text = "AGREGAR CLIENTES";
+            // 
+            // chkNinguna
+            // 
+            chkNinguna.AutoSize = true;
+            chkNinguna.Font = new Font("Segoe UI", 10F);
+            chkNinguna.Location = new Point(1138, 307);
+            chkNinguna.Name = "chkNinguna";
+            chkNinguna.Size = new Size(98, 27);
+            chkNinguna.TabIndex = 79;
+            chkNinguna.Text = "Ninguna";
+            chkNinguna.UseVisualStyleBackColor = true;
+            // 
+            // txtLesionDescripcion
+            // 
+            txtLesionDescripcion.Font = new Font("Segoe UI", 11F);
+            txtLesionDescripcion.Location = new Point(771, 340);
+            txtLesionDescripcion.Name = "txtLesionDescripcion";
+            txtLesionDescripcion.Size = new Size(389, 32);
+            txtLesionDescripcion.TabIndex = 47;
             // 
             // cmbsexo
             // 
@@ -466,14 +483,6 @@ namespace UI.DISEÑO
             label13.TabIndex = 24;
             label13.Text = "INFORMACIÓN MÉDICA";
             // 
-            // txtEmergenciaTelefonoAlt
-            // 
-            txtEmergenciaTelefonoAlt.Font = new Font("Segoe UI", 11F);
-            txtEmergenciaTelefonoAlt.Location = new Point(192, 595);
-            txtEmergenciaTelefonoAlt.Name = "txtEmergenciaTelefonoAlt";
-            txtEmergenciaTelefonoAlt.Size = new Size(322, 32);
-            txtEmergenciaTelefonoAlt.TabIndex = 23;
-            // 
             // txtEmergenciaTelefono
             // 
             txtEmergenciaTelefono.Font = new Font("Segoe UI", 11F);
@@ -497,16 +506,6 @@ namespace UI.DISEÑO
             txtEmergenciaNombre.Name = "txtEmergenciaNombre";
             txtEmergenciaNombre.Size = new Size(322, 32);
             txtEmergenciaNombre.TabIndex = 15;
-            // 
-            // label12
-            // 
-            label12.AutoSize = true;
-            label12.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            label12.Location = new Point(27, 599);
-            label12.Name = "label12";
-            label12.Size = new Size(161, 23);
-            label12.TabIndex = 20;
-            label12.Text = "TEL. ALTERNATIVO";
             // 
             // label11
             // 
@@ -889,14 +888,6 @@ namespace UI.DISEÑO
             panelMedicamentos.Size = new Size(170, 36);
             panelMedicamentos.TabIndex = 49;
             // 
-            // txtLesionDescripcion
-            // 
-            txtLesionDescripcion.Font = new Font("Segoe UI", 11F);
-            txtLesionDescripcion.Location = new Point(771, 340);
-            txtLesionDescripcion.Name = "txtLesionDescripcion";
-            txtLesionDescripcion.Size = new Size(389, 32);
-            txtLesionDescripcion.TabIndex = 47;
-            // 
             // rbMedicamentosSi
             // 
             rbMedicamentosSi.AutoSize = true;
@@ -961,7 +952,7 @@ namespace UI.DISEÑO
             panelAlergias.Controls.Add(rbAlergiasNo);
             panelAlergias.Location = new Point(662, 581);
             panelAlergias.Name = "panelAlergias";
-            panelAlergias.Size = new Size(163, 36);
+            panelAlergias.Size = new Size(0, 36);
             panelAlergias.TabIndex = 53;
             // 
             // rbAlergiasSi
@@ -1403,7 +1394,7 @@ namespace UI.DISEÑO
             tabMiembros.Location = new Point(4, 34);
             tabMiembros.Name = "tabMiembros";
             tabMiembros.Padding = new Padding(16);
-            tabMiembros.Size = new Size(1505, 701);
+            tabMiembros.Size = new Size(1607, 630);
             tabMiembros.TabIndex = 1;
             tabMiembros.Text = "MIEMBROS";
             // 
@@ -1423,7 +1414,7 @@ namespace UI.DISEÑO
             layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Absolute, 64F));
             layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 38F));
             layoutMiembros.RowStyles.Add(new RowStyle(SizeType.Percent, 62F));
-            layoutMiembros.Size = new Size(1473, 669);
+            layoutMiembros.Size = new Size(1575, 598);
             layoutMiembros.TabIndex = 0;
             // 
             // panelToolbarMiembros
@@ -1435,7 +1426,7 @@ namespace UI.DISEÑO
             panelToolbarMiembros.Location = new Point(0, 0);
             panelToolbarMiembros.Margin = new Padding(0);
             panelToolbarMiembros.Name = "panelToolbarMiembros";
-            panelToolbarMiembros.Size = new Size(1473, 64);
+            panelToolbarMiembros.Size = new Size(1575, 64);
             panelToolbarMiembros.TabIndex = 0;
             // 
             // label6
@@ -1456,7 +1447,7 @@ namespace UI.DISEÑO
             txtBuscar.Location = new Point(90, 14);
             txtBuscar.Name = "txtBuscar";
             txtBuscar.PlaceholderText = "Buscar por nombre, telefono...";
-            txtBuscar.Size = new Size(1000, 32);
+            txtBuscar.Size = new Size(1102, 32);
             txtBuscar.TabIndex = 1;
             txtBuscar.TextChanged += txtBuscar_TextChanged;
             // 
@@ -1476,7 +1467,7 @@ namespace UI.DISEÑO
             dgvClientes.ReadOnly = true;
             dgvClientes.RowHeadersWidth = 51;
             dgvClientes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvClientes.Size = new Size(1473, 217);
+            dgvClientes.Size = new Size(1575, 190);
             dgvClientes.TabIndex = 1;
             dgvClientes.CellClick += dgvClientes_CellClick;
             dgvClientes.CellDoubleClick += dgvClientes_CellDoubleClick;
@@ -1487,10 +1478,10 @@ namespace UI.DISEÑO
             panelDetalleScroll.BackColor = Color.White;
             panelDetalleScroll.Controls.Add(ucFichaResumen);
             panelDetalleScroll.Dock = DockStyle.Fill;
-            panelDetalleScroll.Location = new Point(0, 293);
+            panelDetalleScroll.Location = new Point(0, 266);
             panelDetalleScroll.Margin = new Padding(0);
             panelDetalleScroll.Name = "panelDetalleScroll";
-            panelDetalleScroll.Size = new Size(1473, 376);
+            panelDetalleScroll.Size = new Size(1575, 332);
             panelDetalleScroll.TabIndex = 2;
             // 
             // ucFichaResumen
@@ -1501,7 +1492,7 @@ namespace UI.DISEÑO
             ucFichaResumen.Font = new Font("Segoe UI", 9F);
             ucFichaResumen.Location = new Point(0, 0);
             ucFichaResumen.Name = "ucFichaResumen";
-            ucFichaResumen.Size = new Size(1473, 376);
+            ucFichaResumen.Size = new Size(1575, 332);
             ucFichaResumen.TabIndex = 0;
             // 
             // btnBack
@@ -1520,12 +1511,12 @@ namespace UI.DISEÑO
             AutoScroll = true;
             AutoScrollMinSize = new Size(1080, 720);
             BackColor = Color.White;
-            ClientSize = new Size(1513, 791);
+            ClientSize = new Size(1062, 673);
             Controls.Add(layoutNavClientes);
             Controls.Add(btnBack);
             Name = "FrmClientes";
             StartPosition = FormStartPosition.CenterParent;
-            Text = "Clientes";
+            Text = "MIEMBROS";
             WindowState = FormWindowState.Maximized;
             Load += FrmClientes_Load;
             layoutNavClientes.ResumeLayout(false);
@@ -1598,7 +1589,7 @@ namespace UI.DISEÑO
         private TextBox txtEmergenciaNombre;
         private Label label14;
         private Label label13;
-        private TextBox txtEmergenciaTelefonoAlt;
+       
         private TextBox txtEmergenciaTelefono;
         private TextBox txtEmergenciaParentesco;
         private CheckBox chkAsma;
@@ -1671,6 +1662,6 @@ namespace UI.DISEÑO
         private TextBox txtHorarioVariadoDetalle;
         private Label label16;
         private ComboBox cmbsexo;
-        
+        private CheckBox chkNinguna;
     }
 }

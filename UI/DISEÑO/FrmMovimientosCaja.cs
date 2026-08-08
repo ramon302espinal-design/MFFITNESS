@@ -4,7 +4,6 @@ using CORE;
 using System;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -20,15 +19,13 @@ namespace UI.DISEÑO
         public FrmMovimientosCaja()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
         }
 
         public FrmMovimientosCaja(Form frm)
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
             formularioAnterior = frm;
-            if (ThemeHost.IsDesignTime())
+            if (DesignMode)
                 return;
 
             CargarMovimientos();

@@ -14,16 +14,17 @@ namespace BLL
 
         public void AbrirCajaSeguro(decimal montoInicial, string usuario)
         {
-            var caja = cajaDAL.ObtenerCajaAbierta();
+            string user = ResolveUsuario(usuario);
+            var caja = cajaDAL.ObtenerCajaAbierta(user);
 
             if (caja != null)
-                throw new Exception("Ya hay una caja abierta.");
+                throw new Exception("Ya tienes una caja abierta.");
 
-            cajaDAL.AbrirCaja(montoInicial, ResolveUsuario(usuario));
+            cajaDAL.AbrirCaja(montoInicial, user);
         }
 
         public bool ObtenerEstadoCaja()
-            => cajaDAL.ObtenerCajaAbierta() != null;
+            => ObtenerCajaAbiertaHoy() != null;
 
         // ===============================
         // REGISTRAR INGRESO / EGRESO (UI manual via CajaCommandService)
@@ -36,13 +37,12 @@ namespace BLL
             if (monto <= 0)
                 throw new Exception("Monto inválido");
 
-            DataRow caja = cajaDAL.ObtenerCajaAbierta();
+            string user = ResolveUsuario(usuario);
+            DataRow? caja = cajaDAL.ObtenerCajaAbierta(user);
             if (caja == null)
                 throw new Exception("No hay caja abierta para registrar ingresos.");
 
             int cajaId = Convert.ToInt32(caja["Id"]);
-            string user = ResolveUsuario(usuario);
-
             return cajaDAL.InsertarMovimiento(cajaId, "INGRESO", concepto, monto, user);
         }
 
@@ -54,7 +54,7 @@ namespace BLL
             if (monto <= 0)
                 throw new Exception("Monto inválido");
 
-            DataRow? caja = ObtenerCajaAbiertaHoy();
+            DataRow? caja = ObtenerCajaAbiertaHoy(usuario);
             if (caja == null)
                 throw new CajaNoAbiertaException();
 
@@ -67,26 +67,26 @@ namespace BLL
         private static string ResolveUsuario(string? usuario)
         {
             if (!string.IsNullOrWhiteSpace(usuario))
-                return usuario;
+                return usuario.Trim();
 
             if (!string.IsNullOrWhiteSpace(Sesion.Usuario))
-                return Sesion.Usuario;
+                return Sesion.Usuario.Trim();
 
             return "ADMIN";
         }
 
         // ===============================
-        // OBTENER CAJA ABIERTA
+        // OBTENER CAJA ABIERTA (del usuario en sesión)
         // ===============================
-        public DataRow? ObtenerCajaAbiertaHoy()
-            => cajaDAL.ObtenerCajaAbierta();
+        public DataRow? ObtenerCajaAbiertaHoy(string? usuario = null)
+            => cajaDAL.ObtenerCajaAbierta(ResolveUsuario(usuario));
 
         // ===============================
         // MOVIMIENTOS DEL DÍA
         // ===============================
         public DataTable MovimientosHoy()
         {
-            DataRow caja = ObtenerCajaAbiertaHoy();
+            DataRow? caja = ObtenerCajaAbiertaHoy();
             if (caja == null) return new DataTable();
 
             int cajaId = Convert.ToInt32(caja["Id"]);
@@ -100,7 +100,7 @@ namespace BLL
         // ===============================
         public decimal ObtenerMontoInicial()
         {
-            DataRow caja = ObtenerCajaAbiertaHoy();
+            DataRow? caja = ObtenerCajaAbiertaHoy();
             return caja != null ? Convert.ToDecimal(caja["MontoInicial"]) : 0;
         }
 

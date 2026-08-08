@@ -135,7 +135,7 @@
             Controls.Add(cbClientes);
             Controls.Add(label1);
             Name = "FrmCrearDeuda";
-            Text = "FrmCrearDeuda";
+            Text = "CREAR DEUDA";
             Load += FrmCrearDeuda_Load;
             ResumeLayout(false);
             PerformLayout();

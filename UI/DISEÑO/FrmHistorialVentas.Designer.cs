@@ -16,15 +16,15 @@ namespace UI.DISEÑO
         private void InitializeComponent()
         {
             panelNav = new Panel();
-            btnBack = new Button();
-            btnNavPagar = new Button();
-            btnNavDeudas = new Button();
-            btnNavEstado = new Button();
-            btnNavCaja = new Button();
-            btnNavHistorial = new Button();
-            btnNavInventario = new Button();
-            btnNavReportes = new Button();
             btnNavClientes = new Button();
+            btnNavReportes = new Button();
+            btnNavInventario = new Button();
+            btnNavHistorial = new Button();
+            btnNavCaja = new Button();
+            btnNavEstado = new Button();
+            btnNavDeudas = new Button();
+            btnNavPagar = new Button();
+            btnBack = new Button();
             tabControl1 = new TabControl();
             tabMembresia = new TabPage();
             dgvHistorialMembresia = new DataGridView();
@@ -61,20 +61,78 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1781, 52);
+            panelNav.Size = new Size(1062, 52);
             panelNav.TabIndex = 0;
             // 
-            // btnBack
+            // btnNavClientes
             // 
-            btnBack.FlatAppearance.BorderSize = 0;
-            btnBack.FlatStyle = FlatStyle.Flat;
-            btnBack.Font = new Font("Segoe UI", 11F);
-            btnBack.Location = new Point(8, 8);
-            btnBack.Name = "btnBack";
-            btnBack.Size = new Size(43, 35);
-            btnBack.TabIndex = 0;
-            btnBack.Text = "";
-            btnBack.UseVisualStyleBackColor = true;
+            btnNavClientes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavClientes.Location = new Point(940, 10);
+            btnNavClientes.Name = "btnNavClientes";
+            btnNavClientes.Size = new Size(120, 32);
+            btnNavClientes.TabIndex = 8;
+            btnNavClientes.Text = "CLIENTES";
+            btnNavClientes.UseVisualStyleBackColor = true;
+            // 
+            // btnNavReportes
+            // 
+            btnNavReportes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavReportes.Location = new Point(810, 10);
+            btnNavReportes.Name = "btnNavReportes";
+            btnNavReportes.Size = new Size(120, 32);
+            btnNavReportes.TabIndex = 7;
+            btnNavReportes.Text = "REPORTES";
+            btnNavReportes.UseVisualStyleBackColor = true;
+            // 
+            // btnNavInventario
+            // 
+            btnNavInventario.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavInventario.Location = new Point(670, 10);
+            btnNavInventario.Name = "btnNavInventario";
+            btnNavInventario.Size = new Size(130, 32);
+            btnNavInventario.TabIndex = 6;
+            btnNavInventario.Text = "INVENTARIO";
+            btnNavInventario.UseVisualStyleBackColor = true;
+            // 
+            // btnNavHistorial
+            // 
+            btnNavHistorial.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavHistorial.Location = new Point(540, 10);
+            btnNavHistorial.Name = "btnNavHistorial";
+            btnNavHistorial.Size = new Size(120, 32);
+            btnNavHistorial.TabIndex = 5;
+            btnNavHistorial.Text = "HISTORIAL";
+            btnNavHistorial.UseVisualStyleBackColor = true;
+            // 
+            // btnNavCaja
+            // 
+            btnNavCaja.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavCaja.Location = new Point(420, 10);
+            btnNavCaja.Name = "btnNavCaja";
+            btnNavCaja.Size = new Size(110, 32);
+            btnNavCaja.TabIndex = 4;
+            btnNavCaja.Text = "CAJA";
+            btnNavCaja.UseVisualStyleBackColor = true;
+            // 
+            // btnNavEstado
+            // 
+            btnNavEstado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavEstado.Location = new Point(300, 10);
+            btnNavEstado.Name = "btnNavEstado";
+            btnNavEstado.Size = new Size(110, 32);
+            btnNavEstado.TabIndex = 3;
+            btnNavEstado.Text = "ESTADO";
+            btnNavEstado.UseVisualStyleBackColor = true;
+            // 
+            // btnNavDeudas
+            // 
+            btnNavDeudas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavDeudas.Location = new Point(180, 10);
+            btnNavDeudas.Name = "btnNavDeudas";
+            btnNavDeudas.Size = new Size(110, 32);
+            btnNavDeudas.TabIndex = 2;
+            btnNavDeudas.Text = "DEUDAS";
+            btnNavDeudas.UseVisualStyleBackColor = true;
             // 
             // btnNavPagar
             // 
@@ -88,75 +146,17 @@ namespace UI.DISEÑO
             btnNavPagar.Text = "COBRAR";
             btnNavPagar.UseVisualStyleBackColor = false;
             // 
-            // btnNavDeudas
+            // btnBack
             // 
-            btnNavDeudas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavDeudas.Location = new Point(180, 10);
-            btnNavDeudas.Name = "btnNavDeudas";
-            btnNavDeudas.Size = new Size(110, 32);
-            btnNavDeudas.TabIndex = 2;
-            btnNavDeudas.Text = "DEUDAS";
-            btnNavDeudas.UseVisualStyleBackColor = true;
-            // 
-            // btnNavEstado
-            // 
-            btnNavEstado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavEstado.Location = new Point(300, 10);
-            btnNavEstado.Name = "btnNavEstado";
-            btnNavEstado.Size = new Size(110, 32);
-            btnNavEstado.TabIndex = 3;
-            btnNavEstado.Text = "ESTADO";
-            btnNavEstado.UseVisualStyleBackColor = true;
-            // 
-            // btnNavCaja
-            // 
-            btnNavCaja.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavCaja.Location = new Point(420, 10);
-            btnNavCaja.Name = "btnNavCaja";
-            btnNavCaja.Size = new Size(110, 32);
-            btnNavCaja.TabIndex = 4;
-            btnNavCaja.Text = "CAJA";
-            btnNavCaja.UseVisualStyleBackColor = true;
-            // 
-            // btnNavHistorial
-            // 
-            btnNavHistorial.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavHistorial.Location = new Point(540, 10);
-            btnNavHistorial.Name = "btnNavHistorial";
-            btnNavHistorial.Size = new Size(120, 32);
-            btnNavHistorial.TabIndex = 5;
-            btnNavHistorial.Text = "HISTORIAL";
-            btnNavHistorial.UseVisualStyleBackColor = true;
-            // 
-            // btnNavInventario
-            // 
-            btnNavInventario.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavInventario.Location = new Point(670, 10);
-            btnNavInventario.Name = "btnNavInventario";
-            btnNavInventario.Size = new Size(130, 32);
-            btnNavInventario.TabIndex = 6;
-            btnNavInventario.Text = "INVENTARIO";
-            btnNavInventario.UseVisualStyleBackColor = true;
-            // 
-            // btnNavReportes
-            // 
-            btnNavReportes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavReportes.Location = new Point(810, 10);
-            btnNavReportes.Name = "btnNavReportes";
-            btnNavReportes.Size = new Size(120, 32);
-            btnNavReportes.TabIndex = 7;
-            btnNavReportes.Text = "REPORTES";
-            btnNavReportes.UseVisualStyleBackColor = true;
-            // 
-            // btnNavClientes
-            // 
-            btnNavClientes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavClientes.Location = new Point(940, 10);
-            btnNavClientes.Name = "btnNavClientes";
-            btnNavClientes.Size = new Size(120, 32);
-            btnNavClientes.TabIndex = 8;
-            btnNavClientes.Text = "CLIENTES";
-            btnNavClientes.UseVisualStyleBackColor = true;
+            btnBack.FlatAppearance.BorderSize = 0;
+            btnBack.FlatStyle = FlatStyle.Flat;
+            btnBack.Font = new Font("Segoe UI", 11F);
+            btnBack.Location = new Point(8, 8);
+            btnBack.Name = "btnBack";
+            btnBack.Size = new Size(43, 35);
+            btnBack.TabIndex = 0;
+            btnBack.Text = "◀️";
+            btnBack.UseVisualStyleBackColor = true;
             // 
             // tabControl1
             // 
@@ -167,7 +167,7 @@ namespace UI.DISEÑO
             tabControl1.Location = new Point(0, 52);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(1781, 717);
+            tabControl1.Size = new Size(1062, 621);
             tabControl1.TabIndex = 1;
             // 
             // tabMembresia
@@ -180,18 +180,20 @@ namespace UI.DISEÑO
             tabMembresia.Location = new Point(4, 34);
             tabMembresia.Name = "tabMembresia";
             tabMembresia.Padding = new Padding(12);
-            tabMembresia.Size = new Size(1773, 679);
+            tabMembresia.Size = new Size(1054, 583);
             tabMembresia.TabIndex = 0;
             tabMembresia.Text = "MEMBRESÍA";
             // 
             // dgvHistorialMembresia
             // 
             dgvHistorialMembresia.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dgvHistorialMembresia.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvHistorialMembresia.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvHistorialMembresia.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvHistorialMembresia.Location = new Point(900, 56);
             dgvHistorialMembresia.Name = "dgvHistorialMembresia";
             dgvHistorialMembresia.RowHeadersWidth = 51;
-            dgvHistorialMembresia.Size = new Size(850, 590);
+            dgvHistorialMembresia.Size = new Size(131, 494);
             dgvHistorialMembresia.TabIndex = 3;
             // 
             // label4
@@ -208,11 +210,12 @@ namespace UI.DISEÑO
             // 
             dgvHistorial.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvHistorial.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvHistorial.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvHistorial.Location = new Point(20, 56);
             dgvHistorial.Name = "dgvHistorial";
             dgvHistorial.RowHeadersWidth = 51;
-            dgvHistorial.Size = new Size(860, 590);
+            dgvHistorial.Size = new Size(860, 494);
             dgvHistorial.TabIndex = 1;
             // 
             // label1
@@ -235,7 +238,7 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(4, 34);
             tabProductos.Name = "tabProductos";
             tabProductos.Padding = new Padding(12);
-            tabProductos.Size = new Size(1773, 679);
+            tabProductos.Size = new Size(1054, 583);
             tabProductos.TabIndex = 1;
             tabProductos.Text = "PRODUCTOS";
             // 
@@ -247,7 +250,7 @@ namespace UI.DISEÑO
             dgvDetalleProductos.Location = new Point(900, 56);
             dgvDetalleProductos.Name = "dgvDetalleProductos";
             dgvDetalleProductos.RowHeadersWidth = 51;
-            dgvDetalleProductos.Size = new Size(850, 590);
+            dgvDetalleProductos.Size = new Size(131, 494);
             dgvDetalleProductos.TabIndex = 3;
             // 
             // label3
@@ -263,11 +266,13 @@ namespace UI.DISEÑO
             // dgvVentasProductos
             // 
             dgvVentasProductos.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            dgvVentasProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvVentasProductos.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvVentasProductos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvVentasProductos.Location = new Point(20, 56);
             dgvVentasProductos.Name = "dgvVentasProductos";
             dgvVentasProductos.RowHeadersWidth = 51;
-            dgvVentasProductos.Size = new Size(860, 590);
+            dgvVentasProductos.Size = new Size(860, 494);
             dgvVentasProductos.TabIndex = 1;
             dgvVentasProductos.SelectionChanged += dgvVentasProductos_SelectionChanged;
             // 
@@ -285,11 +290,11 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1781, 769);
+            ClientSize = new Size(1062, 673);
             Controls.Add(tabControl1);
             Controls.Add(panelNav);
             Name = "FrmHistorialVentas";
-            Text = "Historial de ventas";
+            Text = "HISTORIAL DE VENTAS";
             WindowState = FormWindowState.Maximized;
             FormClosed += FrmHistorialVentas_FormClosed;
             Load += FrmHistorialVentas_Load;

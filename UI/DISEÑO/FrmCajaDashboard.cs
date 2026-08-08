@@ -4,7 +4,6 @@ using DL;
 using System;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -18,8 +17,7 @@ namespace UI.DISEÑO
         public FrmCajaDashboard()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
-            if (ThemeHost.IsDesignTime())
+            if (DesignMode)
                 return;
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloCaja);
         }
@@ -109,7 +107,7 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                cajaBLL.AbrirCajaSeguro(montoInicial, "Admin");
+                cajaBLL.AbrirCajaSeguro(montoInicial, Sesion.Usuario ?? "ADMIN");
 
                 MessageBox.Show("Caja abierta correctamente.");
                 ActualizarDashboard();
@@ -136,8 +134,8 @@ namespace UI.DISEÑO
                 //return;
                 //}
 
-                decimal ingresos = cajaService.CalcularIngresosHoy();
-                decimal egresos = cajaService.CalcularEgresosHoy();
+                decimal ingresos = cajaBLL.IngresosHoy();
+                decimal egresos = cajaBLL.EgresosHoy();
                 decimal sistema = ingresos - egresos;
 
                 string input = Microsoft.VisualBasic.Interaction.InputBox(
