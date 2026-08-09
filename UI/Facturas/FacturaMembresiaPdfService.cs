@@ -6,13 +6,14 @@ using CORE;
 namespace UI.Facturas
 {
     /// <summary>
-    /// Wrapper UI: reutiliza PDF ya generado (WhatsApp) o lo crea si falta; abre copia temporal.
+    /// Wrapper UI: reutiliza PDF ya generado (WhatsApp) o lo crea si falta.
     /// </summary>
     public static class FacturaMembresiaPdfService
     {
         public static void ConfigurarLicencia() =>
             FacturaMembresiaPdfGenerator.ConfigurarLicencia();
 
+        /// <summary>Compat: genera y opcionalmente abre. Por defecto ya no abre.</summary>
         public static string? GenerarAbrirDesdeOperacion(
             IWin32Window? owner,
             int clienteId,
@@ -22,6 +23,20 @@ namespace UI.Facturas
             string metodoPago,
             MembresiaOperacionResult operacion,
             string? notaExtra = null)
+            => GenerarDesdeOperacion(
+                owner, clienteId, nombrePlan, montoPagado, fechaVencimiento,
+                metodoPago, operacion, notaExtra, abrirPdf: false);
+
+        public static string? GenerarDesdeOperacion(
+            IWin32Window? owner,
+            int clienteId,
+            string nombrePlan,
+            decimal montoPagado,
+            DateTime fechaVencimiento,
+            string metodoPago,
+            MembresiaOperacionResult operacion,
+            string? notaExtra = null,
+            bool abrirPdf = false)
         {
             try
             {
@@ -29,7 +44,6 @@ namespace UI.Facturas
                     ? operacion.PagoId
                     : (operacion.MembresiaId > 0 ? operacion.MembresiaId : clienteId);
 
-                // Evitar regenerar/subir 2 veces si WhatsApp ya creo factura_{pagoId}.pdf
                 string? path = FacturaStorage.ResolverRutaFacturaExistente(pagoId);
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 {
@@ -46,17 +60,28 @@ namespace UI.Facturas
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                     throw new Exception("No se pudo guardar el PDF de la factura.");
 
-                AbrirArchivo(path);
+                if (abrirPdf)
+                    AbrirArchivo(path);
+
                 return path;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    owner,
-                    "El pago se registró, pero no se pudo generar la factura PDF.\n\n" + ex.Message,
-                    "Factura",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                // Solo avisar si hay owner UI y se pidió abrir; post-pago silencioso solo loguea.
+                if (owner != null && abrirPdf)
+                {
+                    MessageBox.Show(
+                        owner,
+                        "El pago se registró, pero no se pudo generar la factura PDF.\n\n" + ex.Message,
+                        "Factura",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    Debug.WriteLine($"[Factura PDF] {ex.Message}");
+                }
+
                 return null;
             }
         }

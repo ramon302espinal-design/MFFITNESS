@@ -98,9 +98,15 @@ namespace BLL
         /// Consulta ligera: no carga todo el grid de Estado Clientes.
         /// </summary>
         public bool TieneMembresiaVencidaSinActiva(int clienteId) =>
+            ClienteElegibleParaRenovacion(clienteId);
+
+        /// <summary>
+        /// Misma elegibilidad que RENOVAR en Estado: VENCIDO, DESACTIVADO (baja) o plan vencido.
+        /// </summary>
+        public bool ClienteElegibleParaRenovacion(int clienteId) =>
             clienteId > 0
             && !dal.TieneMembresiaActiva(clienteId)
-            && dal.TieneMembresiaVencida(clienteId);
+            && (dal.TieneMembresiaVencida(clienteId) || dal.TieneUltimaSalidaOBaja(clienteId));
 
         /// <summary>
         /// True si el cliente ya tiene membresía ACTIVA (pagada o financiada vigente).
@@ -196,6 +202,15 @@ namespace BLL
                     concepto,
                     usuario);
 
+                // Historial PAGO anula SALIDA/BAJA (DESACTIVADO/VENCIDO → ACTIVO en Estado).
+                new HistorialMembresiaDAL().Insertar(
+                    clienteId,
+                    "PAGO",
+                    planId,
+                    monto,
+                    usuario,
+                    "Pago de membresía");
+
                 var result = new MembresiaOperacionResult
                 {
                     MembresiaId = membresiaId,
@@ -204,8 +219,7 @@ namespace BLL
                     FechaFinMembresia = fin
                 };
 
-                // WhatsApp/PDF se envian despues del cobro (UI en segundo plano)
-                // para no congelar la pantalla de pagos.
+                // WhatsApp/PDF se envían después del cobro (UI en segundo plano).
                 return result;
             }
             catch

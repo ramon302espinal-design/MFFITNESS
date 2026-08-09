@@ -51,7 +51,8 @@ namespace BLL
                 variables["CLIENTE"] = nombreCliente;
 
                 string plantilla = dal.ObtenerPlantilla(tipoPlantilla);
-                if (string.IsNullOrWhiteSpace(plantilla) && string.IsNullOrWhiteSpace(cuerpoTwilioOverride))
+                // cuerpoTwilioOverride == "" es valido (factura solo PDF, sin texto).
+                if (string.IsNullOrWhiteSpace(plantilla) && cuerpoTwilioOverride is null)
                 {
                     System.Diagnostics.Debug.WriteLine($"Plantilla no encontrada: {tipoPlantilla}");
                     UltimoDetalleEnvio = $"Plantilla no encontrada: {tipoPlantilla}";
@@ -59,21 +60,18 @@ namespace BLL
                 }
 
                 string mensajeTwilio;
-                if (!string.IsNullOrWhiteSpace(cuerpoTwilioOverride))
+                if (cuerpoTwilioOverride != null)
                 {
-                    mensajeTwilio = WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(
-                        cuerpoTwilioOverride, nombreCliente);
+                    // Incluye "" para enviar solo MediaUrl sin caption.
+                    mensajeTwilio = string.IsNullOrWhiteSpace(cuerpoTwilioOverride)
+                        ? string.Empty
+                        : WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(
+                            cuerpoTwilioOverride, nombreCliente);
                 }
                 else
                 {
                     string mensaje = AplicarVariables(plantilla!, variables);
                     mensajeTwilio = WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(mensaje, nombreCliente);
-
-                    if (!string.IsNullOrWhiteSpace(mediaUrl)
-                        && !mensajeTwilio.Contains(mediaUrl, StringComparison.OrdinalIgnoreCase))
-                    {
-                        mensajeTwilio = $"Factura PDF: {mediaUrl} — {mensajeTwilio}";
-                    }
                 }
 
                 mensajeId = dal.RegistrarMensaje(
@@ -92,14 +90,7 @@ namespace BLL
                     variables);
 
                 string detalleRespuesta = FormatearDetalleRespuesta(resultado);
-                if (!string.IsNullOrWhiteSpace(mediaUrl) && !TwilioSettings.AdjuntarPdfLibre)
-                {
-                    detalleRespuesta =
-                        $"{detalleRespuesta}\n\n" +
-                        "WhatsApp enviado. El PDF va como LINK en el chat (no como archivo).\n" +
-                        "Abra o reenvie este enlace al cliente:\n" +
-                        mediaUrl;
-                }
+                // (ya no se sugiere abrir link en UI; el PDF debe ir como adjunto)
 
                 UltimoDetalleEnvio = detalleRespuesta;
 
@@ -203,16 +194,8 @@ namespace BLL
                 }
             }
 
-            string cuerpoCorto =
-                $"COMPROBANTE MFFITNESS. Plan {nombrePlan}, {FormatearMonto(monto)}, " +
-                $"{metodoPago}, recibo {numeroRecibo}, vence {fechaVencimiento:dd/MM/yyyy}.";
-            // El PDF va como adjunto (plantilla media o MediaUrl). El link solo si falla el adjunto.
-            if (!string.IsNullOrWhiteSpace(mediaUrl)
-                && !TwilioSettings.UsaPlantillaFacturaMedia
-                && !TwilioSettings.AdjuntarPdfLibre)
-            {
-                cuerpoCorto += $" Factura PDF: {mediaUrl}";
-            }
+            // Sin cuerpo de texto: el PDF va solo como adjunto (plantilla media o MediaUrl).
+            string cuerpoCorto = string.Empty;
 
             bool enviado = EnviarMensajeTemplado(
                 clienteId,
@@ -228,16 +211,18 @@ namespace BLL
                 },
                 referenciaId: pagoId,
                 mediaUrl: mediaUrl,
-                adjuntarArchivo: TwilioSettings.AdjuntarPdfLibre,
+                adjuntarArchivo: true,
                 cuerpoTwilioOverride: cuerpoCorto);
 
+            // No enviar segundo mensaje de texto de respaldo: ensucia el chat del miembro.
             if (!enviado)
             {
-                EnviarMensajePagoMembresia(clienteId, fechaVencimiento);
+                System.Diagnostics.Debug.WriteLine(
+                    $"FACTURA_MEMBRESIA no enviada: {UltimoDetalleEnvio}");
             }
 
             return UltimoDetalleEnvio
-                   ?? (enviado ? "WhatsApp aceptado por Twilio." : "WhatsApp no entregado.");
+                   ?? (enviado ? "WhatsApp: PDF enviado." : "WhatsApp: PDF no entregado.");
         }
 
         public void EnviarMensajeVencimientoProximo(int clienteId, DateTime fechaVencimiento, int? membresiaId = null)

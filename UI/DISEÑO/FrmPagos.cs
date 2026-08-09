@@ -27,7 +27,6 @@ namespace UI.DISEÑO
         private readonly MembresiaBLL membresiaBLL = new MembresiaBLL();
         private readonly DataTable carrito = new DataTable();
         private FrmPresentacion? _presentacion;
-        private readonly HistorialMembresiaBLL historialBLL = new HistorialMembresiaBLL();
         private readonly ClienteBLL clienteBLL = new ClienteBLL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
 
@@ -396,6 +395,9 @@ namespace UI.DISEÑO
 
         private void btnPagarMembresia_Click(object sender, EventArgs e)
         {
+            if (!btnPagar.Enabled)
+                return;
+
             try
             {
                 if (!TryObtenerClienteSeleccionado(out int clienteId, out _) || cmbMembresia.SelectedValue == null)
@@ -419,14 +421,13 @@ namespace UI.DISEÑO
                 }
 
                 // Con financiamiento: vencido/desactivado/sin plan puede activarse a crédito.
-                // Sin financiamiento: ofrecer renovación al contado si aplica.
+                // Sin financiamiento: ofrecer renovación (misma regla que Estado) si aplica.
                 if (!chkFinanciamiento.Checked && IntentarRedirigirRenovacion(clienteId))
                     return;
 
                 int planId = Convert.ToInt32(cmbMembresia.SelectedValue);
                 string usuario = Sesion.Usuario ?? "ADMIN";
 
-                // 🔥 OBTENER PLAN REAL
                 PlanBLL planBLL = new PlanBLL();
                 var plan = planBLL.ObtenerPlan(planId);
 
@@ -439,153 +440,191 @@ namespace UI.DISEÑO
                 DateTime inicio = DateTime.Now;
                 DateTime fin = MembresiaHelper.CalcularFechaVencimiento(inicio);
 
-                // ===============================
-                // 🆕 BIFURCACIÓN: PAGO COMPLETO vs FINANCIADO
-                // ===============================
+                btnPagar.Enabled = false;
+                Cursor = Cursors.WaitCursor;
 
-                if (chkFinanciamiento.Checked)
+                try
                 {
-                    // =============================
-                    // FLUJO DE FINANCIAMIENTO
-                    // =============================
-
-                    if (membresiaBLL.ClienteNoElegibleParaFinanciamiento(clienteId, out string motivoFinanciamiento))
+                    if (chkFinanciamiento.Checked)
                     {
-                        MessageBox.Show(
-                            motivoFinanciamiento,
-                            "Financiamiento no disponible",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                        chkFinanciamiento.Checked = false;
-                        return;
+                        CobrarMembresiaFinanciada(clienteId, planId, plan, fin, usuario);
                     }
-
-                    decimal pagoInicial = decimal.TryParse(txtPagoInicial.Text, out decimal p) ? p : 0;
-
-                    if (pagoInicial < 0 || pagoInicial > plan.Precio)
+                    else
                     {
-                        MessageBox.Show("Pago inicial inválido.");
-                        return;
+                        CobrarMembresiaCompleta(clienteId, planId, plan, fin, usuario);
                     }
-
-                    decimal saldo = plan.Precio - pagoInicial;
-                    string conceptoPago = $"Pago inicial - Membresía {cmbMembresia.Text}";
-                    // Membresía: cobro directo (sin modal de cambio), como antes.
-                    string metodoPago = "Efectivo";
-
-                    DateTime? fechaVencimientoDeuda = saldo > 0
-                        ? dtpFechaVencimiento.Value.Date
-                        : null;
-
-                    var result = MembresiaCommandService.VenderMembresiaFinanciada(
-                        clienteId,
-                        planId,
-                        pagoInicial,
-                        metodoPago,
-                        conceptoPago,
-                        fechaVencimientoDeuda,
-                        usuario);
-
-                    if (!result.Success)
-                    {
-                        MessageBox.Show(result.Message);
-                        return;
-                    }
-
-                    CORE.AppEventos.PagoRegistrado();
-
-                    _presentacion?.CargarDashboard();
-                    MessageBox.Show(
-                        $"✅ Membresía financiada registrada correctamente.\n\n" +
-                        $"Plan: {plan.Nombre}\n" +
-                        $"Pago inicial: ${pagoInicial:N2}\n" +
-                        $"Saldo pendiente: ${saldo:N2}\n" +
-                        $"Cliente activado inmediatamente.",
-                        "Financiamiento Exitoso",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-
-                    if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
-                    {
-                        string? nota = saldo > 0
-                            ? $"Tu membresía está activa. Saldo pendiente: RD${saldo:N0}. Vence el {fin:dd/MM/yyyy}."
-                            : null;
-                        FacturaMembresiaPdfService.GenerarAbrirDesdeOperacion(
-                            this,
-                            clienteId,
-                            plan.Nombre ?? cmbMembresia.Text,
-                            pagoInicial,
-                            fin,
-                            metodoPago,
-                            opFin,
-                            nota);
-                    }
-
-                    LimpiarCampos();
                 }
-                else
+                finally
                 {
-                    // =============================
-                    // FLUJO ORIGINAL: PAGO COMPLETO (sin modal de cambio)
-                    // =============================
-
-                    decimal monto = decimal.Parse(txtMonto.Text);
-                    string concepto = $"Membresía {cmbMembresia.Text}";
-                    string metodoPago = "Efectivo";
-
-                    var result = MembresiaCommandService.PagarMembresia(
-                        clienteId,
-                        planId,
-                        monto,
-                        metodoPago,
-                        concepto,
-                        fin,
-                        usuario);
-
-                    if (!result.Success)
-                    {
-                        MessageBox.Show(result.Message);
-                        return;
-                    }
-
-                    CORE.AppEventos.PagoRegistrado();
-
-                    historialBLL.Registrar(
-                        clienteId,
-                        "PAGO",
-                        planId,
-                        monto,
-                        usuario,
-                        "Pago de membresía"
-                    );
-
-                    _presentacion?.CargarDashboard();
-                    MessageBox.Show("Membresía registrada correctamente.");
-
-                    if (result.Payload is MembresiaOperacionResult opPago)
-                    {
-                        IniciarPostPagoEnSegundoPlano(
-                            clienteId,
-                            planId,
-                            plan.Nombre ?? cmbMembresia.Text,
-                            monto,
-                            fin,
-                            metodoPago,
-                            opPago);
-                    }
-
-                    LimpiarCampos();
+                    Cursor = Cursors.Default;
+                    if (!IsDisposed)
+                        btnPagar.Enabled = true;
                 }
             }
             catch (Exception ex)
             {
+                Cursor = Cursors.Default;
+                if (!IsDisposed)
+                    btnPagar.Enabled = true;
                 MessageBox.Show(ex.Message);
             }
         }
 
+        private void CobrarMembresiaFinanciada(
+            int clienteId,
+            int planId,
+            PlanDTO plan,
+            DateTime fin,
+            string usuario)
+        {
+            if (membresiaBLL.ClienteNoElegibleParaFinanciamiento(clienteId, out string motivoFinanciamiento))
+            {
+                MessageBox.Show(
+                    motivoFinanciamiento,
+                    "Financiamiento no disponible",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                chkFinanciamiento.Checked = false;
+                return;
+            }
+
+            decimal pagoInicial = decimal.TryParse(txtPagoInicial.Text, out decimal p) ? p : 0;
+
+            if (pagoInicial < 0 || pagoInicial > plan.Precio)
+            {
+                MessageBox.Show("Pago inicial inválido.");
+                return;
+            }
+
+            decimal saldo = plan.Precio - pagoInicial;
+            string conceptoPago = $"Pago inicial - Membresía {cmbMembresia.Text}";
+            string metodoPago = "Efectivo";
+
+            DateTime? fechaVencimientoDeuda = saldo > 0
+                ? dtpFechaVencimiento.Value.Date
+                : null;
+
+            var result = MembresiaCommandService.VenderMembresiaFinanciada(
+                clienteId,
+                planId,
+                pagoInicial,
+                metodoPago,
+                conceptoPago,
+                fechaVencimientoDeuda,
+                usuario);
+
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message);
+                return;
+            }
+
+            LimpiarCampos();
+
+            MessageBox.Show(
+                $"Membresía financiada registrada correctamente.\n\n" +
+                $"Plan: {plan.Nombre}\n" +
+                $"Pago inicial: ${pagoInicial:N2}\n" +
+                $"Saldo pendiente: ${saldo:N2}\n" +
+                $"Cliente activado inmediatamente.",
+                "Financiamiento Exitoso",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            ProgramarRefrescoTrasPago();
+
+            if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
+            {
+                string? nota = saldo > 0
+                    ? $"Tu membresía está activa. Saldo pendiente: RD${saldo:N0}. Vence el {fin:dd/MM/yyyy}."
+                    : null;
+                // WhatsApp ya lo dispara MembresiaBLL en background; aquí solo PDF de respaldo.
+                IniciarPostPagoEnSegundoPlano(
+                    clienteId,
+                    planId,
+                    plan.Nombre ?? cmbMembresia.Text,
+                    pagoInicial,
+                    fin,
+                    metodoPago,
+                    opFin,
+                    notaExtra: nota,
+                    enviarWhatsAppFactura: false);
+            }
+        }
+
+        private void CobrarMembresiaCompleta(
+            int clienteId,
+            int planId,
+            PlanDTO plan,
+            DateTime fin,
+            string usuario)
+        {
+            if (!decimal.TryParse(txtMonto.Text, out decimal monto) || monto <= 0)
+            {
+                MessageBox.Show("Monto inválido.");
+                return;
+            }
+
+            string concepto = $"Membresía {cmbMembresia.Text}";
+            string metodoPago = "Efectivo";
+
+            var result = MembresiaCommandService.PagarMembresia(
+                clienteId,
+                planId,
+                monto,
+                metodoPago,
+                concepto,
+                fin,
+                usuario);
+
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message);
+                return;
+            }
+
+            LimpiarCampos();
+            MessageBox.Show("Membresía registrada correctamente.");
+
+            ProgramarRefrescoTrasPago();
+
+            if (result.Payload is MembresiaOperacionResult opPago)
+            {
+                IniciarPostPagoEnSegundoPlano(
+                    clienteId,
+                    planId,
+                    plan.Nombre ?? cmbMembresia.Text,
+                    monto,
+                    fin,
+                    metodoPago,
+                    opPago);
+            }
+        }
+
         /// <summary>
-        /// PDF + Supabase + WhatsApp fuera del hilo UI para evitar congelar Pagos.
+        /// Dashboard + eventos fuera del click sincronizado (evita freeze por listeners).
+        /// </summary>
+        private void ProgramarRefrescoTrasPago()
+        {
+            if (IsDisposed)
+                return;
+
+            BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    CORE.AppEventos.PagoRegistrado();
+                    _presentacion?.CargarDashboard();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Refresco post-pago] {ex.Message}");
+                }
+            }));
+        }
+
+        /// <summary>
+        /// PDF + Supabase + WhatsApp fuera del hilo UI. Sin popups ni abrir factura en el PC.
         /// </summary>
         private void IniciarPostPagoEnSegundoPlano(
             int clienteId,
@@ -594,95 +633,52 @@ namespace UI.DISEÑO
             decimal monto,
             DateTime fin,
             string metodoPago,
-            MembresiaOperacionResult opPago)
+            MembresiaOperacionResult opPago,
+            string? notaExtra = null,
+            bool enviarWhatsAppFactura = true)
         {
-            var sync = SynchronizationContext.Current;
             System.Threading.Tasks.Task.Run(() =>
             {
-                string? waDetalle = null;
-                try
-                {
-                    waDetalle = membresiaBLL.EnviarWhatsAppTrasPagoMembresia(
-                        clienteId,
-                        planId,
-                        monto,
-                        DateTime.Now,
-                        fin,
-                        metodoPago,
-                        opPago.PagoId);
-                }
-                catch (Exception ex)
-                {
-                    waDetalle = "Error WhatsApp: " + ex.Message;
-                }
-
-                void MostrarEnUi()
+                if (enviarWhatsAppFactura)
                 {
                     try
                     {
-                        if (!string.IsNullOrWhiteSpace(waDetalle))
-                            MostrarDetalleWhatsApp(waDetalle);
-
-                        FacturaMembresiaPdfService.GenerarAbrirDesdeOperacion(
-                            this,
+                        string? waDetalle = membresiaBLL.EnviarWhatsAppTrasPagoMembresia(
                             clienteId,
-                            nombrePlan,
+                            planId,
                             monto,
+                            DateTime.Now,
                             fin,
                             metodoPago,
-                            opPago);
+                            opPago.PagoId);
+
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[WhatsApp post-pago] {waDetalle ?? "(sin detalle)"}");
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(this, ex.Message, "Post-pago", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        System.Diagnostics.Debug.WriteLine($"[WhatsApp post-pago] Error: {ex.Message}");
                     }
                 }
 
-                if (sync != null)
-                    sync.Post(_ => MostrarEnUi(), null);
-                else if (IsHandleCreated && !IsDisposed)
-                    BeginInvoke(MostrarEnUi);
-            });
-        }
-
-        private void MostrarDetalleWhatsApp(string detalle)
-        {
-            var match = System.Text.RegularExpressions.Regex.Match(
-                detalle,
-                @"https://[^\s\r\n]+",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            string? link = match.Success ? match.Value.TrimEnd('.', ')', ']') : null;
-
-            var icono = detalle.Contains("ERROR", StringComparison.OrdinalIgnoreCase)
-                || detalle.Contains("no responde", StringComparison.OrdinalIgnoreCase)
-                ? MessageBoxIcon.Warning
-                : MessageBoxIcon.Information;
-
-            if (!string.IsNullOrWhiteSpace(link))
-            {
-                var r = MessageBox.Show(
-                    this,
-                    detalle + "\n\n¿Abrir el link de la factura en el navegador?",
-                    "WhatsApp",
-                    MessageBoxButtons.YesNo,
-                    icono);
-                if (r == DialogResult.Yes)
+                try
                 {
-                    try
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = link,
-                            UseShellExecute = true
-                        });
-                    }
-                    catch { /* ignore */ }
+                    FacturaMembresiaPdfService.GenerarDesdeOperacion(
+                        owner: null,
+                        clienteId,
+                        nombrePlan,
+                        monto,
+                        fin,
+                        metodoPago,
+                        opPago,
+                        notaExtra: notaExtra,
+                        abrirPdf: false);
                 }
-            }
-            else
-            {
-                MessageBox.Show(this, detalle, "WhatsApp", MessageBoxButtons.OK, icono);
-            }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PDF post-pago] {ex.Message}");
+                }
+            });
         }
 
         private void LimpiarCampos()
@@ -693,7 +689,6 @@ namespace UI.DISEÑO
             txtMonto.Clear();
             txtPrecioProducto.Clear();
             numCantidad.Value = 1;
-            // 🆕 Limpiar controles de financiamiento
             chkFinanciamiento.Checked = false;
             txtPagoInicial.Text = "0";
             lblSaldoValor.Text = "$0.00";
@@ -742,29 +737,28 @@ namespace UI.DISEÑO
 
         private bool IntentarRedirigirRenovacion(int clienteId)
         {
-            // Consulta ligera (evita cargar todo el grid de estados = pausa al pagar).
-            if (membresiaBLL.TieneMembresiaActiva(clienteId)
-                || !membresiaBLL.TieneMembresiaVencidaSinActiva(clienteId))
-            {
+            // Misma regla que botón RENOVAR en FrmEstadoClientes (VENCIDO / DESACTIVADO).
+            if (!membresiaBLL.ClienteElegibleParaRenovacion(clienteId))
                 return false;
-            }
 
             string nombre = cmbCliente.Text.Trim();
             if (string.IsNullOrWhiteSpace(nombre))
                 nombre = "Cliente";
 
             DialogResult respuesta = MessageBox.Show(
-                $"El cliente {nombre} (#{clienteId}) tiene una membresía vencida.\n\n¿Desea renovar el plan?",
+                $"El cliente {nombre} (#{clienteId}) aparece como VENCIDO o DESACTIVADO en Estado.\n\n" +
+                "¿Desea renovar el plan?\n\n" +
+                "Sí = renovar | No = cobrar como membresía nueva",
                 "Renovación",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
             if (respuesta != DialogResult.Yes)
-                return true;
+                return false;
 
             bool renovado = RenovacionMembresiaDialog.Mostrar(this, clienteId, nombre, () =>
             {
-                _presentacion?.CargarDashboard();
+                ProgramarRefrescoTrasPago();
             });
 
             if (renovado)
@@ -776,7 +770,8 @@ namespace UI.DISEÑO
                     MessageBoxIcon.Information);
             }
 
-            return true;
+            // Si canceló el diálogo de renovación, permitir continuar con cobro nuevo.
+            return renovado;
         }
 
         // ===============================

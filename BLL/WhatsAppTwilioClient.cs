@@ -39,24 +39,27 @@ namespace BLL
                 Trace.WriteLine($"[WhatsApp] MediaUrl rechazada (no es https absoluta): '{mediaUrl}'");
             }
 
-            // Factura PDF: un solo aviso = Body corto + MediaUrl (COMPROBANTE...).
-            // No cascada a plantilla media ni a plantilla+link: eso duplicaba 2-3 mensajes
-            // cuando Twilio ya habia aceptado el adjunto (status queued/accepted).
+            // Factura PDF limpio:
+            // 1) Adjunto libre SIN caption (ideal)
+            // 2) Plantilla media (PDF adjunto; body de plantilla Meta si aplica)
+            // NUNCA plantilla de texto con link.
             bool adjuntarLibre = tieneMedia
                 && (TwilioSettings.AdjuntarPdfLibre
                     || !TwilioSettings.ModoProduccion
                     || TwilioSettings.PermitirBodyEnProduccion);
 
+            WhatsAppEnvioResult? ultimoIntento = null;
+
             if (tieneMedia && adjuntarLibre && MediaListoParaTwilio(mediaUrlNormalizada))
             {
                 var media = EnviarInterno(
                     numeroDestino,
-                    string.IsNullOrWhiteSpace(mensaje) ? "Factura MFFITNESS" : TruncarParaMedia(mensaje),
+                    mensaje: string.Empty,
                     contentSid: null,
                     mediaUrl: mediaUrlNormalizada,
-                    forzarBodyConMedia: true);
+                    forzarBodyConMedia: true,
+                    soloMediaSinCaption: true);
 
-                // Si Twilio acepto el mensaje (hay SID y no fallo duro), NO reenviar.
                 if (FueAceptadoPorTwilio(media))
                 {
                     return new WhatsAppEnvioResult
@@ -65,18 +68,18 @@ namespace BLL
                         Entregado = media.Entregado
                                      || EsEstadoEntregaMediaOk(media.StatusFinal)
                                      || EsEstadoEnviado(media.StatusFinal ?? string.Empty),
-                        Detalle = "PDF adjunto enviado." + DetalleMediaUrl(mediaUrlNormalizada),
+                        Detalle = "PDF adjunto enviado (sin texto)." + DetalleMediaUrl(mediaUrlNormalizada),
                         MessageSid = media.MessageSid,
                         StatusFinal = media.StatusFinal
                     };
                 }
 
-                Trace.WriteLine(
-                    "[WhatsApp] Adjunto libre no aceptado; respaldo plantilla/link. " + media.Detalle);
+                ultimoIntento = media;
+                Trace.WriteLine("[WhatsApp] Adjunto libre no aceptado; se intenta plantilla media. " + media.Detalle);
             }
-            else if (tieneMedia && TwilioSettings.UsaPlantillaFacturaMedia)
+
+            if (tieneMedia && TwilioSettings.UsaPlantillaFacturaMedia)
             {
-                // Solo si no hay adjunto libre: plantilla twilio/media.
                 var facturaMedia = EnviarFacturaMediaTemplate(
                     numeroDestino,
                     mensaje,
@@ -85,38 +88,23 @@ namespace BLL
                 if (FueAceptadoPorTwilio(facturaMedia))
                     return facturaMedia;
 
-                Trace.WriteLine(
-                    "[WhatsApp] Plantilla factura media fallo; se intenta respaldo. " + facturaMedia.Detalle);
+                ultimoIntento = facturaMedia;
+                Trace.WriteLine("[WhatsApp] Plantilla factura media no aceptada. " + facturaMedia.Detalle);
             }
 
-            // Ultimo recurso: plantilla generica (con link si hay mediaUrl).
-            // Solo si el adjunto PDF no se pudo aceptar.
-            if (usarPlantilla)
+            if (tieneMedia)
             {
-                string mensajeFinal = tieneMedia
-                    ? AsegurarLinkEnTexto(mensaje, mediaUrlNormalizada!)
-                    : mensaje;
-                var soloPlantilla = EnviarInterno(numeroDestino, mensajeFinal, contentSid, mediaUrl: null);
-                if (!soloPlantilla.Exito)
-                    return soloPlantilla;
-
-                string extra = tieneMedia
-                    ? " | PDF como link (adjunto no disponible)."
-                      + DetalleMediaUrl(mediaUrlNormalizada)
-                    : string.Empty;
-
-                return new WhatsAppEnvioResult
-                {
-                    Exito = soloPlantilla.Exito,
-                    Entregado = soloPlantilla.Entregado
-                                 || FueAceptadoPorTwilio(soloPlantilla),
-                    Detalle = (soloPlantilla.Detalle ?? string.Empty) + extra,
-                    MessageSid = soloPlantilla.MessageSid,
-                    StatusFinal = soloPlantilla.StatusFinal
-                };
+                return ultimoIntento ?? Fallo(
+                    "No se pudo adjuntar el PDF al WhatsApp del miembro. "
+                    + "Verifique plantilla ContentSidFactura / bucket FACTURAS."
+                    + DetalleMediaUrl(mediaUrlNormalizada));
             }
 
-            return EnviarInterno(numeroDestino, mensaje, contentSid, adjuntarLibre ? mediaUrlNormalizada : null);
+            // Sin media: plantilla generica o body libre (recordatorios, etc.).
+            if (usarPlantilla)
+                return EnviarInterno(numeroDestino, mensaje, contentSid, mediaUrl: null);
+
+            return EnviarInterno(numeroDestino, mensaje, contentSid, mediaUrl: null);
         }
 
         private WhatsAppEnvioResult EnviarFacturaMediaTemplate(
@@ -240,7 +228,8 @@ namespace BLL
             string mensaje,
             string? contentSid,
             string? mediaUrl,
-            bool forzarBodyConMedia = false)
+            bool forzarBodyConMedia = false,
+            bool soloMediaSinCaption = false)
         {
             bool usarPlantilla = !string.IsNullOrWhiteSpace(contentSid) && string.IsNullOrWhiteSpace(mediaUrl);
 
@@ -254,8 +243,6 @@ namespace BLL
                     "Configure TwilioContentSidGenerico en App.config.");
             }
 
-            // En produccion, MediaUrl + Body puede fallar fuera de ventana 24h;
-            // se intenta igual (host/Supabase ya sirvieron el PDF).
             _ = forzarBodyConMedia;
 
             try
@@ -283,7 +270,6 @@ namespace BLL
                 }
                 else if (!string.IsNullOrWhiteSpace(mediaUrl))
                 {
-                    // MessageResource.Create: mediaUrl = List<Uri> con URL publica (Supabase o Host).
                     var mediaUri = new Uri(mediaUrl, UriKind.Absolute);
                     var mediaUrls = new List<Uri> { mediaUri };
 
@@ -295,13 +281,25 @@ namespace BLL
                             DetalleMediaUrl(mediaUrl));
                     }
 
-                    Trace.WriteLine($"WhatsApp MediaUrl={mediaUri.AbsoluteUri}");
+                    Trace.WriteLine(
+                        $"WhatsApp MediaUrl={mediaUri.AbsoluteUri} soloPdf={soloMediaSinCaption}");
 
-                    message = MessageResource.Create(
-                        to: new PhoneNumber($"whatsapp:{numeroTo}"),
-                        from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
-                        body: string.IsNullOrWhiteSpace(mensaje) ? "Factura MFFITNESS" : mensaje,
-                        mediaUrl: mediaUrls);
+                    if (soloMediaSinCaption || string.IsNullOrWhiteSpace(mensaje))
+                    {
+                        // PDF limpio: sin caption/texto en el chat.
+                        message = MessageResource.Create(
+                            to: new PhoneNumber($"whatsapp:{numeroTo}"),
+                            from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
+                            mediaUrl: mediaUrls);
+                    }
+                    else
+                    {
+                        message = MessageResource.Create(
+                            to: new PhoneNumber($"whatsapp:{numeroTo}"),
+                            from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
+                            body: mensaje,
+                            mediaUrl: mediaUrls);
+                    }
                 }
                 else
                 {

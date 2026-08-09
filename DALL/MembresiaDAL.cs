@@ -19,37 +19,17 @@ namespace DL
                 FROM Membresias m
                 WHERE m.ClienteId = @ClienteId
                   AND m.FechaFin IS NOT NULL
-                  AND (
-                        CAST(m.FechaFin AS DATE) > CAST(GETDATE() AS DATE)
-                     OR (
-                            CAST(m.FechaFin AS DATE) = CAST(GETDATE() AS DATE)
-                        AND m.Activa = 1
-                     )
-                  )
+                  AND CAST(m.FechaFin AS DATE) >= CAST(GETDATE() AS DATE)
                   AND NOT EXISTS (
                       SELECT 1
                       FROM HistorialMembresias h
                       INNER JOIN (
-                          SELECT ClienteId, MAX(Fecha) AS UltimaFecha
+                          SELECT ClienteId, MAX(Id) AS UltimoId
                           FROM HistorialMembresias
                           GROUP BY ClienteId
-                      ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimaFecha = h.Fecha
+                      ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
                       WHERE h.ClienteId = @ClienteId
-                        AND h.TipoMovimiento = 'SALIDA'
-                  )
-                  AND NOT (
-                      CAST(m.FechaFin AS DATE) = CAST(GETDATE() AS DATE)
-                      AND EXISTS (
-                          SELECT 1
-                          FROM HistorialMembresias h
-                          INNER JOIN (
-                              SELECT ClienteId, MAX(Fecha) AS UltimaFecha
-                              FROM HistorialMembresias
-                              GROUP BY ClienteId
-                          ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimaFecha = h.Fecha
-                          WHERE h.ClienteId = @ClienteId
-                            AND h.TipoMovimiento = 'BAJA_VENCIDO'
-                      )
+                        AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO')
                   )";
 
             SqlParameter[] p =
@@ -80,6 +60,30 @@ namespace DL
             return Convert.ToInt32(db.ExecuteScalar(query, p)) > 0;
         }
 
+        /// <summary>
+        /// Último historial es SALIDA o BAJA_VENCIDO (DESACTIVADO / VENCIDO manual en Estado).
+        /// </summary>
+        public bool TieneUltimaSalidaOBaja(int clienteId)
+        {
+            string query = @"
+                SELECT COUNT(*)
+                FROM HistorialMembresias h
+                INNER JOIN (
+                    SELECT ClienteId, MAX(Id) AS UltimoId
+                    FROM HistorialMembresias
+                    GROUP BY ClienteId
+                ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
+                WHERE h.ClienteId = @ClienteId
+                  AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO')";
+
+            SqlParameter[] p =
+            {
+                new SqlParameter("@ClienteId", clienteId)
+            };
+
+            return Convert.ToInt32(db.ExecuteScalar(query, p)) > 0;
+        }
+
         // ===============================
         // OBTENER INFORMACIÓN DE LA MEMBRESÍA ACTIVA
         // ===============================
@@ -95,37 +99,17 @@ namespace DL
                              INNER JOIN Planes p ON p.Id = m.PlanId
                              WHERE m.ClienteId = @ClienteId
                              AND m.FechaFin IS NOT NULL
-                             AND (
-                                   CAST(m.FechaFin AS DATE) > CAST(GETDATE() AS DATE)
-                                OR (
-                                       CAST(m.FechaFin AS DATE) = CAST(GETDATE() AS DATE)
-                                   AND m.Activa = 1
-                                )
-                             )
+                             AND CAST(m.FechaFin AS DATE) >= CAST(GETDATE() AS DATE)
                              AND NOT EXISTS (
                                  SELECT 1
                                  FROM HistorialMembresias h
                                  INNER JOIN (
-                                     SELECT ClienteId, MAX(Fecha) AS UltimaFecha
+                                     SELECT ClienteId, MAX(Id) AS UltimoId
                                      FROM HistorialMembresias
                                      GROUP BY ClienteId
-                                 ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimaFecha = h.Fecha
+                                 ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
                                  WHERE h.ClienteId = @ClienteId
-                                   AND h.TipoMovimiento = 'SALIDA'
-                             )
-                             AND NOT (
-                                 CAST(m.FechaFin AS DATE) = CAST(GETDATE() AS DATE)
-                                 AND EXISTS (
-                                     SELECT 1
-                                     FROM HistorialMembresias h
-                                     INNER JOIN (
-                                         SELECT ClienteId, MAX(Fecha) AS UltimaFecha
-                                         FROM HistorialMembresias
-                                         GROUP BY ClienteId
-                                     ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimaFecha = h.Fecha
-                                     WHERE h.ClienteId = @ClienteId
-                                       AND h.TipoMovimiento = 'BAJA_VENCIDO'
-                                 )
+                                   AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO')
                              )
                              ORDER BY m.FechaFin DESC, m.Id DESC";
 
@@ -260,8 +244,8 @@ namespace DL
 
             db.ExecuteNonQuery(queryVencer);
 
-            // 2) Reactivar planes con FechaFin futura que quedaron Activa=0
-            //    (historial BAJA residual no manda si la fecha aún no llega).
+            // 2) Reactivar planes vigentes (FechaFin >= hoy) que quedaron Activa=0,
+            //    salvo baja manual: SALIDA o BAJA_VENCIDO como último historial.
             string queryReactivar = @"
     UPDATE m
     SET Activa = 1
@@ -273,17 +257,17 @@ namespace DL
     ) u ON u.IdUltima = m.Id
     WHERE m.Activa = 0
       AND m.FechaFin IS NOT NULL
-      AND CAST(m.FechaFin AS DATE) > CAST(GETDATE() AS DATE)
+      AND CAST(m.FechaFin AS DATE) >= CAST(GETDATE() AS DATE)
       AND NOT EXISTS (
           SELECT 1
           FROM HistorialMembresias h
           INNER JOIN (
-              SELECT ClienteId, MAX(Fecha) AS UltimaFecha
+              SELECT ClienteId, MAX(Id) AS UltimoId
               FROM HistorialMembresias
               GROUP BY ClienteId
-          ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimaFecha = h.Fecha
+          ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
           WHERE h.ClienteId = m.ClienteId
-            AND h.TipoMovimiento = 'SALIDA'
+            AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO')
       )";
 
             db.ExecuteNonQuery(queryReactivar);

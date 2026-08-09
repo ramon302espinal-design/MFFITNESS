@@ -165,24 +165,43 @@ namespace UI.Helpers
                         return;
                     }
 
+                    // Capturar datos; PDF/WhatsApp fuera del modal (evita freeze al confirmar).
                     if (result.Payload is RenovacionOperacionResult opRen)
                     {
-                        FacturaMembresiaPdfService.GenerarAbrirDesdeOperacion(
-                            frm,
-                            clienteId,
-                            plan.Nombre ?? "PLAN",
-                            plan.Precio,
-                            opRen.FechaFinMembresia == default
-                                ? MembresiaHelper.CalcularFechaVencimiento(DateTime.Now)
-                                : opRen.FechaFinMembresia,
-                            "Efectivo",
-                            new MembresiaOperacionResult
+                        int pagoIdBg = opRen.PagoId;
+                        int membresiaIdBg = opRen.MembresiaId;
+                        int cajaMovIdBg = opRen.CajaMovimientoId;
+                        DateTime finBg = opRen.FechaFinMembresia == default
+                            ? MembresiaHelper.CalcularFechaVencimiento(DateTime.Now)
+                            : opRen.FechaFinMembresia;
+                        string planNombreBg = plan.Nombre ?? "PLAN";
+                        decimal precioBg = plan.Precio;
+
+                        System.Threading.Tasks.Task.Run(() =>
+                        {
+                            try
                             {
-                                MembresiaId = opRen.MembresiaId,
-                                PagoId = opRen.PagoId,
-                                CajaMovimientoId = opRen.CajaMovimientoId,
-                                FechaFinMembresia = opRen.FechaFinMembresia
-                            });
+                                FacturaMembresiaPdfService.GenerarDesdeOperacion(
+                                    owner: null,
+                                    clienteId,
+                                    planNombreBg,
+                                    precioBg,
+                                    finBg,
+                                    "Efectivo",
+                                    new MembresiaOperacionResult
+                                    {
+                                        MembresiaId = membresiaIdBg,
+                                        PagoId = pagoIdBg,
+                                        CajaMovimientoId = cajaMovIdBg,
+                                        FechaFinMembresia = finBg
+                                    },
+                                    abrirPdf: false);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[PDF renovación] {ex.Message}");
+                            }
+                        });
                     }
 
                     renovacionCompletada = true;

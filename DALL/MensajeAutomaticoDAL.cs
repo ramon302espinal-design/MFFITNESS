@@ -208,10 +208,10 @@ namespace DL
                   SELECT 1
                   FROM HistorialMembresias h
                   INNER JOIN (
-                      SELECT ClienteId, MAX(Fecha) AS UltimaFecha
+                      SELECT ClienteId, MAX(Id) AS UltimoId
                       FROM HistorialMembresias
                       GROUP BY ClienteId
-                  ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimaFecha = h.Fecha
+                  ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
                   WHERE h.ClienteId = m.ClienteId
                     AND h.TipoMovimiento = 'SALIDA'
               )";

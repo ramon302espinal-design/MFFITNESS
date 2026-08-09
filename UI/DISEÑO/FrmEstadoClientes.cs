@@ -48,36 +48,8 @@ namespace UI.DISEÑO
                 return;
 
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloEstado);
-            AjustarContenidoTrasNavBar();
-            ConfigurarGridEstado();
-        }
-
-        private void ConfigurarGridEstado()
-        {
+            // Columnas vienen del DataSource; AutoGenerate solo en runtime.
             dgvEstado.AutoGenerateColumns = true;
-            dgvEstado.AllowUserToAddRows = false;
-            dgvEstado.AllowUserToDeleteRows = false;
-            dgvEstado.ReadOnly = true;
-            // AllCells dispara CellFormatting en cada paint y rompe durante rebind.
-            dgvEstado.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
-            dgvEstado.RowTemplate.Height = 32;
-        }
-
-        /// <summary>
-        /// Baja el contenido absoluto para que no quede debajo de la barra Dock.Top.
-        /// </summary>
-        private void AjustarContenidoTrasNavBar()
-        {
-            const int offset = 52;
-            foreach (Control c in Controls)
-            {
-                if (c.Dock != DockStyle.None)
-                    continue;
-                c.Top += offset;
-            }
-
-            // Back ya está en la barra de navegación
-            btnAtras.Visible = false;
         }
 
         // ===============================
@@ -85,12 +57,9 @@ namespace UI.DISEÑO
         // ===============================
         private int ObtenerClienteSeleccionado()
         {
-            if (dgvEstado.CurrentRow == null) return 0;
-
-            var cell = ObtenerCelda(dgvEstado.CurrentRow, "ID");
-            if (cell?.Value == null) return 0;
-
-            return int.TryParse(cell.Value.ToString(), out int id) ? id : 0;
+            if (!TryObtenerClienteDeFila(dgvEstado.CurrentRow, out int id))
+                return 0;
+            return id;
         }
 
         private static DataGridViewCell? ObtenerCelda(DataGridViewRow row, string nombreColumna)
@@ -348,9 +317,24 @@ namespace UI.DISEÑO
             AbrirGestionDeudasCliente(clienteId);
         }
 
-        private static bool TryObtenerClienteDeFila(DataGridViewRow fila, out int clienteId)
+        private static bool TryObtenerClienteDeFila(DataGridViewRow? fila, out int clienteId)
         {
             clienteId = 0;
+            if (fila == null || fila.IsNewRow)
+                return false;
+
+            if (fila.DataBoundItem is DataRowView drv)
+            {
+                if (drv.Row.Table.Columns.Contains("ID")
+                    && drv["ID"] != null
+                    && drv["ID"] != DBNull.Value
+                    && int.TryParse(drv["ID"].ToString(), out clienteId)
+                    && clienteId > 0)
+                {
+                    return true;
+                }
+            }
+
             var cell = ObtenerCelda(fila, "ID");
             if (cell?.Value == null || cell.Value == DBNull.Value)
                 return false;
@@ -459,14 +443,13 @@ namespace UI.DISEÑO
         {
             try
             {
-                if (dgvEstado.CurrentRow == null)
+                if (!TryObtenerClienteDeFila(dgvEstado.CurrentRow, out int clienteId))
                 {
                     MessageBox.Show("Selecciona un cliente.");
                     return;
                 }
 
-                int clienteId = ObtenerClienteSeleccionado();
-                string nombre = ObtenerValorCelda(dgvEstado.CurrentRow, "Nombre");
+                string nombre = ObtenerValorCelda(dgvEstado.CurrentRow!, "Nombre");
 
                 RenovacionMembresiaDialog.Mostrar(this, clienteId, nombre, () =>
                 {
@@ -487,23 +470,40 @@ namespace UI.DISEÑO
         {
             try
             {
-                if (dgvEstado.CurrentRow == null)
+                if (!TryObtenerClienteDeFila(dgvEstado.CurrentRow, out int clienteId))
                 {
                     MessageBox.Show("Selecciona un cliente.");
                     return;
                 }
 
-                int clienteId = ObtenerClienteSeleccionado();
-                if (clienteId <= 0)
-                {
-                    MessageBox.Show("No se pudo identificar al cliente seleccionado.");
-                    return;
-                }
+                string nombreCliente = ObtenerValorCelda(dgvEstado.CurrentRow!, "Nombre");
+                string estadoActual = ObtenerValorCelda(dgvEstado.CurrentRow!, "Estado");
 
-                string nombreCliente = ObtenerValorCelda(dgvEstado.CurrentRow, "Nombre");
                 ModoDesactivacionMiembro? modo = DesactivacionMiembroDialog.Mostrar(this, nombreCliente);
                 if (modo == null)
                     return;
+
+                if (modo == ModoDesactivacionMiembro.SinMembresia
+                    && estadoActual.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(
+                        "El cliente ya está DESACTIVADO.",
+                        "Desactivar",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (modo == ModoDesactivacionMiembro.Vencido
+                    && estadoActual.Equals("VENCIDO", StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(
+                        "El cliente ya está como VENCIDO.",
+                        "Desactivar",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
 
                 string usuario = Sesion.Usuario ?? "ADMIN";
 
@@ -512,13 +512,27 @@ namespace UI.DISEÑO
                         ? "Motivo de baja por vencimiento:"
                         : "¿Por qué se va el cliente?",
                     "Motivo de salida",
-                    ""
+                    "Sin especificar"
                 );
+
+                // InputBox: Cancel → ""; Aceptar con default → "Sin especificar".
+                if (motivo.Length == 0)
+                    return;
 
                 if (string.IsNullOrWhiteSpace(motivo))
                     motivo = "Sin especificar";
 
-                int resultado = membresiaBLL.DesactivarMiembro(clienteId, usuario, motivo, modo.Value);
+                Cursor = Cursors.WaitCursor;
+                int resultado;
+                try
+                {
+                    resultado = membresiaBLL.DesactivarMiembro(clienteId, usuario, motivo, modo.Value);
+                }
+                finally
+                {
+                    Cursor = Cursors.Default;
+                }
+
                 if (resultado <= 0)
                 {
                     MessageBox.Show(
@@ -529,39 +543,32 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                try
-                {
-                    bool whatsappEnviado = mensajeBLL.EnviarMensajeDesactivacion(clienteId, motivo);
-                    if (!whatsappEnviado)
-                    {
-                        string? error = mensajeBLL.ObtenerUltimoErrorCliente(clienteId);
-                        MessageBox.Show(
-                            "Miembro desactivado, pero no se pudo enviar WhatsApp.\n\n" +
-                            (error ?? "Verifique telefono del cliente y TwilioContentSidGenerico en App.config."),
-                            "WhatsApp",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        "Miembro desactivado, pero fallo WhatsApp: " + ex.Message,
-                        "WhatsApp",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                }
+                // Refrescar primero: el usuario ve el cambio aunque WhatsApp tarde.
+                CargarEstado();
+                _presentacion?.CargarDashboard();
 
                 string estadoFinal = modo == ModoDesactivacionMiembro.Vencido
                     ? "CLIENTE VENCIDO"
                     : "CLIENTE DESACTIVADO";
                 MessageBox.Show($"Miembro desactivado correctamente.\nEstado: {estadoFinal}.");
 
-                CargarEstado();
-                _presentacion?.CargarDashboard();
+                int clienteWhatsApp = clienteId;
+                string motivoWhatsApp = motivo;
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        mensajeBLL.EnviarMensajeDesactivacion(clienteWhatsApp, motivoWhatsApp);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("WhatsApp desactivación: " + ex.Message);
+                    }
+                });
             }
             catch (Exception ex)
             {
+                Cursor = Cursors.Default;
                 MessageBox.Show(
                     "Error al desactivar miembro: " + ex.Message,
                     "Error",
