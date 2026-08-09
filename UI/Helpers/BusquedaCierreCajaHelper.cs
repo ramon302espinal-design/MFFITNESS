@@ -121,6 +121,7 @@ namespace UI.Helpers
                     "(" +
                     $"Turno LIKE {like} " +
                     $"OR Usuario LIKE {like} " +
+                    $"OR Convert(MontoInicial, 'System.String') LIKE {like} " +
                     $"OR Convert(TotalIngresos, 'System.String') LIKE {like} " +
                     $"OR Convert(TotalGastos, 'System.String') LIKE {like} " +
                     $"OR Convert(TotalSistema, 'System.String') LIKE {like} " +

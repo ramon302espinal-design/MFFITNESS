@@ -61,19 +61,21 @@ namespace DL
         {
             string query = @"
                 SELECT
-                    Id,
-                    Fecha,
-                    Turno,
-                    TotalIngresos,
-                    TotalGastos,
-                    TotalSistema,
-                    TotalContado,
-                    Diferencia,
-                    FechaCierre,
-                    CajaId,
-                    Usuario
-                FROM CierreCaja
-                ORDER BY FechaCierre DESC, Id DESC";
+                    cc.Id,
+                    cc.Fecha,
+                    cc.Turno,
+                    ISNULL(c.MontoInicial, 0) AS MontoInicial,
+                    cc.TotalIngresos,
+                    cc.TotalGastos,
+                    cc.TotalSistema,
+                    cc.TotalContado,
+                    cc.Diferencia,
+                    cc.FechaCierre,
+                    cc.CajaId,
+                    cc.Usuario
+                FROM CierreCaja cc
+                LEFT JOIN Caja c ON c.Id = cc.CajaId
+                ORDER BY cc.FechaCierre DESC, cc.Id DESC";
             return db.ExecuteQuery(query);
         }
 

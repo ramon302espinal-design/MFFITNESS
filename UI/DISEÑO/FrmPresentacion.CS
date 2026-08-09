@@ -268,10 +268,68 @@ namespace UI.DISEÑO
         // ===============================
         private void btnCerrarSesion_Click(object sender, EventArgs e)
         {
-            Sesion.CerrarSesion();   // limpiar sesión
-            this.Hide();             // ocultar FrmPresentacion
-            Application.OpenForms[0]?.Show(); // Mostrar FrmLogin (siempre es el primer formulario)
+            if (!PuedeSalirTrasValidarCaja())
+                return;
 
+            RealizarSalidaALogin();
+        }
+
+        /// <summary>
+        /// Con caja ABIERTA el cuadre es obligatorio: "No" solo cierra el aviso (no sale).
+        /// </summary>
+        private bool PuedeSalirTrasValidarCaja()
+        {
+            var cajaBll = new CajaBLL();
+            if (!cajaBll.ObtenerEstadoCaja())
+                return true;
+
+            bool quiereCuadrar = AppDialog.Confirm(
+                this,
+                "Aún no has cerrado caja. ¿Desea hacer el cuadre para salir?",
+                "Caja abierta");
+
+            if (!quiereCuadrar)
+                return false;
+
+            using (var frmCaja = new FrmCajaDashboard())
+                frmCaja.ShowDialog(this);
+
+            try { CargarDashboard(); } catch { /* no bloquear salida por refresh */ }
+
+            if (cajaBll.ObtenerEstadoCaja())
+            {
+                AppDialog.Warning(
+                    this,
+                    "Debe completar el cuadre y cerrar la caja antes de salir.",
+                    "Caja abierta");
+                return false;
+            }
+
+            return true;
+        }
+
+        private void RealizarSalidaALogin()
+        {
+            Sesion.CerrarSesion();
+            Hide();
+            Application.OpenForms[0]?.Show();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            // Alt+F4 / X: misma regla — no se cierra el programa con caja abierta.
+            if (e.CloseReason == CloseReason.UserClosing
+                && Sesion.Activa
+                && Visible
+                && new CajaBLL().ObtenerEstadoCaja())
+            {
+                e.Cancel = true;
+                if (PuedeSalirTrasValidarCaja())
+                    RealizarSalidaALogin();
+                return;
+            }
+
+            base.OnFormClosing(e);
         }
 
         private void btnAgregarCliente_Click(object sender, EventArgs e)

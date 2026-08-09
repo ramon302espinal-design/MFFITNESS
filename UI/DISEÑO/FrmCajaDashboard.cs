@@ -112,6 +112,7 @@ namespace UI.DISEÑO
                 cajaBLL.AbrirCajaSeguro(montoInicial, "Admin");
 
                 MessageBox.Show("Caja abierta correctamente.");
+                ActualizarEstadoCaja(true);
                 ActualizarDashboard();
                 AppEventos.CajaCambiada();
             }
@@ -126,22 +127,25 @@ namespace UI.DISEÑO
         // ================================
         private void btnCerrarCaja_Click(object sender, EventArgs e)
         {
-           
-            AppEventos.CajaCambiada();
             try
             {
-                //if (cajaBLL.ObtenerCajaAbiertaHoy() == null)
-                //{
-                //MessageBox.Show("No hay caja abierta.");
-                //return;
-                //}
+                if (cajaBLL.ObtenerCajaAbiertaHoy() == null)
+                {
+                    MessageBox.Show("No hay caja abierta.");
+                    ActualizarEstadoCaja(false);
+                    return;
+                }
 
-                decimal ingresos = cajaService.CalcularIngresosHoy();
-                decimal egresos = cajaService.CalcularEgresosHoy();
-                decimal sistema = ingresos - egresos;
+                // SISTEMA = Monto Inicial + Ingresos − Gastos (mismo criterio que BalanceActual / cuadre BLL).
+                decimal montoInicial = cajaBLL.ObtenerMontoInicial();
+                decimal ingresos = cajaBLL.IngresosHoy();
+                decimal egresos = cajaBLL.EgresosHoy();
+                decimal sistema = montoInicial + ingresos - egresos;
 
                 string input = Microsoft.VisualBasic.Interaction.InputBox(
-                    $"💰 SISTEMA: {sistema:C}\n\nIngrese dinero contado:",
+                    $"💰 SISTEMA: {sistema:C}\n" +
+                    $"(Inicial {montoInicial:C} + Ingresos {ingresos:C} − Gastos {egresos:C})\n\n" +
+                    "Ingrese dinero contado:",
                     "Cierre de Caja",
                     "0"
                 );
@@ -173,15 +177,19 @@ namespace UI.DISEÑO
 
                 MessageBox.Show(
                     $"✅ Caja cerrada correctamente\n\n" +
+                    $"Turno: {CajaServiceBLL.ObtenerTurnoActual()}\n" +
                     $"Sistema: {resultado.sistema:C}\n" +
                     $"Diferencia: {resultado.diferencia:C}"
                 );
-                AppEventos.CajaCambiada();
+
+                ActualizarEstadoCaja(false);
                 ActualizarDashboard();
-            }    
+                AppEventos.CajaCambiada();
+            }
             catch (Exception ex)
             {
                 MessageBox.Show("Error en cierre: " + ex.Message);
+                RefrescarEstadoCaja();
             }
         }
 

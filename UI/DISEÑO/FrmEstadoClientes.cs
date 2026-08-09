@@ -29,6 +29,7 @@ namespace UI.DISEÑO
         // ===============================
         private System.Windows.Forms.Timer timerActualizacion = new System.Windows.Forms.Timer();
         private bool cargando = false;
+        private bool _estadoUiInicializado;
 
         /// <summary>Constructor para el diseñador de WinForms.</summary>
         public FrmEstadoClientes()
@@ -119,22 +120,21 @@ namespace UI.DISEÑO
         // ===============================
         private void FrmEstadoClientes_Load(object? sender, EventArgs e)
         {
-               
+            if (_estadoUiInicializado || ThemeHost.IsDesignTime())
+                return;
+
+            _estadoUiInicializado = true;
+
             CargarEstado();
 
             timerActualizacion.Interval = 30000;
+            timerActualizacion.Tick -= TimerActualizacion_Tick;
             timerActualizacion.Tick += TimerActualizacion_Tick;
             timerActualizacion.Start();
 
-
-            // 🔴 Forzamos el color rojo para el botón de desactivar
+            // Rojo fijo; no enganchar BackColorChanged→Load (congelaba con el tema/hover).
             btnDesactivar.BackColor = Color.Red;
-            btnDesactivar.ForeColor = Color.White; // Opcional: texto blanco para buen contraste
-
-            
-
-
-
+            btnDesactivar.ForeColor = Color.White;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

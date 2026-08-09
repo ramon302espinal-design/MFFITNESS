@@ -71,6 +71,7 @@ namespace UI.DISEÑO
             grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
+            ConfigurarColumnaMoneda(grid, "MontoInicial", "Monto inicial");
             ConfigurarColumnaMoneda(grid, "TotalIngresos", "Ingresos");
             ConfigurarColumnaMoneda(grid, "TotalGastos", "Gastos");
             ConfigurarColumnaMoneda(grid, "TotalSistema", "Total sistema");
@@ -113,7 +114,21 @@ namespace UI.DISEÑO
                 return;
 
             string nombreColumna = dgvCierres.Columns[e.ColumnIndex].Name;
-            if (nombreColumna is not ("TotalIngresos" or "TotalGastos" or "TotalSistema"
+
+            if (nombreColumna == "Turno")
+            {
+                DateTime? fechaCierre = null;
+                if (dgvCierres.Rows[e.RowIndex].Cells["FechaCierre"]?.Value is DateTime fc)
+                    fechaCierre = fc;
+                else if (DateTime.TryParse(dgvCierres.Rows[e.RowIndex].Cells["FechaCierre"]?.Value?.ToString(), out DateTime fcParsed))
+                    fechaCierre = fcParsed;
+
+                e.Value = CajaServiceBLL.NormalizarNombreTurno(e.Value?.ToString(), fechaCierre);
+                e.FormattingApplied = true;
+                return;
+            }
+
+            if (nombreColumna is not ("MontoInicial" or "TotalIngresos" or "TotalGastos" or "TotalSistema"
                 or "TotalContado" or "Diferencia"))
                 return;
 

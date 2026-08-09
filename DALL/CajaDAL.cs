@@ -282,14 +282,75 @@ namespace DL
         {
             string query = @"UPDATE Caja
                              SET Estado = 'CERRADA'
-                             WHERE Id = @CajaId";
+                             WHERE Id = @CajaId
+                               AND Estado = 'ABIERTA'";
 
             SqlParameter[] parametros =
             {
                 new SqlParameter("@CajaId", cajaId)
             };
 
-            db.ExecuteNonQuery(query, parametros);
+            int afectados = db.ExecuteNonQuery(query, parametros);
+            if (afectados <= 0)
+                throw new Exception("No se pudo cerrar la caja (ya estaba cerrada o no existe).");
+        }
+
+        /// <summary>
+        /// Inserta el cuadre en CierreCaja y marca la caja como CERRADA en la misma transacción.
+        /// </summary>
+        public void RegistrarCierreYCerrarCaja(
+            int cajaId,
+            string turno,
+            decimal ingresos,
+            decimal gastos,
+            decimal totalSistema,
+            decimal totalContado,
+            decimal diferencia,
+            string usuario)
+        {
+            using SqlConnection conn = new SqlConnection(db.ConnectionString);
+            conn.Open();
+            using SqlTransaction tx = conn.BeginTransaction();
+
+            try
+            {
+                using (SqlCommand cmdInsert = new SqlCommand(@"
+                    INSERT INTO CierreCaja
+                    (Fecha, Turno, TotalIngresos, TotalGastos, TotalSistema, TotalContado, Diferencia, FechaCierre, CajaId, Usuario)
+                    VALUES
+                    (CAST(GETDATE() AS DATE), @Turno, @Ingresos, @Gastos, @TotalSistema, @TotalContado, @Diferencia, GETDATE(), @CajaId, @Usuario)",
+                    conn, tx))
+                {
+                    cmdInsert.Parameters.AddWithValue("@Turno", turno);
+                    cmdInsert.Parameters.AddWithValue("@Ingresos", ingresos);
+                    cmdInsert.Parameters.AddWithValue("@Gastos", gastos);
+                    cmdInsert.Parameters.AddWithValue("@TotalSistema", totalSistema);
+                    cmdInsert.Parameters.AddWithValue("@TotalContado", totalContado);
+                    cmdInsert.Parameters.AddWithValue("@Diferencia", diferencia);
+                    cmdInsert.Parameters.AddWithValue("@CajaId", cajaId);
+                    cmdInsert.Parameters.AddWithValue("@Usuario", usuario);
+                    cmdInsert.ExecuteNonQuery();
+                }
+
+                using (SqlCommand cmdClose = new SqlCommand(@"
+                    UPDATE Caja
+                    SET Estado = 'CERRADA'
+                    WHERE Id = @CajaId
+                      AND Estado = 'ABIERTA'", conn, tx))
+                {
+                    cmdClose.Parameters.AddWithValue("@CajaId", cajaId);
+                    int afectados = cmdClose.ExecuteNonQuery();
+                    if (afectados <= 0)
+                        throw new Exception("No se pudo cerrar la caja (ya estaba cerrada o no existe).");
+                }
+
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
 
         // ===============================

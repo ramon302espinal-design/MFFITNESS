@@ -209,7 +209,6 @@ namespace UI.DISEÑO
             btnDesactivar.TabIndex = 22;
             btnDesactivar.Text = "DESACTIVAR";
             btnDesactivar.UseVisualStyleBackColor = false;
-            btnDesactivar.BackColorChanged += FrmEstadoClientes_Load;
             btnDesactivar.Click += btnDesactivar_Click;
             // 
             // lblBuscar

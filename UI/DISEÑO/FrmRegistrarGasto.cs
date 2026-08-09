@@ -1,4 +1,3 @@
-using BLL;
 using BLL.Commands;
 using CORE;
 using CORE.Commands;
@@ -11,31 +10,26 @@ namespace UI.DISEÑO
     [System.ComponentModel.DesignerCategory("Form")]
     public partial class FrmRegistrarGasto : Form
     {
-        private CajaBLL cajaBLL = new CajaBLL();
-
         public FrmRegistrarGasto()
         {
             InitializeComponent();
             ThemeHost.Attach(this);
-            cmbTipoMovimiento?.Items.AddRange(new string[] { "Ingreso", "Egreso", "Apertura" });
-            if (cmbTipoMovimiento != null && cmbTipoMovimiento.Items.Count > 0)
+
+            if (cmbTipoMovimiento != null)
+            {
+                cmbTipoMovimiento.Items.Clear();
+                cmbTipoMovimiento.Items.Add("Egreso");
                 cmbTipoMovimiento.SelectedIndex = 0;
+                cmbTipoMovimiento.Enabled = false;
+            }
         }
 
         private void btnRegistrar_Click(object sender, EventArgs e)
         {
             try
             {
-                string tipoMovimiento = (cmbTipoMovimiento?.SelectedItem as string) ?? string.Empty;
                 string concepto = txtConcepto?.Text?.Trim() ?? string.Empty;
                 string montoTexto = txtMonto?.Text?.Trim() ?? string.Empty;
-
-                if (string.IsNullOrEmpty(tipoMovimiento))
-                {
-                    MessageBox.Show("Seleccione un tipo de movimiento.");
-                    cmbTipoMovimiento?.Focus();
-                    return;
-                }
 
                 if (string.IsNullOrEmpty(concepto))
                 {
@@ -51,18 +45,7 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                if (tipoMovimiento == "Apertura")
-                {
-                    cajaBLL.AbrirCajaSeguro(monto, Sesion.Usuario ?? "ADMIN");
-                    MessageBox.Show("Caja abierta correctamente.");
-                    AppEventos.CajaCambiada();
-                    this.Close();
-                    return;
-                }
-
-                CommandResult result = tipoMovimiento == "Ingreso"
-                    ? CajaCommandService.RegistrarIngreso(concepto, monto, Sesion.Usuario)
-                    : CajaCommandService.RegistrarGasto(concepto, monto, Sesion.Usuario);
+                CommandResult result = CajaCommandService.RegistrarGasto(concepto, monto, Sesion.Usuario);
 
                 if (!result.Success)
                 {
