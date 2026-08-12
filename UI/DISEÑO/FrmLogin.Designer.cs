@@ -210,7 +210,7 @@
             chkMostrarContraseña.TabIndex = 3;
             chkMostrarContraseña.Text = "Mostrar contraseña";
             chkMostrarContraseña.UseVisualStyleBackColor = true;
-            chkMostrarContraseña.Click += chkMostrarContraseña_CheckedChanged;
+            chkMostrarContraseña.CheckedChanged += chkMostrarContraseña_CheckedChanged;
             // 
             // panelBotones
             // 

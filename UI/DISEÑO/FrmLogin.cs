@@ -66,15 +66,34 @@ namespace UI.DISEÑO
                 comboUsuarios.SelectedIndex = 0;
 
             txtContraseña.Clear();
+            chkMostrarContraseña.Checked = false;
+            ActualizarVisibilidadContraseña();
             txtContraseña.Focus(); // cursor en contraseña
+        }
+
+        /// <summary>
+        /// Con PasswordChar custom, UseSystemPasswordChar solo no revela el texto:
+        /// hay que poner PasswordChar = '\0' para mostrar.
+        /// </summary>
+        private void ActualizarVisibilidadContraseña()
+        {
+            bool mostrar = chkMostrarContraseña.Checked;
+            txtContraseña.UseSystemPasswordChar = false;
+            txtContraseña.PasswordChar = mostrar ? '\0' : '●';
+        }
+
+        private void chkMostrarContraseña_CheckedChanged(object? sender, EventArgs e)
+        {
+            ActualizarVisibilidadContraseña();
         }
         private void ConfigurarUI()
         {
-            txtContraseña.UseSystemPasswordChar = true;
             this.AcceptButton = btnIniciar;
             this.ActiveControl = comboUsuarios;
             lblVersion.Text = $"Versión {AppVersion.SemanticVersion}  ·  Build {AppVersion.Build}";
             lblVersion.TextAlign = ContentAlignment.MiddleCenter;
+            chkMostrarContraseña.Checked = false;
+            ActualizarVisibilidadContraseña();
         }
 
 
@@ -138,7 +157,8 @@ namespace UI.DISEÑO
         private void FrmLogin_Load(object sender, EventArgs e)
         {
             ShellTheme.TryApplyFormIcon(this);
-            txtContraseña.UseSystemPasswordChar = true;
+            chkMostrarContraseña.Checked = false;
+            ActualizarVisibilidadContraseña();
             var dtUsuarios = usuarioBLL.TraerUsuariosActivos(); // devuelve DataTable con Id, Usuario, Rol
             comboUsuarios.DataSource = dtUsuarios;
             comboUsuarios.DisplayMember = "Usuario"; // lo que se ve
@@ -178,12 +198,6 @@ namespace UI.DISEÑO
             {
                 LimpiarControles();
             }
-        }
-
-        private void chkMostrarContraseña_CheckedChanged(object sender, EventArgs e)
-        {
-            // Si el checkbox está marcado, mostramos la contraseña
-            txtContraseña.UseSystemPasswordChar = !chkMostrarContraseña.Checked;
         }
     }
 }
