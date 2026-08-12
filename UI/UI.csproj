@@ -9,7 +9,20 @@
 		<!-- Requerido por el diseñador WinForms (VS: "No se puede recuperar el GUID del proyecto") -->
 		<ProjectGuid>{5B286F5E-1DA4-C61D-7861-80C46E44F0B3}</ProjectGuid>
 		<RootNamespace>UI</RootNamespace>
+		<!-- Nombre del ejecutable (UI.exe): requerido por el contrato OTA. -->
 		<AssemblyName>UI</AssemblyName>
+
+		<!-- Icono embebido en el .exe (Explorador / acceso directo). -->
+		<ApplicationIcon>Resources\mf.ico</ApplicationIcon>
+
+		<!-- Metadatos comerciales (Propiedades del archivo en Windows). -->
+		<AssemblyTitle>MFFITNESS</AssemblyTitle>
+		<Product>MFFITNESS</Product>
+		<Company>MFFITNESS</Company>
+		<Authors>MFFITNESS</Authors>
+		<Description>MFFITNESS POS — sistema de gestión para gimnasios</Description>
+		<Copyright>Copyright © MFFITNESS</Copyright>
+		<NeutralLanguage>es-DO</NeutralLanguage>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -19,6 +32,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- Copia mf.ico a output\Resources\ para carga dinámica segura en formularios. -->
+		<None Update="Resources\mf.ico">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="Resources\mf_logo.png">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
@@ -37,6 +54,9 @@
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\FrmLogin.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmActualizacion.cs">
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\FrmClientes.cs">

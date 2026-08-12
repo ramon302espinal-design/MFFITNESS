@@ -21,6 +21,7 @@ namespace UI.Theme
         public const string Debts = "\uE7BA";
         public const string Logout = "\uE8AC";
         public const string Dashboard = "\uE80F";
+        public const string Update = "\uE895";
 
         public static Font IconFont { get; } = CreateIconFont(14F);
         public static Font IconFontLarge { get; } = CreateIconFont(18F);

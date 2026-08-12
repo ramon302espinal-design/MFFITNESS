@@ -1,17 +1,16 @@
 <#
 .SYNOPSIS
-  Publica el POS (UI) + UpdateManager.exe en un layout de instalación unificado.
+  Publica el POS (UI) + UpdateManager en un layout de instalación unificado.
 
 .DESCRIPTION
   Salida por defecto: artifacts/pos/
     UI.exe
-    UpdateManager\UpdateManager.exe   (runtime aislado; NO en la raíz)
-    *.dll
+    UpdateManager\UpdateManager.exe   (runtime aislado)
+    *.dll (sin .pdb en Release)
     Database/Migrations/*.sql
-    Resources/...
+    Resources/mf.ico
 
-  UpdateManager vive en subcarpeta propia para no bloquear DLLs del install
-  durante updates. Nunca va dentro del ZIP de update.
+  Para instalación en esta PC usa Deploy-Pos.ps1 (LocalAppData + acceso directo).
 
 .EXAMPLE
   .\Scripts\Publish-Pos.ps1
@@ -24,7 +23,10 @@ param(
 
     [string] $OutputDir = '',
 
-    [string] $RepoRoot = ''
+    [string] $RepoRoot = '',
+
+    # Incluir símbolos .pdb (solo diagnóstico). Por defecto NO en Release.
+    [switch] $IncludePdbs
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +37,18 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $RepoRoot 'artifacts\pos'
+}
+
+$OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
+
+# OneDrive / Escritorio: malo para OTA (file locks + sync). Avisar fuerte.
+$normalized = $OutputDir.Replace('/', '\')
+if ($normalized -match '\\OneDrive\\' -or $normalized -match '\\Escritorio\\' -or $normalized -match '\\Desktop\\') {
+    Write-Host ""
+    Write-Host "ADVERTENCIA: destino bajo OneDrive/Escritorio." -ForegroundColor Yellow
+    Write-Host "  Las actualizaciones OTA pueden fallar por bloqueo de archivos en sync." -ForegroundColor Yellow
+    Write-Host "  Preferir: .\Scripts\Deploy-Pos.ps1  →  %LocalAppData%\Programs\MFFITNESS" -ForegroundColor Yellow
+    Write-Host ""
 }
 
 $uiProj = Join-Path $RepoRoot 'UI\UI.csproj'
@@ -55,24 +69,38 @@ if (Test-Path $OutputDir) {
 }
 New-Item -ItemType Directory -Path $OutputDir | Out-Null
 
+$publishArgs = @('-c', $Configuration, '-o', $OutputDir, '--nologo')
+if ($Configuration -eq 'Release' -and -not $IncludePdbs) {
+    $publishArgs += @('-p:DebugType=None', '-p:DebugSymbols=false')
+}
+
 Write-Host "Publicando UI..."
-dotnet publish $uiProj -c $Configuration -o $OutputDir --nologo
+dotnet publish $uiProj @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish UI falló ($LASTEXITCODE)" }
 
-# UpdateManager en SUBCARPETA propia para no bloquear DLLs del install al actualizar.
 $umOut = Join-Path $OutputDir 'UpdateManager'
 if (Test-Path $umOut) { Remove-Item -Recurse -Force $umOut }
 New-Item -ItemType Directory -Path $umOut | Out-Null
 
+$umArgs = @('-c', $Configuration, '-o', $umOut, '--nologo')
+if ($Configuration -eq 'Release' -and -not $IncludePdbs) {
+    $umArgs += @('-p:DebugType=None', '-p:DebugSymbols=false')
+}
+
 Write-Host "Publicando UpdateManager → UpdateManager\ (runtime aislado)..."
-dotnet publish $umProj -c $Configuration -o $umOut --nologo
+dotnet publish $umProj @umArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish UpdateManager falló ($LASTEXITCODE)" }
 
-# Garantizar migraciones (UI.csproj ya copia, reforzamos)
 $migOut = Join-Path $OutputDir 'Database\Migrations'
 New-Item -ItemType Directory -Force -Path $migOut | Out-Null
 if (Test-Path $migrations) {
     Copy-Item (Join-Path $migrations '*.sql') $migOut -Force
+}
+
+# Higiene: quitar PDB residuales / XML de doc / .deps no necesarios no se tocan.
+if ($Configuration -eq 'Release' -and -not $IncludePdbs) {
+    Get-ChildItem $OutputDir -Recurse -Include '*.pdb' -File -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
 $required = @(
@@ -89,14 +117,35 @@ foreach ($path in $required) {
     }
 }
 
-# No dejar UpdateManager.exe suelto en la raíz del install (evita locks).
+$icoOut = Join-Path $OutputDir 'Resources\mf.ico'
+if (!(Test-Path $icoOut)) {
+    foreach ($candidate in @(
+            (Join-Path $RepoRoot 'UI\Resources\mf.ico'),
+            (Join-Path $RepoRoot 'mf.ico')
+        )) {
+        if (Test-Path $candidate) {
+            New-Item -ItemType Directory -Force -Path (Split-Path $icoOut) | Out-Null
+            Copy-Item $candidate $icoOut -Force
+            Write-Host "Icono copiado a Resources\mf.ico" -ForegroundColor Yellow
+            break
+        }
+    }
+    if (!(Test-Path $icoOut)) {
+        Write-Host "ADVERTENCIA: no se encontró mf.ico." -ForegroundColor Yellow
+    }
+}
+
 $rootUm = Join-Path $OutputDir 'UpdateManager.exe'
 if (Test-Path $rootUm) { Remove-Item -Force $rootUm }
 
 $migCount = @(Get-ChildItem $migOut -Filter '*.sql' -ErrorAction SilentlyContinue).Count
+$totalMb = [math]::Round(((Get-ChildItem $OutputDir -Recurse -File | Measure-Object -Sum Length).Sum / 1MB), 1)
+
 Write-Host ""
 Write-Host "Publish OK" -ForegroundColor Green
 Write-Host "  UI.exe en:              $OutputDir"
 Write-Host "  UpdateManager.exe en:   $umOut"
+Write-Host "  Icono:                  $(if (Test-Path $icoOut) { $icoOut } else { 'NO' })"
 Write-Host "  Migraciones SQL: $migCount"
-Write-Host "  Siguiente: .\Scripts\Build-UpdatePackage.ps1"
+Write-Host "  Tamaño: ${totalMb} MB"
+Write-Host "  Despliegue en PC: .\Scripts\Deploy-Pos.ps1"

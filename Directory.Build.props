@@ -1,10 +1,14 @@
 <Project>
-  <!-- Versión centralizada del producto MFFITNESS (SemVer). -->
+  <!-- Versión y marca centralizadas del producto MFFITNESS (SemVer). -->
   <PropertyGroup>
     <Version>1.1.0</Version>
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
     <FileVersion>1.1.0.0</FileVersion>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+    <Company>MFFITNESS</Company>
+    <Product>MFFITNESS</Product>
+    <Authors>MFFITNESS</Authors>
+    <Copyright>Copyright © MFFITNESS</Copyright>
   </PropertyGroup>
 
   <!-- Inyecta el commit corto de Git en InformationalVersion (p. ej. 1.0.0+ec24e58). -->

@@ -73,7 +73,8 @@ namespace UI.DISEÑO
             txtContraseña.UseSystemPasswordChar = true;
             this.AcceptButton = btnIniciar;
             this.ActiveControl = comboUsuarios;
-            lblVersion.Text = AppVersion.DisplayText;
+            lblVersion.Text = $"Versión {AppVersion.SemanticVersion}  ·  Build {AppVersion.Build}";
+            lblVersion.TextAlign = ContentAlignment.MiddleCenter;
         }
 
 
@@ -136,6 +137,7 @@ namespace UI.DISEÑO
         }
         private void FrmLogin_Load(object sender, EventArgs e)
         {
+            ShellTheme.TryApplyFormIcon(this);
             txtContraseña.UseSystemPasswordChar = true;
             var dtUsuarios = usuarioBLL.TraerUsuariosActivos(); // devuelve DataTable con Id, Usuario, Rol
             comboUsuarios.DataSource = dtUsuarios;

@@ -59,6 +59,37 @@ En Login → enlace **Buscar actualizaciones** → `FrmActualizacion`:
 
 Requisito: caja cerrada.
 
+## 6. Publicación / despliegue (Release)
+
+### En esta PC (recomendado)
+
+```powershell
+.\Scripts\Deploy-Pos.ps1 -CleanDesktopFolder
+```
+
+Instala en `%LocalAppData%\Programs\MFFITNESS` (fuera de OneDrive) y deja solo
+`MFFITNESS.lnk` en el Escritorio + Menú Inicio. Ideal para OTA.
+
+### Solo generar layout (lab / paquete)
+
+```powershell
+.\Scripts\Publish-Pos.ps1 -Configuration Release
+# → artifacts\pos\
+```
+
+### Self-contained win-x64 (PC sin .NET Runtime; más pesado)
+
+```powershell
+dotnet publish .\UI\UI.csproj -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=false -p:DebugType=None -o .\artifacts\pos-sc --nologo
+```
+
+**No** copies la carpeta completa al Escritorio/OneDrive: el sync bloquea DLLs en updates.
+
+Notas:
+- El exe se llama `UI.exe` (contrato OTA). Nombre comercial **MFFITNESS** en metadatos/icono/acceso directo.
+- No uses `PublishSingleFile=true` con ZIP OTA parcial.
+
 ## Flujo senior recomendado (1.0.0 → 1.1.0)
 
 ```powershell

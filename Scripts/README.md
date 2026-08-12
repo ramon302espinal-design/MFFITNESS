@@ -30,3 +30,9 @@ One-shots ya aplicados, pruebas y fixes urgentes ? [`archive/`](archive/).
 
 Ver [Update/README.md](Update/README.md) — publish, package, lab E2E, GitHub Release y quarantine de sesiones.
 
+### Despliegue en esta PC
+
+```powershell
+.\Scripts\Deploy-Pos.ps1 -CleanDesktopFolder
+```
+

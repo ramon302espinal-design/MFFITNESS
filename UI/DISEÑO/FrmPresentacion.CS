@@ -3,6 +3,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using CORE;
+using UI.Helpers;
 using UI.Theme;
 
 namespace UI.DISEÑO
@@ -18,6 +19,7 @@ namespace UI.DISEÑO
         private bool _dashboardStyled;
         private Label? _lblDashWelcome;
         private Label? _lblDashDateTime;
+        private LinkLabel? _lnkDashUpdate;
 
         public FrmPresentacion()
         {
@@ -26,6 +28,8 @@ namespace UI.DISEÑO
 
         private void FrmPresentacion_Load(object sender, EventArgs e)
         {
+            ShellTheme.TryApplyFormIcon(this);
+
             // 🛡️ PASO 0: SEGURIDAD (El "Filtro" de entrada)
             if (string.IsNullOrEmpty(Sesion.Usuario) || Sesion.Usuario.ToUpper() == "ANONIMO")
             {
@@ -182,8 +186,47 @@ namespace UI.DISEÑO
 
             _lblDashDateTime = panelDashboard.Controls["lblDashDateTime"] as Label;
             PresentacionDashboardStyle.ActualizarEncabezado(_lblDashWelcome, _lblDashDateTime);
+            EnsureDashboardUpdateEntry();
             IniciarRelojDashboard();
             _dashboardStyled = true;
+        }
+
+        /// <summary>
+        /// Entrada discreta al Centro de Actualizaciones (solo ADMIN).
+        /// </summary>
+        private void EnsureDashboardUpdateEntry()
+        {
+            bool isAdmin = string.Equals(Sesion.Rol?.Trim(), "ADMIN", StringComparison.OrdinalIgnoreCase);
+            if (!isAdmin)
+            {
+                if (_lnkDashUpdate != null)
+                    _lnkDashUpdate.Visible = false;
+                return;
+            }
+
+            if (_lnkDashUpdate == null || _lnkDashUpdate.IsDisposed)
+            {
+                _lnkDashUpdate = new LinkLabel
+                {
+                    Name = "lnkDashUpdate",
+                    AutoSize = true,
+                    Font = AppTheme.FontCaption,
+                    LinkColor = AppTheme.Primary,
+                    ActiveLinkColor = AppTheme.PrimaryDark,
+                    VisitedLinkColor = AppTheme.Primary,
+                    LinkBehavior = LinkBehavior.HoverUnderline,
+                    Cursor = Cursors.Hand,
+                    BackColor = Color.Transparent,
+                    Text = $"Sistema v{AppVersion.SemanticVersion}  ·  Actualizar"
+                };
+                _lnkDashUpdate.LinkClicked += (_, _) => UpdateCenterSupport.Open(this);
+                panelDashboard.Controls.Add(_lnkDashUpdate);
+            }
+
+            _lnkDashUpdate.Text = $"Sistema v{AppVersion.SemanticVersion}  ·  Actualizar";
+            _lnkDashUpdate.Visible = true;
+            _lnkDashUpdate.Location = new Point(40, 228);
+            _lnkDashUpdate.BringToFront();
         }
 
         private void IniciarRelojDashboard()
@@ -218,9 +261,13 @@ namespace UI.DISEÑO
                     MostrarTodos();
                     break;
                 case "CAJERO":
+                    // Caja 1 / 2 / 3: operación de mostrador + consulta de miembros/stock.
                     btnPagar.Visible = true;
                     btnCaja.Visible = true;
                     btnHistorial.Visible = true;
+                    btnAgregarCliente.Visible = true;   // CLIENTES
+                    btnProductoStock.Visible = true;    // INVENTARIO
+                    btnEstado.Visible = true;           // ESTADO
                     break;
                 case "CONSULTA":
                     btnEstado.Visible = true;

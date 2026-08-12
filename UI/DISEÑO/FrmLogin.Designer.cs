@@ -35,13 +35,13 @@
             lblMF = new Label();
             lblFitness = new Label();
             panelFormulario = new Panel();
+            lblVersion = new Label();
             lblUsuario = new Label();
             comboUsuarios = new ComboBox();
             lblContraseña = new Label();
             txtContraseña = new TextBox();
             chkMostrarContraseña = new CheckBox();
             panelBotones = new Panel();
-            lblVersion = new Label();
             btnCancelar = new Button();
             btnIniciar = new Button();
             tableLayoutPanel1.SuspendLayout();
@@ -141,6 +141,19 @@
             panelFormulario.Size = new Size(629, 413);
             panelFormulario.TabIndex = 1;
             // 
+            // lblVersion
+            // 
+            lblVersion.Anchor = AnchorStyles.None;
+            lblVersion.AutoSize = true;
+            lblVersion.Font = new Font("Segoe UI", 8.5F);
+            lblVersion.ForeColor = Color.FromArgb(130, 130, 130);
+            lblVersion.Location = new Point(267, 372);
+            lblVersion.Name = "lblVersion";
+            lblVersion.Size = new Size(114, 20);
+            lblVersion.TabIndex = 6;
+            lblVersion.Text = "MFFITNESS POS";
+            lblVersion.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // lblUsuario
             // 
             lblUsuario.AutoSize = true;
@@ -209,19 +222,6 @@
             panelBotones.Name = "panelBotones";
             panelBotones.Size = new Size(629, 133);
             panelBotones.TabIndex = 2;
-            // 
-            // lblVersion
-            // 
-            lblVersion.Anchor = AnchorStyles.None;
-            lblVersion.AutoSize = true;
-            lblVersion.Font = new Font("Segoe UI", 8.5F);
-            lblVersion.ForeColor = Color.FromArgb(130, 130, 130);
-            lblVersion.Location = new Point(267, 372);
-            lblVersion.Name = "lblVersion";
-            lblVersion.Size = new Size(114, 20);
-            lblVersion.TabIndex = 6;
-            lblVersion.Text = "MFFITNESS POS";
-            lblVersion.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // btnCancelar
             // 

@@ -232,6 +232,43 @@ namespace UI.Theme
             return null;
         }
 
+        /// <summary>
+        /// Asigna el icono de la app al formulario si el archivo existe (sin lanzar excepciones).
+        /// Busca Resources\mf.ico junto al exe (salida de build) y variantes de desarrollo.
+        /// </summary>
+        public static void TryApplyFormIcon(Form form)
+        {
+            if (form == null || form.IsDisposed)
+                return;
+
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var paths = new[]
+            {
+                Path.Combine(baseDir, "Resources", "mf.ico"),
+                Path.Combine(baseDir, "mf.ico"),
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "Resources", "mf.ico")),
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "mf.ico"))
+            };
+
+            foreach (string path in paths)
+            {
+                if (!File.Exists(path))
+                    continue;
+
+                try
+                {
+                    // Clonar el icono para no mantener bloqueado el archivo en disco.
+                    using var loaded = new Icon(path);
+                    form.Icon = (Icon)loaded.Clone();
+                    return;
+                }
+                catch
+                {
+                    // Fail-soft: sin icono es preferible a tumbar el arranque.
+                }
+            }
+        }
+
         public static void ShowThemedMessage(IWin32Window owner, string message, string title, MessageBoxIcon icon)
         {
             DialogType type = icon switch
