@@ -9,7 +9,9 @@ namespace DL
 
         public DataTable ObtenerEstadoClientes()
         {
-            // Activos, vencidos y desactivados (misma regla que el dashboard).
+            new CongelacionDAL().EnsureSchema();
+
+            // Activos, vencidos, desactivados y congelados (misma regla que el dashboard).
             // Clientes recién agregados (sin compra) no aparecen hasta pagar un plan.
             string query = $@"
             SELECT *
@@ -40,7 +42,7 @@ namespace DL
                     GROUP BY ClienteId, Estado
                 ) d ON d.ClienteId = c.ID
             ) estado
-            WHERE estado.Estado IN ('ACTIVO', 'VENCIDO', 'DESACTIVADO')
+            WHERE estado.Estado IN ('ACTIVO', 'VENCIDO', 'DESACTIVADO', 'CONGELADO')
             ORDER BY estado.Nombre";
 
             return db.ExecuteQuery(query);

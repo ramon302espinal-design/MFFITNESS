@@ -38,6 +38,111 @@ namespace BLL
             return dal.DesactivarMiembro(clienteId, usuario, motivo.Trim(), marcarComoVencido);
         }
 
+        public CongelacionDTO? ObtenerCongelacionActiva(int clienteId) =>
+            new CongelacionDAL().ObtenerActiva(clienteId);
+
+        public CongelacionDTO CongelarMiembro(int clienteId, string motivo, string usuario)
+        {
+            if (clienteId <= 0)
+                throw new Exception("Cliente no válido.");
+            if (string.IsNullOrWhiteSpace(motivo))
+                throw new Exception("Indique el motivo de congelamiento.");
+            if (string.IsNullOrWhiteSpace(usuario))
+                usuario = "ADMIN";
+
+            var congelacionDAL = new CongelacionDAL();
+            congelacionDAL.EnsureSchema();
+
+            if (congelacionDAL.ObtenerActiva(clienteId) != null)
+                throw new Exception("El cliente ya está congelado.");
+
+            if (!dal.TieneMembresiaActiva(clienteId))
+                throw new Exception("Solo se puede congelar un miembro ACTIVO.");
+
+            var membresia = dal.ObtenerMembresiaActiva(clienteId)
+                ?? throw new Exception("No se encontró la membresía activa.");
+
+            int membresiaId = Convert.ToInt32(membresia["Id"]);
+            DateTime fechaFin = Convert.ToDateTime(membresia["FechaFin"]).Date;
+            DateTime hoy = CongelacionHelper.HoyPc();
+            if (CongelacionHelper.EsFinDeSemana(hoy))
+                throw new InvalidOperationException(
+                    "El congelamiento solo se registra de lunes a viernes (no sábado ni domingo).");
+
+            int diaAncla = CongelacionHelper.CalcularDiaAncla(hoy);
+            int diasRestantes = CongelacionHelper.CalcularDiasRestantes(fechaFin, hoy);
+
+            var dto = new CongelacionDTO
+            {
+                ClienteId = clienteId,
+                MembresiaId = membresiaId,
+                FechaCongelacion = hoy,
+                DiaAncla = diaAncla,
+                DiasRestantes = diasRestantes,
+                FechaFinOriginal = fechaFin,
+                Motivo = motivo.Trim(),
+                Usuario = usuario,
+                Activa = true
+            };
+
+            dto.Id = congelacionDAL.Insertar(dto);
+            dal.DesactivarMembresiaPorId(membresiaId);
+            new HistorialMembresiaDAL().Insertar(
+                clienteId,
+                "CONGELACION",
+                null,
+                null,
+                usuario,
+                motivo.Trim());
+
+            return dto;
+        }
+
+        public DateTime ActivarMiembroCongelado(int clienteId, string usuario)
+        {
+            if (clienteId <= 0)
+                throw new Exception("Cliente no válido.");
+            if (string.IsNullOrWhiteSpace(usuario))
+                usuario = "ADMIN";
+
+            var congelacionDAL = new CongelacionDAL();
+            var cong = congelacionDAL.ObtenerActiva(clienteId)
+                ?? throw new Exception("El cliente no tiene un congelamiento activo.");
+
+            DateTime hoy = CongelacionHelper.HoyPc();
+            int diaAncla = cong.FechaCongelacion.Day > 0
+                ? cong.FechaCongelacion.Day
+                : cong.DiaAncla;
+
+            if (!CongelacionHelper.PuedeActivarHoy(diaAncla, hoy))
+            {
+                var cliente = clienteDAL.ObtenerClientePorId(clienteId);
+                string nombre = cliente?["Nombre"]?.ToString() ?? "El cliente";
+                throw new InvalidOperationException(
+                    CongelacionHelper.MensajeActivacionBloqueada(nombre, diaAncla, hoy));
+            }
+
+            DateTime nuevaFechaFin = CongelacionHelper.CalcularFechaFinAlActivar(
+                hoy,
+                cong.FechaFinOriginal,
+                cong.DiasRestantes);
+            int membresiaId = cong.MembresiaId ?? 0;
+            if (membresiaId <= 0)
+                throw new Exception("No se encontró la membresía congelada.");
+
+            dal.ReactivarMembresiaPorId(membresiaId, nuevaFechaFin);
+            congelacionDAL.CerrarActiva(clienteId, hoy);
+            new HistorialMembresiaDAL().Insertar(
+                clienteId,
+                "DESCONGELACION",
+                null,
+                null,
+                usuario,
+                $"Reactivación. Días restantes: {cong.DiasRestantes}. Vence {nuevaFechaFin:dd/MM/yyyy}.");
+
+            return nuevaFechaFin;
+        }
+
 
         // ===============================
         // CREAR MEMBRESÍA
@@ -211,6 +316,8 @@ namespace BLL
                     usuario,
                     "Pago de membresía");
 
+                new CongelacionDAL().CerrarActiva(clienteId, DateTime.Today);
+
                 var result = new MembresiaOperacionResult
                 {
                     MembresiaId = membresiaId,
@@ -291,7 +398,9 @@ namespace BLL
             var deudaDAL = new DeudaDAL();
             var pagoDAL = new PagoDAL();
             var historialDAL = new HistorialMembresiaDAL();
-            string conceptoCaja = $"Pago Cliente {clienteId} - {conceptoPago}";
+            string? nombreCliente = clienteDAL.ObtenerClientePorId(clienteId)?["Nombre"]?.ToString();
+            string conceptoCaja = CajaConceptoHelper.IngresoPagoInicialFinanciado(
+                clienteId, nombreCliente, conceptoPago);
             string notaHistorial =
                 $"Financiamiento - Inicial: ${pagoInicial:N2}, Saldo: ${saldo:N2}";
 
@@ -359,6 +468,8 @@ namespace BLL
                     pagoInicial,
                     usuario,
                     notaHistorial);
+
+                new CongelacionDAL().CerrarActiva(conn, tx, clienteId, DateTime.Today);
             });
 
             if (result.DeudaId > 0)

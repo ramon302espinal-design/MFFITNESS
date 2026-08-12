@@ -55,24 +55,50 @@ namespace DL
 
         public DataTable ObtenerHistorial()
         {
-            // Cambiar INNER JOIN a LEFT JOIN para incluir salidas sin plan
+            // FechaVence: Membresias.FechaFin real; si no hay match, misma regla que MembresiaHelper.
             string query = @"
             SELECT 
                 h.ClienteId,
-                c.Nombre AS Nombre, 
+                c.Nombre AS Nombre,
+                ISNULL(c.Telefono, '') AS Telefono,
+                ISNULL(c.Direccion, '') AS Direccion,
                 ISNULL(p.Nombre, 'N/A') AS PlanNombre, 
                 h.TipoMovimiento, 
                 h.Monto, 
                 h.Fecha AS FechaPago,
-                CASE 
-                    WHEN h.PlanId IS NOT NULL THEN EOMONTH(h.Fecha, 1)
+                CASE
+                    WHEN h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO') THEN NULL
+                    WHEN mem.FechaFin IS NOT NULL THEN CAST(mem.FechaFin AS DATE)
+                    WHEN h.PlanId IS NOT NULL OR h.TipoMovimiento IN ('PAGO', 'RENOVACION') THEN
+                        CASE
+                            WHEN DAY(h.Fecha) <= 19 THEN
+                                DATEFROMPARTS(
+                                    YEAR(DATEADD(MONTH, 1, h.Fecha)),
+                                    MONTH(DATEADD(MONTH, 1, h.Fecha)),
+                                    15)
+                            ELSE EOMONTH(h.Fecha, 1)
+                        END
                     ELSE NULL
-                END AS FechaVence, 
+                END AS FechaVence,
                 h.Usuario, 
                 h.Nota 
             FROM HistorialMembresias h
             INNER JOIN Clientes c ON c.ID = h.ClienteId
             LEFT JOIN Planes p ON p.Id = h.PlanId
+            OUTER APPLY (
+                SELECT TOP 1 m.FechaFin
+                FROM Membresias m
+                WHERE m.ClienteId = h.ClienteId
+                  AND (h.PlanId IS NULL OR m.PlanId = h.PlanId)
+                  AND (
+                        CAST(m.FechaInicio AS DATE) = CAST(h.Fecha AS DATE)
+                     OR (
+                            m.FechaInicio >= DATEADD(MINUTE, -10, h.Fecha)
+                        AND m.FechaInicio <= DATEADD(MINUTE, 10, h.Fecha)
+                     )
+                  )
+                ORDER BY m.Id DESC
+            ) mem
             ORDER BY h.Fecha DESC";
 
             return db.ExecuteQuery(query);

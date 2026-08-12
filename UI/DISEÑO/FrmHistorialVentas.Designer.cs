@@ -28,6 +28,8 @@ namespace UI.DISEÑO
             tabControl1 = new TabControl();
             tabMembresia = new TabPage();
             dgvHistorialMembresia = new DataGridView();
+            txtBuscarHistMembresia = new TextBox();
+            lblBuscarHistMembresia = new Label();
             label4 = new Label();
             dgvHistorial = new DataGridView();
             label1 = new Label();
@@ -61,7 +63,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1062, 52);
+            panelNav.Size = new Size(1447, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -167,20 +169,22 @@ namespace UI.DISEÑO
             tabControl1.Location = new Point(0, 52);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(1062, 621);
+            tabControl1.Size = new Size(1447, 621);
             tabControl1.TabIndex = 1;
             // 
             // tabMembresia
             // 
             tabMembresia.BackColor = Color.White;
             tabMembresia.Controls.Add(dgvHistorialMembresia);
+            tabMembresia.Controls.Add(txtBuscarHistMembresia);
+            tabMembresia.Controls.Add(lblBuscarHistMembresia);
             tabMembresia.Controls.Add(label4);
             tabMembresia.Controls.Add(dgvHistorial);
             tabMembresia.Controls.Add(label1);
             tabMembresia.Location = new Point(4, 34);
             tabMembresia.Name = "tabMembresia";
             tabMembresia.Padding = new Padding(12);
-            tabMembresia.Size = new Size(1054, 583);
+            tabMembresia.Size = new Size(1439, 583);
             tabMembresia.TabIndex = 0;
             tabMembresia.Text = "MEMBRESÍA";
             // 
@@ -188,11 +192,32 @@ namespace UI.DISEÑO
             // 
             dgvHistorialMembresia.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvHistorialMembresia.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvHistorialMembresia.Location = new Point(900, 56);
+            dgvHistorialMembresia.Location = new Point(900, 96);
             dgvHistorialMembresia.Name = "dgvHistorialMembresia";
             dgvHistorialMembresia.RowHeadersWidth = 51;
-            dgvHistorialMembresia.Size = new Size(131, 494);
-            dgvHistorialMembresia.TabIndex = 3;
+            dgvHistorialMembresia.Size = new Size(516, 454);
+            dgvHistorialMembresia.TabIndex = 5;
+            // 
+            // txtBuscarHistMembresia
+            // 
+            txtBuscarHistMembresia.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtBuscarHistMembresia.Font = new Font("Segoe UI", 11F);
+            txtBuscarHistMembresia.Location = new Point(980, 52);
+            txtBuscarHistMembresia.Name = "txtBuscarHistMembresia";
+            txtBuscarHistMembresia.PlaceholderText = "Nombre, teléfono, lugar, plan...";
+            txtBuscarHistMembresia.Size = new Size(436, 32);
+            txtBuscarHistMembresia.TabIndex = 4;
+            txtBuscarHistMembresia.TextChanged += txtBuscarHistMembresia_TextChanged;
+            // 
+            // lblBuscarHistMembresia
+            // 
+            lblBuscarHistMembresia.AutoSize = true;
+            lblBuscarHistMembresia.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblBuscarHistMembresia.Location = new Point(900, 56);
+            lblBuscarHistMembresia.Name = "lblBuscarHistMembresia";
+            lblBuscarHistMembresia.Size = new Size(77, 25);
+            lblBuscarHistMembresia.TabIndex = 3;
+            lblBuscarHistMembresia.Text = "Buscar:";
             // 
             // label4
             // 
@@ -235,7 +260,7 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(4, 34);
             tabProductos.Name = "tabProductos";
             tabProductos.Padding = new Padding(12);
-            tabProductos.Size = new Size(1773, 679);
+            tabProductos.Size = new Size(1054, 583);
             tabProductos.TabIndex = 1;
             tabProductos.Text = "PRODUCTOS";
             // 
@@ -247,7 +272,7 @@ namespace UI.DISEÑO
             dgvDetalleProductos.Location = new Point(900, 56);
             dgvDetalleProductos.Name = "dgvDetalleProductos";
             dgvDetalleProductos.RowHeadersWidth = 51;
-            dgvDetalleProductos.Size = new Size(850, 590);
+            dgvDetalleProductos.Size = new Size(131, 494);
             dgvDetalleProductos.TabIndex = 3;
             // 
             // label3
@@ -267,7 +292,7 @@ namespace UI.DISEÑO
             dgvVentasProductos.Location = new Point(20, 56);
             dgvVentasProductos.Name = "dgvVentasProductos";
             dgvVentasProductos.RowHeadersWidth = 51;
-            dgvVentasProductos.Size = new Size(860, 590);
+            dgvVentasProductos.Size = new Size(860, 494);
             dgvVentasProductos.TabIndex = 1;
             dgvVentasProductos.SelectionChanged += dgvVentasProductos_SelectionChanged;
             // 
@@ -285,7 +310,7 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1062, 673);
+            ClientSize = new Size(1447, 673);
             Controls.Add(tabControl1);
             Controls.Add(panelNav);
             Name = "FrmHistorialVentas";
@@ -329,5 +354,7 @@ namespace UI.DISEÑO
         private Label label1;
         private DataGridView dgvHistorialMembresia;
         private Label label4;
+        private Label lblBuscarHistMembresia;
+        private TextBox txtBuscarHistMembresia;
     }
 }

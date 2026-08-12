@@ -54,9 +54,10 @@ namespace BLL
                     "Renovación de membresía",
                     usuario);
 
+                string? nombreCliente = new ClienteDAL().ObtenerClientePorId(clienteId)?["Nombre"]?.ToString();
                 result.CajaMovimientoId = txService.RegistrarIngresoConId(conn, tx,
                     precio,
-                    $"Renovación cliente {clienteId}",
+                    CajaConceptoHelper.IngresoRenovacion(clienteId, nombreCliente),
                     usuario);
 
                 result.FechaFinMembresia = fin;
@@ -68,6 +69,8 @@ namespace BLL
                     precio,
                     usuario,
                     "Renovación de membresía");
+
+                new CongelacionDAL().CerrarActiva(conn, tx, clienteId, DateTime.Today);
             });
 
             // WhatsApp fuera de la transacción SQL (no bloquear el cobro 4-12s).

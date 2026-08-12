@@ -42,14 +42,23 @@ namespace DL
                               AND h.TipoMovimiento = 'BAJA_VENCIDO'
                         )";
 
+        public const string ExpresionCongelado = @"
+                        EXISTS (
+                            SELECT 1
+                            FROM CongelacionesMembresia g
+                            WHERE g.ClienteId = c.ID
+                              AND g.Activa = 1
+                        )";
+
         /// <summary>
         /// CASE Estado (alias c = Clientes, m = última membresía).
-        /// El último historial SALIDA / BAJA_VENCIDO manda; si no, rige FechaFin (día inclusive).
+        /// SALIDA → DESACTIVADO; congelación activa → CONGELADO; si no, rige FechaFin.
         /// </summary>
         public const string CasoEstado = @"
                     CASE
                         WHEN m.Id IS NULL THEN 'SIN MEMBRESIA'
                         WHEN " + ExpresionUltimaSalida + @" THEN 'DESACTIVADO'
+                        WHEN " + ExpresionCongelado + @" THEN 'CONGELADO'
                         WHEN " + ExpresionUltimaBajaVencido + @" THEN 'VENCIDO'
                         WHEN m.FechaFin IS NULL THEN 'SIN MEMBRESIA'
                         WHEN CAST(m.FechaFin AS DATE) >= CAST(GETDATE() AS DATE) THEN 'ACTIVO'
@@ -61,6 +70,7 @@ namespace DL
                 m.Id IS NOT NULL
                 AND m.FechaFin IS NOT NULL
                 AND NOT (" + ExpresionUltimaSalida + @")
+                AND NOT (" + ExpresionCongelado + @")
                 AND NOT (" + ExpresionUltimaBajaVencido + @")
                 AND CAST(m.FechaFin AS DATE) >= CAST(GETDATE() AS DATE)";
 

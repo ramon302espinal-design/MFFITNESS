@@ -58,5 +58,44 @@ namespace UI.Helpers
                    $"OR Convert(FechaInicioMembresia, 'System.String') LIKE {like} " +
                    $"OR Convert(FechaFinMembresia, 'System.String') LIKE {like}";
         }
+
+        /// <summary>
+        /// Filtro inteligente: nombre/apellido, teléfono, lugar (dirección), tipo plan, movimiento.
+        /// </summary>
+        public static string ConstruirFiltroHistorialMembresia(string termino)
+        {
+            var valor = EscaparFiltroDataView(termino);
+            var like = $"'%{valor}%'";
+
+            return $"Convert(ClienteId, 'System.String') LIKE {like} " +
+                   $"OR Nombre LIKE {like} " +
+                   $"OR Telefono LIKE {like} " +
+                   $"OR Direccion LIKE {like} " +
+                   $"OR PlanNombre LIKE {like} " +
+                   $"OR TipoMovimiento LIKE {like} " +
+                   $"OR Usuario LIKE {like} " +
+                   $"OR Nota LIKE {like} " +
+                   $"OR Convert(FechaPago, 'System.String') LIKE {like} " +
+                   $"OR Convert(FechaVence, 'System.String') LIKE {like} " +
+                   $"OR Convert(Monto, 'System.String') LIKE {like}";
+        }
+
+        /// <summary>
+        /// Filtro POS inventario: Id, nombre, categoría, precios compra/venta, stock.
+        /// </summary>
+        public static string ConstruirFiltroProductosPos(string termino)
+        {
+            var valor = EscaparFiltroDataView(termino);
+            var like = $"'%{valor}%'";
+
+            return $"Convert(Id, 'System.String') LIKE {like} " +
+                   $"OR Nombre LIKE {like} " +
+                   $"OR Categoria LIKE {like} " +
+                   $"OR Convert(IdCategoria, 'System.String') LIKE {like} " +
+                   $"OR Convert(PrecioCompra, 'System.String') LIKE {like} " +
+                   $"OR Convert(PrecioVenta, 'System.String') LIKE {like} " +
+                   $"OR Convert(StockActual, 'System.String') LIKE {like} " +
+                   $"OR Convert(StockMinimo, 'System.String') LIKE {like}";
+        }
     }
 }

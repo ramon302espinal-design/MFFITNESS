@@ -155,28 +155,48 @@ namespace DL
         // ===============================
         public DataTable ObtenerMovimientos(int cajaId)
         {
-            string query = @"SELECT 
-                                dc.Id, 
-                                dc.TipoMovimiento, 
-                                dc.Concepto, 
-                                dc.Monto, 
-                                dc.Fecha, 
-                                dc.Usuario,
-                                COALESCE(p.ClienteId, v.ClienteId, d.ClienteId) AS ClienteId,
-                                COALESCE(c1.Nombre, c2.Nombre, c3.Nombre) AS NombreCliente
-                             FROM DetalleCaja dc
-                             LEFT JOIN Pagos p ON (dc.Concepto LIKE '%Pago membresía%' OR dc.Concepto LIKE '%Renovación%')
-                                    AND CAST(dc.Fecha AS DATE) = CAST(p.FechaPago AS DATE)
-                                    AND ABS(dc.Monto - p.Monto) < 0.01
-                             LEFT JOIN Clientes c1 ON c1.Id = p.ClienteId
-                             LEFT JOIN Ventas v ON dc.Concepto LIKE '%Venta%'
-                                    AND CAST(dc.Fecha AS DATE) = CAST(v.Fecha AS DATE)
-                                    AND ABS(dc.Monto - v.Total) < 0.01
-                             LEFT JOIN Clientes c2 ON c2.Id = v.ClienteId
-                             LEFT JOIN Deudas d ON dc.Concepto LIKE '%Abono deuda%'
-                             LEFT JOIN Clientes c3 ON c3.Id = d.ClienteId
-                             WHERE dc.CajaId = @CajaId
-                             ORDER BY dc.Fecha DESC";
+            // NombreCliente: enlaza Pagos/Ventas/Deudas. Membresía/renovación usan "(Cliente {id})" en Concepto.
+            string query = @"
+SELECT
+    dc.Id,
+    dc.TipoMovimiento,
+    dc.Concepto,
+    dc.Monto,
+    dc.Fecha,
+    dc.Usuario,
+    COALESCE(pm.ClienteId, v.ClienteId, dm.ClienteId) AS ClienteId,
+    COALESCE(pm.Nombre, c2.Nombre, dm.Nombre) AS NombreCliente
+FROM DetalleCaja dc
+OUTER APPLY (
+    SELECT TOP 1 p.ClienteId, c.Nombre
+    FROM Pagos p
+    INNER JOIN Clientes c ON c.ID = p.ClienteId
+    WHERE CAST(p.FechaPago AS DATE) = CAST(dc.Fecha AS DATE)
+      AND ABS(p.Monto - dc.Monto) < 0.01
+      AND (
+            dc.Concepto LIKE '%Cliente ' + CAST(p.ClienteId AS varchar(20)) + '%'
+         OR dc.Concepto LIKE '%cliente ' + CAST(p.ClienteId AS varchar(20)) + '%'
+      )
+    ORDER BY ABS(DATEDIFF(SECOND, p.FechaPago, dc.Fecha)), p.Id DESC
+) pm
+LEFT JOIN Ventas v
+       ON dc.Concepto LIKE '%Venta%'
+      AND CAST(dc.Fecha AS DATE) = CAST(v.Fecha AS DATE)
+      AND ABS(dc.Monto - ISNULL(v.MontoPagado, v.Total)) < 0.01
+LEFT JOIN Clientes c2 ON c2.ID = v.ClienteId
+OUTER APPLY (
+    SELECT TOP 1 d.ClienteId, c.Nombre
+    FROM Deudas d
+    INNER JOIN Clientes c ON c.ID = d.ClienteId
+    WHERE (dc.Concepto LIKE '%deuda%' OR dc.Concepto LIKE '%Abono%' OR dc.Concepto LIKE '%Pago deuda%')
+      AND (
+            dc.Concepto LIKE '%Cliente ' + CAST(d.ClienteId AS varchar(20)) + '%'
+         OR dc.Concepto LIKE '%cliente ' + CAST(d.ClienteId AS varchar(20)) + '%'
+      )
+    ORDER BY d.Id DESC
+) dm
+WHERE dc.CajaId = @CajaId
+ORDER BY dc.Fecha DESC";
 
             SqlParameter[] parametros =
             {

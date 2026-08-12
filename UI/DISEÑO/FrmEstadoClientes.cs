@@ -284,6 +284,7 @@ namespace UI.DISEÑO
                 if (dgvEstado.CurrentRow == null)
                 {
                     btnRenovar.Enabled = false;
+                    btnCongelar.Enabled = false;
                     return;
                 }
 
@@ -292,11 +293,15 @@ namespace UI.DISEÑO
                     estado.Equals("VENCIDO", StringComparison.OrdinalIgnoreCase) ||
                     estado.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase) ||
                     estado.Equals("SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase);
+                btnCongelar.Enabled =
+                    estado.Equals("ACTIVO", StringComparison.OrdinalIgnoreCase) ||
+                    estado.Equals("CONGELADO", StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error en selección del grid: {ex.Message}");
                 btnRenovar.Enabled = false;
+                btnCongelar.Enabled = false;
             }
         }
 
@@ -382,6 +387,8 @@ namespace UI.DISEÑO
                 fila.DefaultCellStyle.BackColor = Color.LightCoral;
             else if (estado == "ACTIVO")
                 fila.DefaultCellStyle.BackColor = Color.LightGreen;
+            else if (estado == "CONGELADO")
+                fila.DefaultCellStyle.BackColor = Color.LightSkyBlue;
             else if (estado == "DESACTIVADO" || estado == "SIN MEMBRESIA")
                 fila.DefaultCellStyle.BackColor = Color.LightGray;
 
@@ -398,6 +405,11 @@ namespace UI.DISEÑO
                 else if (estado == "DESACTIVADO")
                 {
                     e.Value = "CLIENTE DESACTIVADO";
+                    e.FormattingApplied = true;
+                }
+                else if (estado == "CONGELADO")
+                {
+                    e.Value = "CLIENTE CONGELADO";
                     e.FormattingApplied = true;
                 }
             }
@@ -464,6 +476,38 @@ namespace UI.DISEÑO
         }
 
         // ===============================
+        // CONGELAR / ACTIVAR
+        // ===============================
+        private void btnCongelar_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (!TryObtenerClienteDeFila(dgvEstado.CurrentRow, out int clienteId))
+                {
+                    MessageBox.Show("Selecciona un cliente.");
+                    return;
+                }
+
+                string nombreCliente = ObtenerValorCelda(dgvEstado.CurrentRow!, "Nombre");
+                using var frm = new FrmCongelarMiembro(clienteId, nombreCliente);
+                frm.ShowDialog(this);
+                if (frm.CambioRealizado)
+                {
+                    CargarEstado();
+                    _presentacion?.CargarDashboard();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Error al congelar miembro: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        // ===============================
         // DESACTIVAR CLIENTE
         // ===============================
         private void btnDesactivar_Click(object sender, EventArgs e)
@@ -483,8 +527,7 @@ namespace UI.DISEÑO
                 if (modo == null)
                     return;
 
-                if (modo == ModoDesactivacionMiembro.SinMembresia
-                    && estadoActual.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase))
+                if (estadoActual.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase))
                 {
                     MessageBox.Show(
                         "El cliente ya está DESACTIVADO.",
@@ -494,23 +537,10 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                if (modo == ModoDesactivacionMiembro.Vencido
-                    && estadoActual.Equals("VENCIDO", StringComparison.OrdinalIgnoreCase))
-                {
-                    MessageBox.Show(
-                        "El cliente ya está como VENCIDO.",
-                        "Desactivar",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    return;
-                }
-
                 string usuario = Sesion.Usuario ?? "ADMIN";
 
                 string motivo = Microsoft.VisualBasic.Interaction.InputBox(
-                    modo == ModoDesactivacionMiembro.Vencido
-                        ? "Motivo de baja por vencimiento:"
-                        : "¿Por qué se va el cliente?",
+                    "¿Por qué se va el cliente?",
                     "Motivo de salida",
                     "Sin especificar"
                 );
@@ -526,7 +556,11 @@ namespace UI.DISEÑO
                 int resultado;
                 try
                 {
-                    resultado = membresiaBLL.DesactivarMiembro(clienteId, usuario, motivo, modo.Value);
+                    resultado = membresiaBLL.DesactivarMiembro(
+                        clienteId,
+                        usuario,
+                        motivo,
+                        ModoDesactivacionMiembro.SinMembresia);
                 }
                 finally
                 {
@@ -547,10 +581,7 @@ namespace UI.DISEÑO
                 CargarEstado();
                 _presentacion?.CargarDashboard();
 
-                string estadoFinal = modo == ModoDesactivacionMiembro.Vencido
-                    ? "CLIENTE VENCIDO"
-                    : "CLIENTE DESACTIVADO";
-                MessageBox.Show($"Miembro desactivado correctamente.\nEstado: {estadoFinal}.");
+                MessageBox.Show("Miembro desactivado correctamente.\nEstado: CLIENTE DESACTIVADO.");
 
                 int clienteWhatsApp = clienteId;
                 string motivoWhatsApp = motivo;

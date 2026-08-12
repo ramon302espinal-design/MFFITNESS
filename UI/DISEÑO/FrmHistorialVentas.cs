@@ -19,6 +19,7 @@ namespace UI.DISEÑO
         private readonly PagoBLL pagoBLL = new PagoBLL();
         private readonly VentasBLL ventasBLL = new VentasBLL();
         private readonly HistorialMembresiaBLL historialBLL = new HistorialMembresiaBLL();
+        private readonly BindingSource _bsHistorialMembresia = new BindingSource();
 
         public FrmHistorialVentas(Form frm)
         {
@@ -43,6 +44,7 @@ namespace UI.DISEÑO
             }
 
             CargarHistorialPagos();
+            CargarHistorialMembresia();
         }
 
         public FrmHistorialVentas()
@@ -54,15 +56,47 @@ namespace UI.DISEÑO
 
         private void CargarHistorialMembresia()
         {
+            string filtroActual = txtBuscarHistMembresia?.Text?.Trim() ?? string.Empty;
+
             dgvHistorialMembresia.DataBindingComplete -= DgvHistorialMembresia_DespuesDeEnlazar;
 
             dgvHistorialMembresia.Columns.Clear();
-            dgvHistorialMembresia.DataSource = historialBLL.ObtenerHistorial();
+            _bsHistorialMembresia.DataSource = historialBLL.ObtenerHistorial();
+            dgvHistorialMembresia.DataSource = _bsHistorialMembresia;
+
+            if (!string.IsNullOrEmpty(filtroActual) && txtBuscarHistMembresia != null)
+                txtBuscarHistMembresia.Text = filtroActual;
+
+            AplicarFiltroBusquedaHistorialMembresia();
 
             if (_clienteIdParaSeleccionar.HasValue)
                 dgvHistorialMembresia.DataBindingComplete += DgvHistorialMembresia_DespuesDeEnlazar;
             else if (dgvHistorialMembresia.Columns.Count > 0)
                 ConfigurarColumnasHistorialMembresia(dgvHistorialMembresia);
+        }
+
+        private void txtBuscarHistMembresia_TextChanged(object? sender, EventArgs e)
+        {
+            AplicarFiltroBusquedaHistorialMembresia();
+        }
+
+        private void AplicarFiltroBusquedaHistorialMembresia()
+        {
+            if (_bsHistorialMembresia.DataSource == null)
+                return;
+
+            var termino = txtBuscarHistMembresia?.Text?.Trim() ?? string.Empty;
+            try
+            {
+                _bsHistorialMembresia.Filter = string.IsNullOrEmpty(termino)
+                    ? null
+                    : BusquedaGridHelper.ConstruirFiltroHistorialMembresia(termino);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Filtro historial membresía: {ex.Message}");
+                _bsHistorialMembresia.RemoveFilter();
+            }
         }
 
         private void DgvHistorialMembresia_DespuesDeEnlazar(object? sender, DataGridViewBindingCompleteEventArgs e)
@@ -107,6 +141,9 @@ namespace UI.DISEÑO
             if (grid.Columns["Usuario"] != null) grid.Columns["Usuario"]!.HeaderText = "Atendió";
             if (grid.Columns["Nota"] != null) grid.Columns["Nota"]!.HeaderText = "Detalle";
             if (grid.Columns["ClienteId"] != null) grid.Columns["ClienteId"]!.Visible = false;
+            // Usados por el buscador; no saturan el grid.
+            if (grid.Columns["Telefono"] != null) grid.Columns["Telefono"]!.Visible = false;
+            if (grid.Columns["Direccion"] != null) grid.Columns["Direccion"]!.Visible = false;
 
             grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             grid.ReadOnly = true;

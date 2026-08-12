@@ -1,4 +1,5 @@
 using BLL.Services;
+using CORE;
 using DL;
 using System;
 using System.Data;
@@ -8,6 +9,7 @@ namespace BLL
     public class PagoBLL
     {
         private readonly PagoDAL pagoDAL = new PagoDAL();
+        private readonly ClienteDAL clienteDAL = new ClienteDAL();
 
         public DataTable ListarPagos()
         {
@@ -41,7 +43,8 @@ namespace BLL
             var txService = new CajaTransaccionService();
             int pagoId = 0;
             int cajaMovId = 0;
-            string conceptoCaja = $"Pago Cliente {clienteId} - {concepto}";
+            string? nombreCliente = clienteDAL.ObtenerClientePorId(clienteId)?["Nombre"]?.ToString();
+            string conceptoCaja = CajaConceptoHelper.IngresoPagoMembresia(clienteId, nombreCliente, concepto);
 
             txService.Ejecutar((conn, tx) =>
             {

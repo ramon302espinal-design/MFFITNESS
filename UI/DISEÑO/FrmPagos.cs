@@ -26,6 +26,7 @@ namespace UI.DISEÑO
         private readonly CajaBLL cajaBLL = new CajaBLL();
         private readonly MembresiaBLL membresiaBLL = new MembresiaBLL();
         private readonly DataTable carrito = new DataTable();
+        private readonly BindingSource _bsProductos = new BindingSource();
         private FrmPresentacion? _presentacion;
         private readonly ClienteBLL clienteBLL = new ClienteBLL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
@@ -187,10 +188,59 @@ namespace UI.DISEÑO
 
         private void CargarProductos()
         {
-            cmbProducto.DataSource = productoBLL.ObtenerProductos();
+            DataTable productos = productoBLL.ObtenerProductos()
+                ?? new DataTable();
+
+            _bsProductos.RaiseListChangedEvents = false;
+            _bsProductos.DataSource = productos;
+            _bsProductos.RaiseListChangedEvents = true;
+
             cmbProducto.DisplayMember = "Nombre";
             cmbProducto.ValueMember = "Id";
+            cmbProducto.DataSource = _bsProductos;
+            cmbProducto.SelectedIndex = -1;
+
             txtPrecioProducto.ReadOnly = true;
+            txtPrecioProducto.Clear();
+
+            AplicarFiltroBusquedaProducto();
+        }
+
+        private void txtBuscarProducto_TextChanged(object? sender, EventArgs e)
+        {
+            AplicarFiltroBusquedaProducto();
+        }
+
+        private void AplicarFiltroBusquedaProducto()
+        {
+            if (_bsProductos.DataSource == null)
+                return;
+
+            var termino = txtBuscarProducto?.Text?.Trim() ?? string.Empty;
+            object? seleccionPrevia = cmbProducto.SelectedValue;
+
+            try
+            {
+                _bsProductos.Filter = string.IsNullOrEmpty(termino)
+                    ? null
+                    : BusquedaGridHelper.ConstruirFiltroProductosPos(termino);
+
+                if (seleccionPrevia != null)
+                {
+                    try { cmbProducto.SelectedValue = seleccionPrevia; }
+                    catch { /* ya no está en el filtro */ }
+                }
+
+                if (cmbProducto.SelectedIndex < 0 && _bsProductos.Count == 1)
+                    cmbProducto.SelectedIndex = 0;
+                else if (cmbProducto.SelectedIndex < 0)
+                    txtPrecioProducto.Clear();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Filtro productos POS: {ex.Message}");
+                _bsProductos.RemoveFilter();
+            }
         }
 
         private void CargarMembresias()
@@ -685,6 +735,8 @@ namespace UI.DISEÑO
         {
             cmbCliente.SelectedIndex = -1;
             cmbProducto.SelectedIndex = -1;
+            if (txtBuscarProducto != null)
+                txtBuscarProducto.Clear();
             cmbMembresia.SelectedIndex = -1;
             txtMonto.Clear();
             txtPrecioProducto.Clear();

@@ -13,6 +13,8 @@ namespace DL
         // ===============================
         public bool TieneMembresiaActiva(int clienteId)
         {
+            new CongelacionDAL().EnsureSchema();
+
             // Misma regla que dashboard / Estado: vigente inclusive el día de FechaFin.
             string query = @"
                 SELECT COUNT(*)
@@ -30,6 +32,11 @@ namespace DL
                       ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
                       WHERE h.ClienteId = @ClienteId
                         AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO')
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM CongelacionesMembresia g
+                      WHERE g.ClienteId = @ClienteId AND g.Activa = 1
                   )";
 
             SqlParameter[] p =
@@ -111,6 +118,11 @@ namespace DL
                                  WHERE h.ClienteId = @ClienteId
                                    AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO')
                              )
+                             AND NOT EXISTS (
+                                 SELECT 1
+                                 FROM CongelacionesMembresia g
+                                 WHERE g.ClienteId = @ClienteId AND g.Activa = 1
+                             )
                              ORDER BY m.FechaFin DESC, m.Id DESC";
 
             SqlParameter[] parametros =
@@ -187,6 +199,8 @@ namespace DL
                     motivo
                 );
 
+                new CongelacionDAL().CerrarActiva(conn, tx, clienteId, null);
+
                 tx.Commit();
                 return 1;
             }
@@ -234,6 +248,8 @@ namespace DL
         // ===============================
         public void ActualizarVencidas()
         {
+            new CongelacionDAL().EnsureSchema();
+
             // 1) Desactivar solo después del día de vencimiento.
             string queryVencer = @"
     UPDATE Membresias
@@ -267,7 +283,12 @@ namespace DL
               GROUP BY ClienteId
           ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
           WHERE h.ClienteId = m.ClienteId
-            AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO')
+            AND h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO', 'CONGELACION')
+      )
+      AND NOT EXISTS (
+          SELECT 1
+          FROM CongelacionesMembresia g
+          WHERE g.ClienteId = m.ClienteId AND g.Activa = 1
       )";
 
             db.ExecuteNonQuery(queryReactivar);

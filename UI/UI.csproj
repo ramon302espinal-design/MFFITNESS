@@ -59,6 +59,18 @@
 		<Compile Update="DISEÑO\FrmEstadoClientes.cs">
 			<SubType>Form</SubType>
 		</Compile>
+		<Compile Update="DISEÑO\FrmDesactivacionMiembro.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmDesactivacionMiembro.Designer.cs">
+			<DependentUpon>FrmDesactivacionMiembro.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\FrmCongelarMiembro.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\FrmCongelarMiembro.Designer.cs">
+			<DependentUpon>FrmCongelarMiembro.cs</DependentUpon>
+		</Compile>
 		<Compile Update="DISEÑO\FrmPagos.cs">
 			<SubType>Form</SubType>
 		</Compile>

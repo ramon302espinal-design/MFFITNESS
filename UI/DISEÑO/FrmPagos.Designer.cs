@@ -37,6 +37,8 @@ namespace UI.DISEÑO
             label3 = new Label();
             btnBack = new Button();
             cmbProducto = new ComboBox();
+            lblBuscarProducto = new Label();
+            txtBuscarProducto = new TextBox();
             numCantidad = new NumericUpDown();
             label4 = new Label();
             tabProductos = new TabControl();
@@ -159,14 +161,34 @@ namespace UI.DISEÑO
             // 
             // cmbProducto
             // 
+            cmbProducto.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbProducto.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
             cmbProducto.FormattingEnabled = true;
             cmbProducto.Location = new Point(88, 278);
             cmbProducto.Name = "cmbProducto";
             cmbProducto.Size = new Size(198, 43);
             cmbProducto.TabIndex = 30;
-            cmbProducto.Text = "PRODUCTOS";
             cmbProducto.SelectedIndexChanged += cmbProducto_SelectedIndexChanged;
+            // 
+            // lblBuscarProducto
+            // 
+            lblBuscarProducto.AutoSize = true;
+            lblBuscarProducto.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblBuscarProducto.Location = new Point(88, 232);
+            lblBuscarProducto.Name = "lblBuscarProducto";
+            lblBuscarProducto.Size = new Size(74, 28);
+            lblBuscarProducto.TabIndex = 28;
+            lblBuscarProducto.Text = "Buscar:";
+            // 
+            // txtBuscarProducto
+            // 
+            txtBuscarProducto.Font = new Font("Segoe UI", 12F);
+            txtBuscarProducto.Location = new Point(168, 230);
+            txtBuscarProducto.Name = "txtBuscarProducto";
+            txtBuscarProducto.PlaceholderText = "Nombre, Id, categoría, precio venta/compra...";
+            txtBuscarProducto.Size = new Size(520, 34);
+            txtBuscarProducto.TabIndex = 29;
+            txtBuscarProducto.TextChanged += txtBuscarProducto_TextChanged;
             // 
             // numCantidad
             // 
@@ -209,6 +231,8 @@ namespace UI.DISEÑO
             tabPago.Controls.Add(label5);
             tabPago.Controls.Add(txtPrecioProducto);
             tabPago.Controls.Add(cmbProducto);
+            tabPago.Controls.Add(txtBuscarProducto);
+            tabPago.Controls.Add(lblBuscarProducto);
             tabPago.Controls.Add(label4);
             tabPago.Controls.Add(numCantidad);
             tabPago.Location = new Point(4, 37);
@@ -538,6 +562,8 @@ namespace UI.DISEÑO
         private Label label3;
         private Button btnBack;
         private ComboBox cmbProducto;
+        private Label lblBuscarProducto;
+        private TextBox txtBuscarProducto;
         private NumericUpDown numCantidad;
         private Label label4;
         private TabControl tabProductos;

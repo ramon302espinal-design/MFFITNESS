@@ -53,6 +53,20 @@ namespace UI.DISEÑO
                 dgvMovimientos.DataSource = cajaBLL.MovimientosHoy();
                 dgvMovimientos.ClearSelection();
                 DataGridViewHelper.HideColumn(dgvMovimientos, "ClienteId");
+                if (dgvMovimientos.Columns["NombreCliente"] is DataGridViewColumn colNombre)
+                    colNombre.HeaderText = "Cliente";
+                if (dgvMovimientos.Columns["TipoMovimiento"] is DataGridViewColumn colTipo)
+                    colTipo.HeaderText = "Tipo";
+                if (dgvMovimientos.Columns["Concepto"] is DataGridViewColumn colConcepto)
+                    colConcepto.HeaderText = "Concepto";
+                if (dgvMovimientos.Columns["Monto"] is DataGridViewColumn colMonto)
+                {
+                    colMonto.DefaultCellStyle.Format = "C2";
+                    colMonto.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+                if (dgvMovimientos.Columns["Fecha"] is DataGridViewColumn colFecha)
+                    colFecha.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
+                dgvMovimientos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             }
             catch (Exception ex)
             {

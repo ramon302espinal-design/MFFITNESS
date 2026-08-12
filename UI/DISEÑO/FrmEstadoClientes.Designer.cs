@@ -44,6 +44,7 @@ namespace UI.DISEÑO
             panelAcciones = new Panel();
             btnRenovar = new Button();
             btnDesactivar = new Button();
+            btnCongelar = new Button();
             dgvEstado = new DataGridView();
             btnAtras = new Button();
             panelNav.SuspendLayout();
@@ -200,6 +201,7 @@ namespace UI.DISEÑO
             // 
             panelAcciones.Controls.Add(btnRenovar);
             panelAcciones.Controls.Add(btnDesactivar);
+            panelAcciones.Controls.Add(btnCongelar);
             panelAcciones.Dock = DockStyle.Bottom;
             panelAcciones.Location = new Point(0, 609);
             panelAcciones.Name = "panelAcciones";
@@ -209,7 +211,7 @@ namespace UI.DISEÑO
             // btnRenovar
             // 
             btnRenovar.Anchor = AnchorStyles.None;
-            btnRenovar.Location = new Point(381, 9);
+            btnRenovar.Location = new Point(300, 9);
             btnRenovar.Name = "btnRenovar";
             btnRenovar.Size = new Size(142, 46);
             btnRenovar.TabIndex = 0;
@@ -222,13 +224,26 @@ namespace UI.DISEÑO
             btnDesactivar.Anchor = AnchorStyles.None;
             btnDesactivar.BackColor = Color.Red;
             btnDesactivar.ForeColor = Color.White;
-            btnDesactivar.Location = new Point(543, 9);
+            btnDesactivar.Location = new Point(462, 9);
             btnDesactivar.Name = "btnDesactivar";
             btnDesactivar.Size = new Size(126, 46);
             btnDesactivar.TabIndex = 1;
             btnDesactivar.Text = "DESACTIVAR";
             btnDesactivar.UseVisualStyleBackColor = false;
             btnDesactivar.Click += btnDesactivar_Click;
+            // 
+            // btnCongelar
+            // 
+            btnCongelar.Anchor = AnchorStyles.None;
+            btnCongelar.BackColor = Color.FromArgb(14, 165, 233);
+            btnCongelar.ForeColor = Color.White;
+            btnCongelar.Location = new Point(608, 9);
+            btnCongelar.Name = "btnCongelar";
+            btnCongelar.Size = new Size(126, 46);
+            btnCongelar.TabIndex = 2;
+            btnCongelar.Text = "CONGELAR";
+            btnCongelar.UseVisualStyleBackColor = false;
+            btnCongelar.Click += btnCongelar_Click;
             // 
             // dgvEstado
             // 
@@ -308,6 +323,7 @@ namespace UI.DISEÑO
         private Button btnAtras;
         private Button btnRenovar;
         private Button btnDesactivar;
+        private Button btnCongelar;
         private Label lblBuscar;
         private TextBox txtBuscar;
     }
