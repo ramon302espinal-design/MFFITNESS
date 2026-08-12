@@ -1,4 +1,5 @@
 using BLL;
+using CORE.Update;
 using System;
 using System.Windows.Forms;
 using UI.DISEÑO;
@@ -13,6 +14,31 @@ namespace UI
         {
             ApplicationConfiguration.Initialize();
             FacturaMembresiaPdfService.ConfigurarLicencia();
+
+            var startup = UpdateSessionGuard.Evaluate();
+            if (startup.BlockStartup)
+            {
+                MessageBox.Show(
+                    startup.Message,
+                    "Actualización — recuperación requerida",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            if (!startup.SkipAutoMigrations)
+            {
+                var migracion = SchemaMigrationBLL.ApplyPending();
+                if (!migracion.Success)
+                {
+                    MessageBox.Show(
+                        migracion.Message,
+                        "Migración de base de datos",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+            }
 
             // Trabajo pesado fuera del hilo UI para no congelar el arranque.
             try

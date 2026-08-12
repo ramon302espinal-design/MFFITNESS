@@ -1,0 +1,25 @@
+<Project>
+  <!-- Versión centralizada del producto MFFITNESS (SemVer). -->
+  <PropertyGroup>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <!-- Inyecta el commit corto de Git en InformationalVersion (p. ej. 1.0.0+ec24e58). -->
+  <Target Name="SetSourceRevisionIdFromGit"
+          BeforeTargets="GetAssemblyVersion"
+          Condition="'$(SourceRevisionId)' == ''">
+    <Exec Command="git rev-parse --short HEAD"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitShortHash" />
+    </Exec>
+    <PropertyGroup>
+      <SourceRevisionId Condition="'$(GitShortHash)' != ''">$([System.String]::Copy('$(GitShortHash)').Trim())</SourceRevisionId>
+      <SourceRevisionId Condition="'$(SourceRevisionId)' == ''">unknown</SourceRevisionId>
+    </PropertyGroup>
+  </Target>
+</Project>

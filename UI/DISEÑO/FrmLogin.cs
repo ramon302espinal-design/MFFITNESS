@@ -36,6 +36,7 @@ namespace UI.DISEÑO
             
             lblUsuario.ForeColor = AppTheme.TextPrimary;
             lblContraseña.ForeColor = AppTheme.TextPrimary;
+            lblVersion.ForeColor = AppTheme.TextMuted;
 
             var logo = ShellTheme.LoadLogo();
             if (logo != null)
@@ -72,6 +73,7 @@ namespace UI.DISEÑO
             txtContraseña.UseSystemPasswordChar = true;
             this.AcceptButton = btnIniciar;
             this.ActiveControl = comboUsuarios;
+            lblVersion.Text = AppVersion.DisplayText;
         }
 
 

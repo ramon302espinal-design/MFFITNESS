@@ -41,6 +41,7 @@
             txtContraseña = new TextBox();
             chkMostrarContraseña = new CheckBox();
             panelBotones = new Panel();
+            lblVersion = new Label();
             btnCancelar = new Button();
             btnIniciar = new Button();
             tableLayoutPanel1.SuspendLayout();
@@ -128,6 +129,7 @@
             // panelFormulario
             // 
             panelFormulario.BackColor = Color.White;
+            panelFormulario.Controls.Add(lblVersion);
             panelFormulario.Controls.Add(lblUsuario);
             panelFormulario.Controls.Add(comboUsuarios);
             panelFormulario.Controls.Add(lblContraseña);
@@ -208,6 +210,19 @@
             panelBotones.Size = new Size(629, 133);
             panelBotones.TabIndex = 2;
             // 
+            // lblVersion
+            // 
+            lblVersion.Anchor = AnchorStyles.None;
+            lblVersion.AutoSize = true;
+            lblVersion.Font = new Font("Segoe UI", 8.5F);
+            lblVersion.ForeColor = Color.FromArgb(130, 130, 130);
+            lblVersion.Location = new Point(267, 372);
+            lblVersion.Name = "lblVersion";
+            lblVersion.Size = new Size(114, 20);
+            lblVersion.TabIndex = 6;
+            lblVersion.Text = "MFFITNESS POS";
+            lblVersion.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // btnCancelar
             // 
             btnCancelar.BackColor = Color.FromArgb(230, 230, 230);
@@ -281,6 +296,7 @@
         private TextBox txtContraseña;
         private CheckBox chkMostrarContraseña;
         private Panel panelBotones;
+        private Label lblVersion;
         private Button btnCancelar;
         private Button btnIniciar;
     }

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UpdateManager</AssemblyName>
+    <RootNamespace>UpdateManager</RootNamespace>
+    <ProjectGuid>{E4F5A6B7-C8D9-4E0F-1A2B-3C4D5E6F7081}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\BLL\BLL.csproj" />
+    <ProjectReference Include="..\..\CORE\CORE.csproj" />
+  </ItemGroup>
+</Project>

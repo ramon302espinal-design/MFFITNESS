@@ -29,6 +29,8 @@ namespace DL
 
         public DataTable ExecuteQuery(string query, SqlParameter[]? parameters = null)
         {
+            SchemaVersionDAL.EnsureBaseline(this);
+
             using SqlConnection conn = CreateConnection();
             using SqlCommand cmd = new SqlCommand(query, conn);
 
@@ -46,6 +48,8 @@ namespace DL
 
         public int ExecuteNonQuery(string query, SqlParameter[]? parameters = null)
         {
+            SchemaVersionDAL.EnsureBaseline(this);
+
             using SqlConnection conn = CreateConnection();
             using SqlCommand cmd = new SqlCommand(query, conn);
 
@@ -58,6 +62,8 @@ namespace DL
 
         public object? ExecuteScalar(string query, SqlParameter[]? parameters = null)
         {
+            SchemaVersionDAL.EnsureBaseline(this);
+
             using SqlConnection conn = CreateConnection();
             using SqlCommand cmd = new SqlCommand(query, conn);
 
@@ -70,6 +76,7 @@ namespace DL
 
         internal SqlConnection GetConnection()
         {
+            SchemaVersionDAL.EnsureBaseline(this);
             return CreateConnection();
         }
     }

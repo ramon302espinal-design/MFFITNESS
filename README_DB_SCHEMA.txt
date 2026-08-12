@@ -2,7 +2,9 @@
 
 Base de datos LocalDB: **MF CYBER DB**.
 
-El acceso en código es por `DALL` (`DBHelper` + consultas / stored procedures). No hay migraciones automáticas al arrancar la UI.
+El acceso en código es por `DALL` (`DBHelper` + consultas / stored procedures).
+
+La versión del esquema vive en `dbo.SchemaVersion`. El motor de migraciones está en `DL.Migrations.MigrationRunner` y los archivos en [`Database/Migrations/`](Database/Migrations/).
 
 ## Scripts en el repo
 

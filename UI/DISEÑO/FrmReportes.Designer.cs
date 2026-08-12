@@ -29,19 +29,20 @@ namespace UI
         private void InitializeComponent()
         {
             panelNav = new Panel();
-            btnBack = new Button();
-            btnNavPagar = new Button();
-            btnNavDeudas = new Button();
-            btnNavEstado = new Button();
-            btnNavCaja = new Button();
-            btnNavHistorial = new Button();
-            btnNavInventario = new Button();
-            btnNavReportes = new Button();
             btnNavClientes = new Button();
+            btnNavReportes = new Button();
+            btnNavInventario = new Button();
+            btnNavHistorial = new Button();
+            btnNavCaja = new Button();
+            btnNavEstado = new Button();
+            btnNavDeudas = new Button();
+            btnNavPagar = new Button();
+            btnBack = new Button();
             dtDesde = new DateTimePicker();
             dtHasta = new DateTimePicker();
             label1 = new Label();
             label2 = new Label();
+            lbltiempo = new Label();
             cmbReporte = new ComboBox();
             btnGenerarReporte = new Button();
             btnGenerarPDF = new Button();
@@ -71,17 +72,75 @@ namespace UI
             panelNav.Size = new Size(1150, 52);
             panelNav.TabIndex = 0;
             // 
-            // btnBack
+            // btnNavClientes
             // 
-            btnBack.FlatAppearance.BorderSize = 0;
-            btnBack.FlatStyle = FlatStyle.Flat;
-            btnBack.Font = new Font("Segoe UI", 11F);
-            btnBack.Location = new Point(8, 8);
-            btnBack.Name = "btnBack";
-            btnBack.Size = new Size(43, 35);
-            btnBack.TabIndex = 0;
-            btnBack.Text = "";
-            btnBack.UseVisualStyleBackColor = true;
+            btnNavClientes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavClientes.Location = new Point(940, 10);
+            btnNavClientes.Name = "btnNavClientes";
+            btnNavClientes.Size = new Size(120, 32);
+            btnNavClientes.TabIndex = 8;
+            btnNavClientes.Text = "CLIENTES";
+            btnNavClientes.UseVisualStyleBackColor = true;
+            // 
+            // btnNavReportes
+            // 
+            btnNavReportes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavReportes.Location = new Point(810, 10);
+            btnNavReportes.Name = "btnNavReportes";
+            btnNavReportes.Size = new Size(120, 32);
+            btnNavReportes.TabIndex = 7;
+            btnNavReportes.Text = "REPORTES";
+            btnNavReportes.UseVisualStyleBackColor = true;
+            // 
+            // btnNavInventario
+            // 
+            btnNavInventario.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavInventario.Location = new Point(670, 10);
+            btnNavInventario.Name = "btnNavInventario";
+            btnNavInventario.Size = new Size(130, 32);
+            btnNavInventario.TabIndex = 6;
+            btnNavInventario.Text = "INVENTARIO";
+            btnNavInventario.UseVisualStyleBackColor = true;
+            // 
+            // btnNavHistorial
+            // 
+            btnNavHistorial.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavHistorial.Location = new Point(540, 10);
+            btnNavHistorial.Name = "btnNavHistorial";
+            btnNavHistorial.Size = new Size(120, 32);
+            btnNavHistorial.TabIndex = 5;
+            btnNavHistorial.Text = "HISTORIAL";
+            btnNavHistorial.UseVisualStyleBackColor = true;
+            // 
+            // btnNavCaja
+            // 
+            btnNavCaja.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavCaja.Location = new Point(420, 10);
+            btnNavCaja.Name = "btnNavCaja";
+            btnNavCaja.Size = new Size(110, 32);
+            btnNavCaja.TabIndex = 4;
+            btnNavCaja.Text = "CAJA";
+            btnNavCaja.UseVisualStyleBackColor = true;
+            // 
+            // btnNavEstado
+            // 
+            btnNavEstado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavEstado.Location = new Point(300, 10);
+            btnNavEstado.Name = "btnNavEstado";
+            btnNavEstado.Size = new Size(110, 32);
+            btnNavEstado.TabIndex = 3;
+            btnNavEstado.Text = "ESTADO";
+            btnNavEstado.UseVisualStyleBackColor = true;
+            // 
+            // btnNavDeudas
+            // 
+            btnNavDeudas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavDeudas.Location = new Point(180, 10);
+            btnNavDeudas.Name = "btnNavDeudas";
+            btnNavDeudas.Size = new Size(110, 32);
+            btnNavDeudas.TabIndex = 2;
+            btnNavDeudas.Text = "DEUDAS";
+            btnNavDeudas.UseVisualStyleBackColor = true;
             // 
             // btnNavPagar
             // 
@@ -95,89 +154,34 @@ namespace UI
             btnNavPagar.Text = "COBRAR";
             btnNavPagar.UseVisualStyleBackColor = false;
             // 
-            // btnNavDeudas
+            // btnBack
             // 
-            btnNavDeudas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavDeudas.Location = new Point(180, 10);
-            btnNavDeudas.Name = "btnNavDeudas";
-            btnNavDeudas.Size = new Size(110, 32);
-            btnNavDeudas.TabIndex = 2;
-            btnNavDeudas.Text = "DEUDAS";
-            btnNavDeudas.UseVisualStyleBackColor = true;
-            // 
-            // btnNavEstado
-            // 
-            btnNavEstado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavEstado.Location = new Point(300, 10);
-            btnNavEstado.Name = "btnNavEstado";
-            btnNavEstado.Size = new Size(110, 32);
-            btnNavEstado.TabIndex = 3;
-            btnNavEstado.Text = "ESTADO";
-            btnNavEstado.UseVisualStyleBackColor = true;
-            // 
-            // btnNavCaja
-            // 
-            btnNavCaja.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavCaja.Location = new Point(420, 10);
-            btnNavCaja.Name = "btnNavCaja";
-            btnNavCaja.Size = new Size(110, 32);
-            btnNavCaja.TabIndex = 4;
-            btnNavCaja.Text = "CAJA";
-            btnNavCaja.UseVisualStyleBackColor = true;
-            // 
-            // btnNavHistorial
-            // 
-            btnNavHistorial.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavHistorial.Location = new Point(540, 10);
-            btnNavHistorial.Name = "btnNavHistorial";
-            btnNavHistorial.Size = new Size(120, 32);
-            btnNavHistorial.TabIndex = 5;
-            btnNavHistorial.Text = "HISTORIAL";
-            btnNavHistorial.UseVisualStyleBackColor = true;
-            // 
-            // btnNavInventario
-            // 
-            btnNavInventario.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavInventario.Location = new Point(670, 10);
-            btnNavInventario.Name = "btnNavInventario";
-            btnNavInventario.Size = new Size(130, 32);
-            btnNavInventario.TabIndex = 6;
-            btnNavInventario.Text = "INVENTARIO";
-            btnNavInventario.UseVisualStyleBackColor = true;
-            // 
-            // btnNavReportes
-            // 
-            btnNavReportes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavReportes.Location = new Point(810, 10);
-            btnNavReportes.Name = "btnNavReportes";
-            btnNavReportes.Size = new Size(120, 32);
-            btnNavReportes.TabIndex = 7;
-            btnNavReportes.Text = "REPORTES";
-            btnNavReportes.UseVisualStyleBackColor = true;
-            // 
-            // btnNavClientes
-            // 
-            btnNavClientes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavClientes.Location = new Point(940, 10);
-            btnNavClientes.Name = "btnNavClientes";
-            btnNavClientes.Size = new Size(120, 32);
-            btnNavClientes.TabIndex = 8;
-            btnNavClientes.Text = "CLIENTES";
-            btnNavClientes.UseVisualStyleBackColor = true;
+            btnBack.FlatAppearance.BorderSize = 0;
+            btnBack.FlatStyle = FlatStyle.Flat;
+            btnBack.Font = new Font("Segoe UI", 11F);
+            btnBack.Location = new Point(8, 8);
+            btnBack.Name = "btnBack";
+            btnBack.Size = new Size(43, 35);
+            btnBack.TabIndex = 0;
+            btnBack.UseVisualStyleBackColor = true;
             // 
             // dtDesde
             // 
+            dtDesde.Format = DateTimePickerFormat.Short;
             dtDesde.Location = new Point(144, 96);
             dtDesde.Name = "dtDesde";
             dtDesde.Size = new Size(278, 27);
             dtDesde.TabIndex = 0;
+            dtDesde.ValueChanged += RangoFechas_ValueChanged;
             // 
             // dtHasta
             // 
+            dtHasta.Format = DateTimePickerFormat.Short;
             dtHasta.Location = new Point(428, 96);
             dtHasta.Name = "dtHasta";
             dtHasta.Size = new Size(272, 27);
             dtHasta.TabIndex = 1;
+            dtHasta.ValueChanged += RangoFechas_ValueChanged;
             // 
             // label1
             // 
@@ -198,6 +202,17 @@ namespace UI
             label2.Size = new Size(58, 20);
             label2.TabIndex = 3;
             label2.Text = "HASTA";
+            // 
+            // lbltiempo
+            // 
+            lbltiempo.AutoSize = true;
+            lbltiempo.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            lbltiempo.ForeColor = Color.FromArgb(27, 146, 255);
+            lbltiempo.Location = new Point(720, 86);
+            lbltiempo.Name = "lbltiempo";
+            lbltiempo.Size = new Size(98, 46);
+            lbltiempo.TabIndex = 11;
+            lbltiempo.Text = "1 día";
             // 
             // cmbReporte
             // 
@@ -281,6 +296,7 @@ namespace UI
             Controls.Add(btnGenerarPDF);
             Controls.Add(btnGenerarReporte);
             Controls.Add(cmbReporte);
+            Controls.Add(lbltiempo);
             Controls.Add(label2);
             Controls.Add(label1);
             Controls.Add(dtHasta);
@@ -313,6 +329,7 @@ namespace UI
         private DateTimePicker dtHasta;
         private Label label1;
         private Label label2;
+        private Label lbltiempo;
         private ComboBox cmbReporte;
         private Button btnGenerarReporte;
         private Button btnGenerarPDF;

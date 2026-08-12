@@ -1,6 +1,7 @@
 using BLL;
 using System;
 using System.Data;
+using System.Drawing;
 using System.Windows.Forms;
 using UI.Helpers;
 using UI.Theme;
@@ -145,6 +146,35 @@ namespace UI
             cmbReporte.Items.Clear();
             cmbReporte.Items.AddRange(new string[] { "CAJA", "VENTAS", "PAGOS" });
             cmbReporte.SelectedIndex = 0;
+            ActualizarLblTiempo();
+        }
+
+        private void RangoFechas_ValueChanged(object? sender, EventArgs e)
+        {
+            ActualizarLblTiempo();
+        }
+
+        /// <summary>
+        /// Muestra en lbltiempo cuántos días cubre el rango Desde–Hasta (inclusive).
+        /// </summary>
+        private void ActualizarLblTiempo()
+        {
+            if (lbltiempo == null || dtDesde == null || dtHasta == null)
+                return;
+
+            DateTime desde = dtDesde.Value.Date;
+            DateTime hasta = dtHasta.Value.Date;
+
+            if (desde > hasta)
+            {
+                lbltiempo.ForeColor = Color.FromArgb(220, 38, 38);
+                lbltiempo.Text = "Rango inválido";
+                return;
+            }
+
+            int dias = (hasta - desde).Days + 1;
+            lbltiempo.ForeColor = Color.FromArgb(27, 146, 255);
+            lbltiempo.Text = dias == 1 ? "1 día" : $"{dias} días";
         }
     }
 }

@@ -176,7 +176,7 @@ namespace UI.DISEÑO
             lblBuscarProducto.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
             lblBuscarProducto.Location = new Point(88, 232);
             lblBuscarProducto.Name = "lblBuscarProducto";
-            lblBuscarProducto.Size = new Size(74, 28);
+            lblBuscarProducto.Size = new Size(81, 28);
             lblBuscarProducto.TabIndex = 28;
             lblBuscarProducto.Text = "Buscar:";
             // 

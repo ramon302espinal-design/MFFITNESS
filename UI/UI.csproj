@@ -25,6 +25,10 @@
 		<None Update="Resources\nav_back.png">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<Content Include="..\Database\Migrations\*.sql">
+			<Link>Database\Migrations\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 
 	<!-- Formularios: editables en el diseñador WinForms -->

@@ -16,3 +16,18 @@ secrets/
 # Logs locales
 **/logs/
 *.log
+
+# Backups locales de SQL (nunca commitear)
+**/backups/
+*.bak
+
+# Paquetes de actualización descargados localmente
+**/updates/downloads/
+**/updates/staging/
+**/updates/snapshots/
+**/updates/sessions/
+
+# Artefactos de publish / update package (locales)
+**/artifacts/
+**/updates/requests/
+
