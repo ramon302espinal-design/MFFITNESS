@@ -84,6 +84,8 @@ namespace UI.Theme
 
         public static void StyleButton(Button btn, ButtonVariant? variant = null)
         {
+            // Botones clásicos WinForms (diseñador): no aplanar ni redondear.
+            if (btn.Tag?.ToString() is "classic" or "standard") return;
             if (btn.Tag?.ToString() is "nav-icon" or "nav" or "nav-back-wired" or "nav-btn-wired") return;
             // Barra superior de módulos: no aplicar región redondeada (rompe el clic, p. ej. Back)
             if (btn.Name is "btnBack" or "btnNavBack" || btn.Name.StartsWith("btnNav", StringComparison.Ordinal))

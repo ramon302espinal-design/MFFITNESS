@@ -59,6 +59,9 @@
 		<Compile Update="DISEÑO\FrmActualizacion.cs">
 			<SubType>Form</SubType>
 		</Compile>
+		<Compile Update="DISEÑO\FrmActualizacion.Designer.cs">
+			<DependentUpon>FrmActualizacion.cs</DependentUpon>
+		</Compile>
 		<Compile Update="DISEÑO\FrmClientes.cs">
 			<SubType>Form</SubType>
 		</Compile>
