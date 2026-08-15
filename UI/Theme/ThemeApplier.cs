@@ -28,13 +28,28 @@ namespace UI.Theme
 
         public static void ApplyToControlTree(Control root)
         {
+            if (EsClasico(root))
+                return;
+
             foreach (Control c in root.Controls)
             {
+                if (EsClasico(c))
+                    continue;
+
                 StyleControl(c);
                 if (c.HasChildren)
                     ApplyToControlTree(c);
             }
         }
+
+        /// <summary>
+        /// Tag "classic"/"standard": el control (y su subárbol) queda tal cual lo dejó
+        /// el diseñador WinForms. Evita que el tema reescriba una pantalla clásica.
+        /// </summary>
+        private static bool EsClasico(Control control) =>
+            control.Tag is string tag
+            && (tag.Equals("classic", StringComparison.OrdinalIgnoreCase)
+                || tag.Equals("standard", StringComparison.OrdinalIgnoreCase));
 
         private static void StyleControl(Control control)
         {

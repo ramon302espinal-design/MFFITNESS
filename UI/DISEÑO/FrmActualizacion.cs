@@ -213,11 +213,10 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                AppDialog.Info(this,
-                    "UpdateManager se inició correctamente.\nLa aplicación se cerrará ahora para liberar los archivos.",
-                    "Actualización en curso");
-
-                Application.Exit();
+                // CRÍTICO: no mostrar diálogo modal aquí.
+                // UpdateManager ya está en marcha y espera el cierre de UI.exe (UiCloseTimeout).
+                // Un MessageBox bloqueaba el Exit y provocaba "UI no terminó dentro del timeout".
+                Environment.Exit(0);
             }
             catch (Exception ex)
             {

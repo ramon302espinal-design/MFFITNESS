@@ -38,7 +38,9 @@ namespace BLL
             decimal montoPagado,
             string metodo,
             string usuario,
-            DataTable carrito)
+            DataTable carrito,
+            DateTime? fechaVencimientoDeuda = null,
+            string? conceptoDeuda = null)
         {
             if (carrito.Rows.Count == 0)
                 throw new Exception("El carrito está vacío.");
@@ -94,10 +96,14 @@ namespace BLL
                     if (!clienteId.HasValue || clienteId.Value <= 0)
                         throw new Exception("Para ventas a crédito se requiere un cliente válido.");
 
-                    DateTime fechaVencimiento = DateTime.Now.AddDays(30);
+                    DateTime fechaVencimiento = fechaVencimientoDeuda?.Date
+                        ?? DateTime.Today.AddDays(30);
+                    string concepto = string.IsNullOrWhiteSpace(conceptoDeuda)
+                        ? $"Venta de productos (Id {ventaId})"
+                        : conceptoDeuda.Trim();
                     result.DeudaId = deudaBLL.CrearDeudaConId(
                         clienteId.Value,
-                        $"Venta de productos (Id {ventaId})",
+                        concepto,
                         saldo,
                         fechaVencimiento,
                         usuario);

@@ -12,7 +12,9 @@ namespace BLL.Commands
             decimal montoPagado,
             string metodo,
             DataTable carrito,
-            string? usuario = null)
+            string? usuario = null,
+            DateTime? fechaVencimientoDeuda = null,
+            string? conceptoDeuda = null)
         {
             try
             {
@@ -23,7 +25,9 @@ namespace BLL.Commands
                     montoPagado,
                     metodo,
                     ResolveUsuario(usuario),
-                    carrito);
+                    carrito,
+                    fechaVencimientoDeuda,
+                    conceptoDeuda);
                 return CommandResult.Ok("Venta registrada correctamente.", operacion.VentaId);
             }
             catch (Exception ex)

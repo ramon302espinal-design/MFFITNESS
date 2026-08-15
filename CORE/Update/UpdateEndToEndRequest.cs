@@ -11,7 +11,7 @@ namespace CORE.Update
         public bool PackageVerified { get; init; }
         public required string InstallDirectory { get; init; }
         public string UiExecutableName { get; init; } = "UI.exe";
-        public TimeSpan UiCloseTimeout { get; init; } = TimeSpan.FromSeconds(30);
+        public TimeSpan UiCloseTimeout { get; init; } = TimeSpan.FromSeconds(90);
         public bool StartApplicationAfterInstall { get; init; } = true;
         public string? StagingDirectory { get; init; }
         public string? SnapshotDirectory { get; init; }

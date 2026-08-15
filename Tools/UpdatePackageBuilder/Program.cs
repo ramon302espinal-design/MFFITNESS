@@ -59,6 +59,23 @@ internal static class Program
                 return 4;
             }
 
+            // Fail-closed: no permitir manifest 1.1.3 con UI.* todavía en 1.1.2
+            // (eso provocaba Health FAIL + rollback tras "UpdateManager OK").
+            string? binaryVersion = ReadAppVersionFromUi(source);
+            if (string.IsNullOrWhiteSpace(binaryVersion))
+            {
+                Console.Error.WriteLine("ERROR: no se pudo leer SemVer de UI.exe en --source.");
+                return 4;
+            }
+
+            if (!string.Equals(binaryVersion, appVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine(
+                    $"ERROR: AppVersion del manifest ({appVersion}) != versión de UI.exe ({binaryVersion}). "
+                    + "Bumpeá Directory.Build.props, republish y vuelve a generar el paquete.");
+                return 4;
+            }
+
             if (targetDb < 1)
             {
                 Console.Error.WriteLine("ERROR: TargetDbVersion inválido.");
@@ -197,6 +214,11 @@ internal static class Program
             int plus = v.IndexOf('+');
             if (plus > 0)
                 v = v[..plus];
+
+            // FileVersion a veces es "1.1.3.0" → SemVer MAJOR.MINOR.PATCH
+            var parts = v.Split('.');
+            if (parts.Length == 4 && parts[3] == "0")
+                v = string.Join('.', parts[0], parts[1], parts[2]);
 
             return SemVer.TryParse(v, out _) ? v : null;
         }

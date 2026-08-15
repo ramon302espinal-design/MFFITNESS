@@ -37,6 +37,7 @@ if ($sha -ne $expected) {
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+$tmpUi = Join-Path $env:TEMP ("mff-verify-ui-" + [guid]::NewGuid().ToString('N') + ".dll")
 try {
     $names = @($zip.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
     $required = @('UI.exe', 'UI.dll', 'BLL.dll', 'DL.dll', 'DTO.dll', 'CORE.dll')
@@ -51,9 +52,30 @@ try {
         }) {
         throw "ZIP contiene artefactos UpdateManager.* (prohibido)"
     }
+
+    $uiEntry = $zip.Entries | Where-Object {
+        $n = $_.FullName.Replace('\', '/')
+        $n -eq 'UI.dll' -or $n.EndsWith('/UI.dll')
+    } | Select-Object -First 1
+    if ($null -eq $uiEntry) { throw "ZIP sin UI.dll para verificar FileVersion" }
+
+    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($uiEntry, $tmpUi, $true)
+    $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($tmpUi)
+    $binary = $vi.ProductVersion
+    if ([string]::IsNullOrWhiteSpace($binary)) { $binary = $vi.FileVersion }
+    if ($binary -match '\+') { $binary = $binary.Split('+')[0] }
+    $parts = $binary.Split('.')
+    if ($parts.Length -eq 4 -and $parts[3] -eq '0') {
+        $binary = ($parts[0..2] -join '.')
+    }
+    $expectedApp = [string]$manifest.appVersion
+    if ($binary -ne $expectedApp) {
+        throw "Versión de UI.dll en ZIP ($binary) != manifest.appVersion ($expectedApp). Regenera el paquete tras bump de Directory.Build.props."
+    }
 }
 finally {
     $zip.Dispose()
+    if (Test-Path $tmpUi) { Remove-Item $tmpUi -Force -ErrorAction SilentlyContinue }
 }
 
 Write-Host "Verify-UpdatePackage OK" -ForegroundColor Green
@@ -61,4 +83,5 @@ Write-Host "  Package:  $($manifest.packageName)"
 Write-Host "  App:      $($manifest.appVersion)"
 Write-Host "  TargetDb: $($manifest.targetDbVersion)"
 Write-Host "  SHA256:   $sha"
+Write-Host "  UI.dll FileVersion coincide con manifest: OK"
 Write-Host "  UpdateManager.exe ausente del ZIP: OK"

@@ -1,9 +1,9 @@
 <Project>
   <!-- Versión y marca centralizadas del producto MFFITNESS (SemVer). -->
   <PropertyGroup>
-    <Version>1.1.2</Version>
-    <AssemblyVersion>1.1.2.0</AssemblyVersion>
-    <FileVersion>1.1.2.0</FileVersion>
+    <Version>1.1.3</Version>
+    <AssemblyVersion>1.1.3.0</AssemblyVersion>
+    <FileVersion>1.1.3.0</FileVersion>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
     <Company>MFFITNESS</Company>
     <Product>MFFITNESS</Product>
