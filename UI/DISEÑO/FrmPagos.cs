@@ -27,6 +27,7 @@ namespace UI.DISEÑO
         private readonly MembresiaBLL membresiaBLL = new MembresiaBLL();
         private readonly DataTable carrito = new DataTable();
         private readonly BindingSource _bsProductos = new BindingSource();
+
         private FrmPresentacion? _presentacion;
         private readonly ClienteBLL clienteBLL = new ClienteBLL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
@@ -195,16 +196,165 @@ namespace UI.DISEÑO
             _bsProductos.DataSource = productos;
             _bsProductos.RaiseListChangedEvents = true;
 
-            cmbProducto.DisplayMember = "Nombre";
-            cmbProducto.ValueMember = "Id";
-            cmbProducto.DataSource = _bsProductos;
-            cmbProducto.SelectedIndex = -1;
-
-            txtPrecioProducto.ReadOnly = true;
-            txtPrecioProducto.Clear();
-
+            ConfigurarListaProductos();
             AplicarFiltroBusquedaProducto();
         }
+
+        /// <summary>
+        /// lstProductosPos es el selector de productos del POS: se alimenta del
+        /// BindingSource, por lo que txtBuscarProducto la filtra en vivo.
+        /// </summary>
+        private void ConfigurarListaProductos()
+        {
+            lstProductosPos.DisplayMember = "Nombre";
+            lstProductosPos.ValueMember = "Id";
+            lstProductosPos.DataSource = _bsProductos;
+            lstProductosPos.ClearSelected();
+        }
+
+        /// <summary>
+        /// Clic izquierdo suma una unidad, clic derecho resta. La lista no se cierra,
+        /// así se pueden acumular varios productos seguidos.
+        /// </summary>
+        private void lstProductosPos_MouseDown(object? sender, MouseEventArgs e)
+        {
+            int index = lstProductosPos.IndexFromPoint(e.Location);
+            if (index < 0 || index >= lstProductosPos.Items.Count)
+                return;
+
+            lstProductosPos.SelectedIndex = index;
+
+            if (lstProductosPos.Items[index] is not DataRowView row)
+                return;
+
+            if (e.Button == MouseButtons.Left)
+                AjustarCantidadCarrito(row.Row, 1);
+            else if (e.Button == MouseButtons.Right)
+                AjustarCantidadCarrito(row.Row, -1);
+        }
+
+        private void lstProductosPos_KeyDown(object? sender, KeyEventArgs e)
+        {
+            // Enter cobra (ProcessCmdKey). Aquí solo +/- para sumar/restar unidades.
+            if (lstProductosPos.SelectedItem is not DataRowView row)
+                return;
+
+            if (e.KeyCode == Keys.Add || e.KeyCode == Keys.Oemplus)
+            {
+                AjustarCantidadCarrito(row.Row, 1);
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Subtract || e.KeyCode == Keys.OemMinus)
+            {
+                AjustarCantidadCarrito(row.Row, -1);
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        /// <summary>
+        /// Enter dispara COBRAR de la pestaña activa (productos o membresía).
+        /// </summary>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.Enter || keyData == Keys.Return)
+            {
+                if (tabProductos.SelectedTab == tabPago)
+                {
+                    if (btnPagarProductos.Enabled && btnPagarProductos.Visible)
+                    {
+                        btnPagarProductos.PerformClick();
+                        return true;
+                    }
+                }
+                else if (tabProductos.SelectedTab == tabMembresia)
+                {
+                    if (btnPagar.Enabled && btnPagar.Visible)
+                    {
+                        btnPagar.PerformClick();
+                        return true;
+                    }
+                }
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        /// <summary>
+        /// Suma o resta unidades del producto en el carrito y refresca el total al instante.
+        /// Al llegar a cero la línea se elimina.
+        /// </summary>
+        private void AjustarCantidadCarrito(DataRow producto, int delta)
+        {
+            if (producto == null || delta == 0)
+                return;
+
+            int productoId = Convert.ToInt32(producto["Id"]);
+            string nombre = producto["Nombre"]?.ToString()?.Trim() ?? "producto";
+
+            DataRow[] filas = carrito.Select("ProductoId = " + productoId);
+            int cantidadActual = filas.Length > 0 ? Convert.ToInt32(filas[0]["Cantidad"]) : 0;
+            int cantidadNueva = cantidadActual + delta;
+
+            if (cantidadNueva <= 0)
+            {
+                if (filas.Length > 0)
+                {
+                    filas[0].Delete();
+                    carrito.AcceptChanges();
+                    CalcularTotal();
+                }
+                return;
+            }
+
+            decimal precio = LeerPrecioVenta(producto);
+            if (precio <= 0)
+            {
+                MessageBox.Show(
+                    $"{nombre} no tiene un precio de venta válido.",
+                    "Producto",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            int? stock = LeerStockActual(producto);
+            if (delta > 0 && stock.HasValue && cantidadNueva > stock.Value)
+            {
+                MessageBox.Show(
+                    $"Stock insuficiente de {nombre}. Disponible: {stock.Value}.",
+                    "Stock",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            decimal total = Math.Round(precio * cantidadNueva, 2, MidpointRounding.AwayFromZero);
+
+            if (filas.Length > 0)
+            {
+                filas[0]["Precio"] = precio;
+                filas[0]["Cantidad"] = cantidadNueva;
+                filas[0]["Total"] = total;
+            }
+            else
+            {
+                carrito.Rows.Add(productoId, nombre, precio, cantidadNueva, total);
+            }
+
+            CalcularTotal();
+        }
+
+        private static decimal LeerPrecioVenta(DataRow row) =>
+            row.Table.Columns.Contains("PrecioVenta") && row["PrecioVenta"] != DBNull.Value
+                ? Convert.ToDecimal(row["PrecioVenta"])
+                : 0m;
+
+        private static int? LeerStockActual(DataRow row) =>
+            row.Table.Columns.Contains("StockActual") && row["StockActual"] != DBNull.Value
+                ? Convert.ToInt32(row["StockActual"])
+                : (int?)null;
 
         private void txtBuscarProducto_TextChanged(object? sender, EventArgs e)
         {
@@ -217,7 +367,7 @@ namespace UI.DISEÑO
                 return;
 
             var termino = txtBuscarProducto?.Text?.Trim() ?? string.Empty;
-            object? seleccionPrevia = cmbProducto.SelectedValue;
+            object? seleccionPrevia = lstProductosPos.SelectedValue;
 
             try
             {
@@ -227,14 +377,12 @@ namespace UI.DISEÑO
 
                 if (seleccionPrevia != null)
                 {
-                    try { cmbProducto.SelectedValue = seleccionPrevia; }
+                    try { lstProductosPos.SelectedValue = seleccionPrevia; }
                     catch { /* ya no está en el filtro */ }
                 }
 
-                if (cmbProducto.SelectedIndex < 0 && _bsProductos.Count == 1)
-                    cmbProducto.SelectedIndex = 0;
-                else if (cmbProducto.SelectedIndex < 0)
-                    txtPrecioProducto.Clear();
+                if (lstProductosPos.SelectedIndex < 0 && _bsProductos.Count == 1)
+                    lstProductosPos.SelectedIndex = 0;
             }
             catch (Exception ex)
             {
@@ -283,17 +431,12 @@ namespace UI.DISEÑO
             }
 
             dgvCarrito.AllowUserToAddRows = false;
+            // El borrado por línea lo maneja dgvCarrito_KeyDown (Delete / Insert).
+            dgvCarrito.AllowUserToDeleteRows = false;
             dgvCarrito.ReadOnly = true;
             dgvCarrito.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             ThemeApplier.ApplyReadOnlyGridBehavior(dgvCarrito);
-        }
-
-        private void dgvCarrito_SelectionChanged(object sender, EventArgs e)
-        {
-            if (dgvCarrito.CurrentRow?.Cells["ProductoId"].Value == null) return;
-            int id = Convert.ToInt32(dgvCarrito.CurrentRow.Cells["ProductoId"].Value);
-            cmbProducto.SelectedValue = id;
         }
 
         private void dgvCarrito_CellContentClick(object sender, DataGridViewCellEventArgs e)
@@ -310,6 +453,25 @@ namespace UI.DISEÑO
             }
         }
 
+        /// <summary>
+        /// Delete / Insert elimina la línea seleccionada del carrito.
+        /// </summary>
+        private void dgvCarrito_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Delete && e.KeyCode != Keys.Insert)
+                return;
+
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+
+            if (dgvCarrito.CurrentRow?.DataBoundItem is not DataRowView row)
+                return;
+
+            row.Row.Delete();
+            carrito.AcceptChanges();
+            CalcularTotal();
+        }
+
         private void btnLimpiarCarrito_Click(object sender, EventArgs e)
         {
             if (carrito.Rows.Count == 0) return;
@@ -318,40 +480,6 @@ namespace UI.DISEÑO
                 carrito.Clear();
                 CalcularTotal();
             }
-        }
-
-        private void cmbProducto_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cmbProducto.SelectedItem is DataRowView row && row["PrecioVenta"] != DBNull.Value)
-            {
-                txtPrecioProducto.Text = Convert.ToDecimal(row["PrecioVenta"]).ToString("0.00");
-            }
-        }
-
-        private void btnAgregarCarrito_Click(object sender, EventArgs e)
-        {
-            if (cmbProducto.SelectedValue == null) return;
-
-            int id = Convert.ToInt32(cmbProducto.SelectedValue);
-            string nombre = cmbProducto.Text;
-            decimal precio = decimal.TryParse(txtPrecioProducto.Text, out decimal p) ? p : 0;
-            int cantidad = (int)numCantidad.Value;
-
-            DataRow[] filas = carrito.Select("ProductoId = " + id);
-
-            if (filas.Length > 0)
-            {
-                int cantidadActual = Convert.ToInt32(filas[0]["Cantidad"]);
-                filas[0]["Cantidad"] = cantidadActual + cantidad;
-                filas[0]["Total"] = (cantidadActual + cantidad) * precio;
-            }
-            else
-            {
-                carrito.Rows.Add(id, nombre, precio, cantidad, precio * cantidad);
-            }
-
-            CalcularTotal();
-            numCantidad.Value = 1;
         }
 
         private void CalcularTotal()
@@ -734,13 +862,11 @@ namespace UI.DISEÑO
         private void LimpiarCampos()
         {
             cmbCliente.SelectedIndex = -1;
-            cmbProducto.SelectedIndex = -1;
+            lstProductosPos.ClearSelected();
             if (txtBuscarProducto != null)
                 txtBuscarProducto.Clear();
             cmbMembresia.SelectedIndex = -1;
             txtMonto.Clear();
-            txtPrecioProducto.Clear();
-            numCantidad.Value = 1;
             chkFinanciamiento.Checked = false;
             txtPagoInicial.Text = "0";
             lblSaldoValor.Text = "$0.00";

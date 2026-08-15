@@ -36,21 +36,16 @@ namespace UI.DISEÑO
             cmbCliente = new ComboBox();
             label3 = new Label();
             btnBack = new Button();
-            cmbProducto = new ComboBox();
             lblBuscarProducto = new Label();
             txtBuscarProducto = new TextBox();
-            numCantidad = new NumericUpDown();
-            label4 = new Label();
+            lstProductosPos = new ListBox();
             tabProductos = new TabControl();
             tabPago = new TabPage();
             btnLimpiarCarrito = new Button();
             lblTotal = new Label();
             label6 = new Label();
-            btnAgregarCarrito = new Button();
             dgvCarrito = new DataGridView();
             btnPagarProductos = new Button();
-            label5 = new Label();
-            txtPrecioProducto = new TextBox();
             tabMembresia = new TabPage();
             pnlFinanciamiento = new Panel();
             lblFechaLimite = new Label();
@@ -68,7 +63,6 @@ namespace UI.DISEÑO
             btnNavCaja = new Button();
             btnNavEstado = new Button();
             btnNavDeudas = new Button();
-            ((System.ComponentModel.ISupportInitialize)numCantidad).BeginInit();
             tabProductos.SuspendLayout();
             tabPago.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCarrito).BeginInit();
@@ -159,22 +153,11 @@ namespace UI.DISEÑO
             btnBack.TabIndex = 0;
             btnBack.UseVisualStyleBackColor = true;
             // 
-            // cmbProducto
-            // 
-            cmbProducto.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbProducto.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            cmbProducto.FormattingEnabled = true;
-            cmbProducto.Location = new Point(88, 278);
-            cmbProducto.Name = "cmbProducto";
-            cmbProducto.Size = new Size(198, 43);
-            cmbProducto.TabIndex = 30;
-            cmbProducto.SelectedIndexChanged += cmbProducto_SelectedIndexChanged;
-            // 
             // lblBuscarProducto
             // 
             lblBuscarProducto.AutoSize = true;
             lblBuscarProducto.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            lblBuscarProducto.Location = new Point(88, 232);
+            lblBuscarProducto.Location = new Point(766, 289);
             lblBuscarProducto.Name = "lblBuscarProducto";
             lblBuscarProducto.Size = new Size(81, 28);
             lblBuscarProducto.TabIndex = 28;
@@ -183,30 +166,25 @@ namespace UI.DISEÑO
             // txtBuscarProducto
             // 
             txtBuscarProducto.Font = new Font("Segoe UI", 12F);
-            txtBuscarProducto.Location = new Point(168, 230);
+            txtBuscarProducto.Location = new Point(846, 287);
             txtBuscarProducto.Name = "txtBuscarProducto";
             txtBuscarProducto.PlaceholderText = "Nombre, Id, categoría, precio venta/compra...";
             txtBuscarProducto.Size = new Size(520, 34);
             txtBuscarProducto.TabIndex = 29;
             txtBuscarProducto.TextChanged += txtBuscarProducto_TextChanged;
             // 
-            // numCantidad
+            // lstProductosPos
             // 
-            numCantidad.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
-            numCantidad.Location = new Point(750, 277);
-            numCantidad.Name = "numCantidad";
-            numCantidad.Size = new Size(150, 47);
-            numCantidad.TabIndex = 31;
-            // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label4.Location = new Point(598, 284);
-            label4.Name = "label4";
-            label4.Size = new Size(146, 35);
-            label4.TabIndex = 32;
-            label4.Text = "CANTIDAD";
+            lstProductosPos.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lstProductosPos.FormattingEnabled = true;
+            lstProductosPos.IntegralHeight = false;
+            lstProductosPos.ItemHeight = 28;
+            lstProductosPos.Location = new Point(781, 327);
+            lstProductosPos.Name = "lstProductosPos";
+            lstProductosPos.Size = new Size(520, 125);
+            lstProductosPos.TabIndex = 31;
+            lstProductosPos.KeyDown += lstProductosPos_KeyDown;
+            lstProductosPos.MouseDown += lstProductosPos_MouseDown;
             // 
             // tabProductos
             // 
@@ -217,7 +195,7 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(0, 52);
             tabProductos.Name = "tabProductos";
             tabProductos.SelectedIndex = 0;
-            tabProductos.Size = new Size(1246, 807);
+            tabProductos.Size = new Size(1382, 807);
             tabProductos.TabIndex = 33;
             // 
             // tabPago
@@ -225,20 +203,15 @@ namespace UI.DISEÑO
             tabPago.Controls.Add(btnLimpiarCarrito);
             tabPago.Controls.Add(lblTotal);
             tabPago.Controls.Add(label6);
-            tabPago.Controls.Add(btnAgregarCarrito);
+            tabPago.Controls.Add(lstProductosPos);
             tabPago.Controls.Add(dgvCarrito);
             tabPago.Controls.Add(btnPagarProductos);
-            tabPago.Controls.Add(label5);
-            tabPago.Controls.Add(txtPrecioProducto);
-            tabPago.Controls.Add(cmbProducto);
             tabPago.Controls.Add(txtBuscarProducto);
             tabPago.Controls.Add(lblBuscarProducto);
-            tabPago.Controls.Add(label4);
-            tabPago.Controls.Add(numCantidad);
             tabPago.Location = new Point(4, 37);
             tabPago.Name = "tabPago";
             tabPago.Padding = new Padding(3);
-            tabPago.Size = new Size(1238, 766);
+            tabPago.Size = new Size(1374, 766);
             tabPago.TabIndex = 0;
             tabPago.Text = "PRODUCTOS";
             tabPago.UseVisualStyleBackColor = true;
@@ -246,7 +219,7 @@ namespace UI.DISEÑO
             // btnLimpiarCarrito
             // 
             btnLimpiarCarrito.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            btnLimpiarCarrito.Location = new Point(1063, 479);
+            btnLimpiarCarrito.Location = new Point(610, 708);
             btnLimpiarCarrito.Name = "btnLimpiarCarrito";
             btnLimpiarCarrito.Size = new Size(150, 44);
             btnLimpiarCarrito.TabIndex = 40;
@@ -258,7 +231,7 @@ namespace UI.DISEÑO
             // 
             lblTotal.AutoSize = true;
             lblTotal.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            lblTotal.Location = new Point(208, 708);
+            lblTotal.Location = new Point(137, 708);
             lblTotal.Name = "lblTotal";
             lblTotal.Size = new Size(40, 46);
             lblTotal.TabIndex = 39;
@@ -268,22 +241,11 @@ namespace UI.DISEÑO
             // 
             label6.AutoSize = true;
             label6.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            label6.Location = new Point(88, 708);
+            label6.Location = new Point(17, 708);
             label6.Name = "label6";
             label6.Size = new Size(123, 46);
             label6.TabIndex = 38;
             label6.Text = "TOTAL";
-            // 
-            // btnAgregarCarrito
-            // 
-            btnAgregarCarrito.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            btnAgregarCarrito.Location = new Point(904, 278);
-            btnAgregarCarrito.Name = "btnAgregarCarrito";
-            btnAgregarCarrito.Size = new Size(153, 46);
-            btnAgregarCarrito.TabIndex = 37;
-            btnAgregarCarrito.Text = "AGREGAR";
-            btnAgregarCarrito.UseVisualStyleBackColor = true;
-            btnAgregarCarrito.Click += btnAgregarCarrito_Click;
             // 
             // dgvCarrito
             // 
@@ -291,44 +253,26 @@ namespace UI.DISEÑO
             dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvCarrito.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvCarrito.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvCarrito.Location = new Point(88, 327);
+            dgvCarrito.Location = new Point(17, 327);
             dgvCarrito.Name = "dgvCarrito";
             dgvCarrito.RowHeadersWidth = 51;
-            dgvCarrito.Size = new Size(969, 375);
+            dgvCarrito.Size = new Size(751, 355);
             dgvCarrito.TabIndex = 36;
             dgvCarrito.CellContentClick += dgvCarrito_CellContentClick;
-            dgvCarrito.SelectionChanged += dgvCarrito_SelectionChanged;
+            dgvCarrito.KeyDown += dgvCarrito_KeyDown;
             // 
             // btnPagarProductos
             // 
             btnPagarProductos.BackColor = Color.FromArgb(22, 163, 74);
             btnPagarProductos.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             btnPagarProductos.ForeColor = Color.White;
-            btnPagarProductos.Location = new Point(837, 712);
+            btnPagarProductos.Location = new Point(296, 258);
             btnPagarProductos.Name = "btnPagarProductos";
             btnPagarProductos.Size = new Size(220, 59);
             btnPagarProductos.TabIndex = 35;
             btnPagarProductos.Text = "COBRAR";
             btnPagarProductos.UseVisualStyleBackColor = false;
             btnPagarProductos.Click += btnPagarProductos_Click;
-            // 
-            // label5
-            // 
-            label5.AutoSize = true;
-            label5.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label5.Location = new Point(292, 282);
-            label5.Name = "label5";
-            label5.Size = new Size(102, 35);
-            label5.TabIndex = 34;
-            label5.Text = "PRECIO";
-            // 
-            // txtPrecioProducto
-            // 
-            txtPrecioProducto.Font = new Font("Segoe UI", 15F);
-            txtPrecioProducto.Location = new Point(400, 280);
-            txtPrecioProducto.Name = "txtPrecioProducto";
-            txtPrecioProducto.Size = new Size(125, 41);
-            txtPrecioProducto.TabIndex = 33;
             // 
             // tabMembresia
             // 
@@ -344,7 +288,7 @@ namespace UI.DISEÑO
             tabMembresia.Location = new Point(4, 37);
             tabMembresia.Name = "tabMembresia";
             tabMembresia.Padding = new Padding(3);
-            tabMembresia.Size = new Size(1238, 766);
+            tabMembresia.Size = new Size(1374, 766);
             tabMembresia.TabIndex = 1;
             tabMembresia.Text = "MEMBRESIA";
             tabMembresia.UseVisualStyleBackColor = true;
@@ -454,7 +398,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1246, 52);
+            panelNav.Size = new Size(1382, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -531,14 +475,13 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1246, 859);
+            ClientSize = new Size(1382, 859);
             Controls.Add(tabProductos);
             Controls.Add(panelNav);
             Name = "FrmPagos";
             Text = "PAGO";
             WindowState = FormWindowState.Maximized;
             Load += FrmPagos_Load;
-            ((System.ComponentModel.ISupportInitialize)numCantidad).EndInit();
             tabProductos.ResumeLayout(false);
             tabPago.ResumeLayout(false);
             tabPago.PerformLayout();
@@ -561,21 +504,16 @@ namespace UI.DISEÑO
         private ComboBox cmbCliente;
         private Label label3;
         private Button btnBack;
-        private ComboBox cmbProducto;
         private Label lblBuscarProducto;
         private TextBox txtBuscarProducto;
-        private NumericUpDown numCantidad;
-        private Label label4;
+        private ListBox lstProductosPos;
         private TabControl tabProductos;
         private TabPage tabPago;
         private TabPage tabMembresia;
-        private Label label5;
-        private TextBox txtPrecioProducto;
         private Button btnPagarProductos;
         private DataGridView dgvCarrito;
         private Label lblTotal;
         private Label label6;
-        private Button btnAgregarCarrito;
         private Button btnLimpiarCarrito;
         private Panel panelNav;
         private Button btnNavDeudas;
