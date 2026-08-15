@@ -14,6 +14,11 @@ namespace UI.Theme
         public const int CardWidth = 300;
         public const int CardHeight = 168;
 
+        /// <summary>Fila 1 (clientes/ingresos) y fila 2 (deudas), alineadas en columnas.</summary>
+        private const int FirstRowTop = 48;
+        private const int DebtRowTop = 260;
+        private static readonly int[] ColumnLeft = { 40, 360, 680, 1000 };
+
         public static Label Apply(
             Panel host,
             Panel panelActivos, Label titleActivos, Label valueActivos,
@@ -40,14 +45,43 @@ namespace UI.Theme
                 PositionClock(host, clock);
 
                 // Misma posición/tamaño que el Designer
-                StyleCard(panelActivos, titleActivos, valueActivos, AppTheme.Success, "CLIENTES ACTIVOS", new Point(40, 48));
-                StyleCard(panelVencidos, titleVencidos, valueVencidos, AppTheme.Error, "CLIENTES VENCIDOS", new Point(360, 48));
-                StyleCard(panelHoy, titleHoy, valueHoy, AppTheme.Primary, "INGRESOS HOY", new Point(680, 48));
-                StyleCard(panelMes, titleMes, valueMes, Color.FromArgb(168, 85, 247), "INGRESOS MENSUAL", new Point(1000, 48));
+                StyleCard(panelActivos, titleActivos, valueActivos, AppTheme.Success, "CLIENTES ACTIVOS", new Point(ColumnLeft[0], FirstRowTop));
+                StyleCard(panelVencidos, titleVencidos, valueVencidos, AppTheme.Error, "CLIENTES VENCIDOS", new Point(ColumnLeft[1], FirstRowTop));
+                StyleCard(panelHoy, titleHoy, valueHoy, AppTheme.Primary, "INGRESOS HOY", new Point(ColumnLeft[2], FirstRowTop));
+                StyleCard(panelMes, titleMes, valueMes, Color.FromArgb(168, 85, 247), "INGRESOS MENSUAL", new Point(ColumnLeft[3], FirstRowTop));
 
                 welcome.BringToFront();
                 clock.BringToFront();
                 return welcome;
+            }
+            finally
+            {
+                host.ResumeLayout(true);
+            }
+        }
+
+        /// <summary>
+        /// Segunda fila del dashboard: deudas activas, vencidas e ingreso pendiente.
+        /// Misma tarjeta que la fila superior, alineada en las mismas columnas.
+        /// </summary>
+        public static void ApplyDebtRow(
+            Panel host,
+            Panel panelActivas, Label titleActivas, Label valueActivas,
+            Panel panelVencidas, Label titleVencidas, Label valueVencidas,
+            Panel panelPendiente, Label titlePendiente, Label valuePendiente)
+        {
+            if (host == null || host.IsDisposed)
+                return;
+
+            host.SuspendLayout();
+            try
+            {
+                StyleCard(panelActivas, titleActivas, valueActivas,
+                    Color.FromArgb(147, 51, 234), "DEUDAS ACTIVAS", new Point(ColumnLeft[0], DebtRowTop));
+                StyleCard(panelVencidas, titleVencidas, valueVencidas,
+                    AppTheme.Error, "DEUDAS VENCIDAS", new Point(ColumnLeft[1], DebtRowTop));
+                StyleCard(panelPendiente, titlePendiente, valuePendiente,
+                    AppTheme.Success, "INGRESO PENDIENTE", new Point(ColumnLeft[2], DebtRowTop));
             }
             finally
             {

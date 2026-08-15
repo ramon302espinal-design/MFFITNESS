@@ -181,7 +181,7 @@ namespace UI.DISEÑO
             lstProductosPos.ItemHeight = 28;
             lstProductosPos.Location = new Point(781, 327);
             lstProductosPos.Name = "lstProductosPos";
-            lstProductosPos.Size = new Size(520, 125);
+            lstProductosPos.Size = new Size(520, 355);
             lstProductosPos.TabIndex = 31;
             lstProductosPos.KeyDown += lstProductosPos_KeyDown;
             lstProductosPos.MouseDown += lstProductosPos_MouseDown;

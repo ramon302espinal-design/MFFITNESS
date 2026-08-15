@@ -6,7 +6,6 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Linq;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
@@ -16,10 +15,12 @@ namespace UI
         HistorialBLL historialBLL = new HistorialBLL();
         private DataTable dtHistorialCompleto = new();
 
+        /// <summary>Fuente del tipo de movimiento; se crea una vez para no asignar en cada celda.</summary>
+        private Font? fuenteTipo;
+
         public FrmHistorialDeudas()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
         }
 
         private void FrmHistorialDeudas_Load(object sender, EventArgs e)
@@ -43,7 +44,6 @@ namespace UI
                 }
             }
 
-            ConfigurarGrid();
             ConfigurarFiltros();
             CargarHistorial();
 
@@ -55,33 +55,9 @@ namespace UI
         {
             AppEventos.OnDeudaModificada -= CargarHistorial;
             AppEventos.OnPagoRegistrado -= CargarHistorial;
+            fuenteTipo?.Dispose();
+            fuenteTipo = null;
             base.OnFormClosed(e);
-        }
-
-        // ===============================
-        // CONFIGURAR GRID PROFESIONAL
-        // ===============================
-        private void ConfigurarGrid()
-        {
-            dgvHistorial.BorderStyle = BorderStyle.None;
-            dgvHistorial.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
-            dgvHistorial.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            dgvHistorial.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 122, 204);
-            dgvHistorial.DefaultCellStyle.SelectionForeColor = Color.White;
-            dgvHistorial.BackgroundColor = Color.White;
-            dgvHistorial.EnableHeadersVisualStyles = false;
-            dgvHistorial.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(37, 37, 38);
-            dgvHistorial.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvHistorial.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            dgvHistorial.ColumnHeadersHeight = 35;
-            dgvHistorial.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            dgvHistorial.RowTemplate.Height = 30;
-            dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvHistorial.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvHistorial.MultiSelect = false;
-            dgvHistorial.ReadOnly = true;
-            dgvHistorial.AllowUserToAddRows = false;
-            dgvHistorial.AllowUserToDeleteRows = false;
         }
 
         // ===============================
@@ -89,8 +65,12 @@ namespace UI
         // ===============================
         private void ConfigurarFiltros()
         {
+            // Tipos reales que registra HistorialDeudas (deuda, financiamiento, cobros y reversas).
             cmbTipo.Items.Clear();
-            cmbTipo.Items.AddRange(new string[] { "Todos", "DEUDA", "PAGO", "PAGO_INICIAL", "ACTUALIZACION" });
+            cmbTipo.Items.AddRange(new string[]
+            {
+                "Todos", "DEUDA", "PAGO_INICIAL", "PAGO", "REVERSO_PAGO", "ANULACION"
+            });
             cmbTipo.SelectedIndex = 0;
 
             // Establecer rango de fechas por defecto (últimos 30 días)
@@ -226,9 +206,6 @@ namespace UI
             if (dtHistorialCompleto == null || dtHistorialCompleto.Rows.Count == 0)
             {
                 dgvHistorial.DataSource = null;
-                if (!lblTotalDeudas.IsDisposed) lblTotalDeudas.Text = "Total Deudas: $0.00";
-                if (!lblTotalPagos.IsDisposed) lblTotalPagos.Text = "Total Pagos: $0.00";
-                if (!lblBalance.IsDisposed) lblBalance.Text = "Balance: $0.00";
                 return;
             }
 
@@ -258,7 +235,6 @@ namespace UI
                 dgvHistorial.DataSource = dv;
 
                 FormatearColumnas();
-                CalcularTotales();
             }
             catch (ObjectDisposedException)
             {
@@ -334,56 +310,31 @@ namespace UI
         }
 
         // ===============================
-        // CALCULAR TOTALES
+        // TOTALES (export / impresión)
         // ===============================
-        private void CalcularTotales()
+        private void ObtenerTotalesVisibles(out decimal totalDeudas, out decimal totalPagos, out decimal balance)
         {
-            if (dgvHistorial.DataSource == null)
-            {
-                lblTotalDeudas.Text = "Total Deudas: $0.00";
-                lblTotalPagos.Text = "Total Pagos: $0.00";
-                lblBalance.Text = "Balance: $0.00";
+            totalDeudas = 0m;
+            totalPagos = 0m;
+            balance = 0m;
+
+            if (dgvHistorial.DataSource is not DataView dv)
                 return;
-            }
 
-            try
+            foreach (DataRowView row in dv)
             {
-                DataView dv = (DataView)dgvHistorial.DataSource;
-                DataTable dt = dv.ToTable();
+                string tipo = row["Tipo"]?.ToString() ?? string.Empty;
+                decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
 
-                decimal totalDeudas = 0;
-                decimal totalPagos = 0;
-
-                foreach (DataRow row in dt.Rows)
-                {
-                    string tipo = row["Tipo"].ToString();
-                    decimal monto = Convert.ToDecimal(row["Monto"]);
-
-                    if (tipo == "DEUDA")
-                        totalDeudas += monto;
-                    else if (tipo == "PAGO" || tipo == "PAGO_INICIAL")
-                        totalPagos += monto;
-                }
-
-                decimal balance = totalDeudas - totalPagos;
-
-                lblTotalDeudas.Text = $"Total Deudas: {totalDeudas:C2}";
-                lblTotalPagos.Text = $"Total Pagos: {totalPagos:C2}";
-                lblBalance.Text = $"Balance: {balance:C2}";
-
-                // Color del balance
-                if (balance > 0)
-                    lblBalance.ForeColor = Color.Red;
-                else if (balance < 0)
-                    lblBalance.ForeColor = Color.Green;
-                else
-                    lblBalance.ForeColor = Color.Black;
+                if (tipo == "DEUDA")
+                    totalDeudas += monto;
+                else if (tipo == "PAGO" || tipo == "PAGO_INICIAL")
+                    totalPagos += monto;
+                else if (tipo == "REVERSO_PAGO")
+                    totalPagos -= monto; // pago devuelto: deja de contar como cobrado
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al calcular totales: {ex.Message}", "Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+
+            balance = totalDeudas - totalPagos;
         }
 
         // ===============================
@@ -409,20 +360,68 @@ namespace UI
             AplicarFiltros();
         }
 
+        // ===============================
+        // COLOR POR TIPO DE MOVIMIENTO
+        // ===============================
+        /// <summary>
+        /// Cada movimiento del financiamiento se lee de un golpe: la deuda en rojo,
+        /// el pago de inicio en azul y los cobros posteriores en verde.
+        /// </summary>
         private void dgvHistorial_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (dgvHistorial.Columns[e.ColumnIndex].Name == "Tipo" && e.Value != null)
-            {
-                string tipo = e.Value.ToString();
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
 
-                if (tipo == "PAGO")
-                    e.CellStyle.ForeColor = Color.Green;
-                else if (tipo == "PAGO_INICIAL")
-                    e.CellStyle.ForeColor = Color.FromArgb(0, 150, 136);
-                else if (tipo == "DEUDA")
-                    e.CellStyle.ForeColor = Color.Red;
-                else if (tipo == "ACTUALIZACION")
-                    e.CellStyle.ForeColor = Color.Orange;
+            string columna = dgvHistorial.Columns[e.ColumnIndex].Name;
+            if (columna != "Tipo" && columna != "Monto")
+                return;
+
+            if (!TryColorMovimiento(ObtenerTipoFila(e.RowIndex), out Color color))
+                return;
+
+            e.CellStyle.ForeColor = color;
+            e.CellStyle.SelectionForeColor = Color.White;
+
+            if (columna == "Tipo")
+            {
+                fuenteTipo ??= new Font(dgvHistorial.Font, FontStyle.Bold);
+                e.CellStyle.Font = fuenteTipo;
+            }
+        }
+
+        private string ObtenerTipoFila(int rowIndex)
+        {
+            if (dgvHistorial.Rows[rowIndex].DataBoundItem is not DataRowView fila)
+                return string.Empty;
+
+            if (!fila.Row.Table.Columns.Contains("Tipo"))
+                return string.Empty;
+
+            return fila["Tipo"]?.ToString()?.Trim().ToUpperInvariant() ?? string.Empty;
+        }
+
+        private static bool TryColorMovimiento(string tipo, out Color color)
+        {
+            switch (tipo)
+            {
+                case "DEUDA":
+                    color = Color.Firebrick;
+                    return true;
+                case "PAGO_INICIAL":
+                    color = Color.RoyalBlue;
+                    return true;
+                case "PAGO":
+                    color = Color.ForestGreen;
+                    return true;
+                case "REVERSO_PAGO":
+                    color = Color.DarkOrange;
+                    return true;
+                case "ANULACION":
+                    color = Color.DimGray;
+                    return true;
+                default:
+                    color = Color.Empty;
+                    return false;
             }
         }
 
@@ -437,7 +436,7 @@ namespace UI
         }
 
         // ===============================
-        // BOTÓN EXPORTAR
+        // BOTÓN EXPORTAR (CSV/TXT + PDF)
         // ===============================
         private void btnExportar_Click(object sender, EventArgs e)
         {
@@ -445,68 +444,158 @@ namespace UI
             {
                 if (dgvHistorial.Rows.Count == 0)
                 {
-                    MessageBox.Show("No hay datos para exportar", "Advertencia", 
+                    MessageBox.Show("No hay datos para exportar", "Advertencia",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                SaveFileDialog sfd = new SaveFileDialog
+                using var sfd = new SaveFileDialog
                 {
-                    Filter = "Archivo CSV|*.csv|Archivo de texto|*.txt",
+                    Filter = "PDF (*.pdf)|*.pdf|Archivo CSV (*.csv)|*.csv|Archivo de texto (*.txt)|*.txt",
+                    FilterIndex = 1,
+                    DefaultExt = "pdf",
+                    AddExtension = true,
                     Title = "Exportar Historial",
                     FileName = $"Historial_Deudas_{DateTime.Now:yyyyMMdd_HHmmss}"
                 };
 
-                if (sfd.ShowDialog() == DialogResult.OK)
+                if (sfd.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                Cursor = Cursors.WaitCursor;
+
+                string rutaElegida = sfd.FileName;
+                string extension = System.IO.Path.GetExtension(rutaElegida)?.ToLowerInvariant() ?? "";
+                string carpeta = System.IO.Path.GetDirectoryName(rutaElegida)
+                    ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string baseName = System.IO.Path.GetFileNameWithoutExtension(rutaElegida);
+                string rutaPdf = System.IO.Path.Combine(carpeta, baseName + ".pdf");
+
+                DataTable datos = ConstruirTablaHistorialVisible();
+                ObtenerTotalesVisibles(out decimal totalDeudas, out decimal totalPagos, out decimal balance);
+
+                string filtroTipo = cmbTipo.SelectedIndex > 0 ? cmbTipo.Text : "Todos";
+                string filtroCliente = txtCliente.Text?.Trim() ?? string.Empty;
+
+                // PDF siempre: vista organizada de todos los resultados filtrados.
+                new ReporteBLL().GenerarPdfHistorialDeudas(
+                    datos,
+                    rutaPdf,
+                    Sesion.Usuario ?? "ADMIN",
+                    dtpDesde.Value.Date,
+                    dtpHasta.Value.Date,
+                    filtroTipo,
+                    filtroCliente,
+                    totalDeudas,
+                    totalPagos,
+                    balance);
+
+                // CSV / TXT si el usuario eligió esos formatos (además del PDF).
+                if (extension == ".csv" || extension == ".txt")
+                    ExportarHistorialTexto(rutaElegida);
+
+                string mensaje = extension == ".pdf"
+                    ? $"PDF generado:\n{rutaPdf}"
+                    : $"Exportado:\n{rutaElegida}\n\nPDF generado:\n{rutaPdf}";
+
+                DialogResult abrir = MessageBox.Show(
+                    mensaje + "\n\n¿Desea abrir el PDF?",
+                    "Exportación completa",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (abrir == DialogResult.Yes)
                 {
-                    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(sfd.FileName, false, System.Text.Encoding.UTF8))
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {
-                        // Encabezados
-                        string[] headers = new string[dgvHistorial.Columns.Count];
-                        for (int i = 0; i < dgvHistorial.Columns.Count; i++)
-                        {
-                            if (dgvHistorial.Columns[i].Visible)
-                                headers[i] = dgvHistorial.Columns[i].HeaderText;
-                        }
-                        sw.WriteLine(string.Join(",", headers.Where(h => !string.IsNullOrEmpty(h))));
-
-                        // Datos
-                        foreach (DataGridViewRow row in dgvHistorial.Rows)
-                        {
-                            if (row.IsNewRow) continue;
-
-                            string[] cells = new string[dgvHistorial.Columns.Count];
-                            for (int i = 0; i < dgvHistorial.Columns.Count; i++)
-                            {
-                                if (dgvHistorial.Columns[i].Visible)
-                                {
-                                    object value = row.Cells[i].Value;
-                                    cells[i] = value?.ToString()?.Replace(",", ";") ?? string.Empty;
-                                }
-                            }
-                            sw.WriteLine(string.Join(",", cells.Where(c => c != null)));
-                        }
-                    }
-
-                    MessageBox.Show("Historial exportado exitosamente", "Éxito", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    // Preguntar si desea abrir el archivo
-                    if (MessageBox.Show("¿Desea abrir el archivo?", "Exportación Completa", 
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = sfd.FileName,
-                            UseShellExecute = true
-                        });
-                    }
+                        FileName = rutaPdf,
+                        UseShellExecute = true
+                    });
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al exportar: {ex.Message}", "Error", 
+                MessageBox.Show($"Error al exportar: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
+        }
+
+        /// <summary>
+        /// Copia de las filas visibles del grid (mismo filtro que ve el usuario).
+        /// </summary>
+        private DataTable ConstruirTablaHistorialVisible()
+        {
+            var tabla = new DataTable();
+            tabla.Columns.Add("Nombre", typeof(string));
+            tabla.Columns.Add("Tipo", typeof(string));
+            tabla.Columns.Add("Descripcion", typeof(string));
+            tabla.Columns.Add("AporteInicial", typeof(string));
+            tabla.Columns.Add("FechaLimitePago", typeof(DateTime));
+            tabla.Columns.Add("Monto", typeof(decimal));
+            tabla.Columns.Add("Fecha", typeof(DateTime));
+            tabla.Columns.Add("Usuario", typeof(string));
+
+            bool tieneAporte = dgvHistorial.Columns.Contains("AporteInicial");
+            bool tieneLimite = dgvHistorial.Columns.Contains("FechaLimitePago");
+
+            foreach (DataGridViewRow row in dgvHistorial.Rows)
+            {
+                if (row.IsNewRow) continue;
+
+                DataRow nr = tabla.NewRow();
+                nr["Nombre"] = row.Cells["Nombre"].Value?.ToString() ?? "";
+                nr["Tipo"] = row.Cells["Tipo"].Value?.ToString() ?? "";
+                nr["Descripcion"] = row.Cells["Descripcion"].Value?.ToString() ?? "";
+                nr["AporteInicial"] = tieneAporte
+                    ? row.Cells["AporteInicial"].Value?.ToString() ?? ""
+                    : "";
+                nr["FechaLimitePago"] = tieneLimite && row.Cells["FechaLimitePago"].Value != null
+                    && row.Cells["FechaLimitePago"].Value != DBNull.Value
+                    ? Convert.ToDateTime(row.Cells["FechaLimitePago"].Value)
+                    : (object)DBNull.Value;
+                nr["Monto"] = row.Cells["Monto"].Value != null && row.Cells["Monto"].Value != DBNull.Value
+                    ? Convert.ToDecimal(row.Cells["Monto"].Value)
+                    : 0m;
+                nr["Fecha"] = row.Cells["Fecha"].Value != null && row.Cells["Fecha"].Value != DBNull.Value
+                    ? Convert.ToDateTime(row.Cells["Fecha"].Value)
+                    : (object)DBNull.Value;
+                nr["Usuario"] = row.Cells["Usuario"].Value?.ToString() ?? "";
+                tabla.Rows.Add(nr);
+            }
+
+            return tabla;
+        }
+
+        private void ExportarHistorialTexto(string ruta)
+        {
+            using var sw = new System.IO.StreamWriter(ruta, false, System.Text.Encoding.UTF8);
+
+            string[] headers = new string[dgvHistorial.Columns.Count];
+            for (int i = 0; i < dgvHistorial.Columns.Count; i++)
+            {
+                if (dgvHistorial.Columns[i].Visible)
+                    headers[i] = dgvHistorial.Columns[i].HeaderText;
+            }
+            sw.WriteLine(string.Join(",", headers.Where(h => !string.IsNullOrEmpty(h))));
+
+            foreach (DataGridViewRow row in dgvHistorial.Rows)
+            {
+                if (row.IsNewRow) continue;
+
+                string[] cells = new string[dgvHistorial.Columns.Count];
+                for (int i = 0; i < dgvHistorial.Columns.Count; i++)
+                {
+                    if (dgvHistorial.Columns[i].Visible)
+                    {
+                        object value = row.Cells[i].Value;
+                        cells[i] = value?.ToString()?.Replace(",", ";") ?? string.Empty;
+                    }
+                }
+                sw.WriteLine(string.Join(",", cells.Where(c => c != null)));
             }
         }
 
@@ -580,13 +669,15 @@ namespace UI
                 sb.AppendLine("───────────────────────────────────────────────────────────");
             }
 
+            ObtenerTotalesVisibles(out decimal totalDeudas, out decimal totalPagos, out decimal balance);
+
             sb.AppendLine();
             sb.AppendLine("═══════════════════════════════════════════════════════════");
             sb.AppendLine("                    RESUMEN FINANCIERO");
             sb.AppendLine("═══════════════════════════════════════════════════════════");
-            sb.AppendLine(lblTotalDeudas.Text);
-            sb.AppendLine(lblTotalPagos.Text);
-            sb.AppendLine(lblBalance.Text);
+            sb.AppendLine($"Total Deudas: {totalDeudas:C2}");
+            sb.AppendLine($"Total Pagos: {totalPagos:C2}");
+            sb.AppendLine($"Balance: {balance:C2}");
             sb.AppendLine("═══════════════════════════════════════════════════════════");
 
             return sb.ToString();

@@ -46,6 +46,15 @@ namespace UI.DISEÑO
             panelIngresosMes = new Panel();
             lblIngresosMes = new Label();
             label4 = new Label();
+            panelDeudasActivas = new Panel();
+            lblDeudasActivas = new Label();
+            lblTituloDeudasActivas = new Label();
+            panelDeudasVencidas = new Panel();
+            lblDeudasVencidas = new Label();
+            lblTituloDeudasVencidas = new Label();
+            panelIngresoPendiente = new Panel();
+            lblIngresoPendiente = new Label();
+            lblTituloIngresoPendiente = new Label();
             panel1 = new Panel();
             btnDeudas = new Button();
             btnReportes = new Button();
@@ -56,6 +65,9 @@ namespace UI.DISEÑO
             panelClientesVencidos.SuspendLayout();
             panelIngresosHoy.SuspendLayout();
             panelIngresosMes.SuspendLayout();
+            panelDeudasActivas.SuspendLayout();
+            panelDeudasVencidas.SuspendLayout();
+            panelIngresoPendiente.SuspendLayout();
             panel1.SuspendLayout();
             SuspendLayout();
             // 
@@ -127,6 +139,9 @@ namespace UI.DISEÑO
             panelDashboard.Controls.Add(panelClientesVencidos);
             panelDashboard.Controls.Add(panelIngresosHoy);
             panelDashboard.Controls.Add(panelIngresosMes);
+            panelDashboard.Controls.Add(panelDeudasActivas);
+            panelDashboard.Controls.Add(panelDeudasVencidas);
+            panelDashboard.Controls.Add(panelIngresoPendiente);
             panelDashboard.Dock = DockStyle.Fill;
             panelDashboard.Location = new Point(268, 28);
             panelDashboard.Name = "panelDashboard";
@@ -271,6 +286,109 @@ namespace UI.DISEÑO
             label4.TabIndex = 4;
             label4.Text = "INGRESOS MENSUAL";
             // 
+            // panelDeudasActivas
+            // 
+            panelDeudasActivas.BackColor = Color.FromArgb(45, 45, 45, 50);
+            panelDeudasActivas.Controls.Add(lblDeudasActivas);
+            panelDeudasActivas.Controls.Add(lblTituloDeudasActivas);
+            panelDeudasActivas.Location = new Point(40, 260);
+            panelDeudasActivas.Name = "panelDeudasActivas";
+            panelDeudasActivas.Size = new Size(300, 168);
+            panelDeudasActivas.TabIndex = 6;
+            // 
+            // lblDeudasActivas
+            // 
+            lblDeudasActivas.AutoSize = true;
+            lblDeudasActivas.BackColor = Color.Transparent;
+            lblDeudasActivas.Font = new Font("Segoe UI", 28F, FontStyle.Bold);
+            lblDeudasActivas.ForeColor = Color.DarkViolet;
+            lblDeudasActivas.Location = new Point(3, 42);
+            lblDeudasActivas.Name = "lblDeudasActivas";
+            lblDeudasActivas.Size = new Size(54, 62);
+            lblDeudasActivas.TabIndex = 1;
+            lblDeudasActivas.Text = "0";
+            // 
+            // lblTituloDeudasActivas
+            // 
+            lblTituloDeudasActivas.AutoSize = true;
+            lblTituloDeudasActivas.BackColor = Color.DarkViolet;
+            lblTituloDeudasActivas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTituloDeudasActivas.ForeColor = Color.White;
+            lblTituloDeudasActivas.Location = new Point(83, 10);
+            lblTituloDeudasActivas.Name = "lblTituloDeudasActivas";
+            lblTituloDeudasActivas.Size = new Size(145, 23);
+            lblTituloDeudasActivas.TabIndex = 0;
+            lblTituloDeudasActivas.Text = "DEUDAS ACTIVAS";
+            // 
+            // panelDeudasVencidas
+            // 
+            panelDeudasVencidas.BackColor = Color.FromArgb(45, 45, 45, 50);
+            panelDeudasVencidas.Controls.Add(lblDeudasVencidas);
+            panelDeudasVencidas.Controls.Add(lblTituloDeudasVencidas);
+            panelDeudasVencidas.Location = new Point(360, 260);
+            panelDeudasVencidas.Name = "panelDeudasVencidas";
+            panelDeudasVencidas.Size = new Size(300, 168);
+            panelDeudasVencidas.TabIndex = 7;
+            // 
+            // lblDeudasVencidas
+            // 
+            lblDeudasVencidas.AutoSize = true;
+            lblDeudasVencidas.BackColor = Color.Transparent;
+            lblDeudasVencidas.Font = new Font("Segoe UI", 28F, FontStyle.Bold);
+            lblDeudasVencidas.ForeColor = Color.Red;
+            lblDeudasVencidas.Location = new Point(3, 42);
+            lblDeudasVencidas.Name = "lblDeudasVencidas";
+            lblDeudasVencidas.Size = new Size(54, 62);
+            lblDeudasVencidas.TabIndex = 1;
+            lblDeudasVencidas.Text = "0";
+            // 
+            // lblTituloDeudasVencidas
+            // 
+            lblTituloDeudasVencidas.AutoSize = true;
+            lblTituloDeudasVencidas.BackColor = Color.Red;
+            lblTituloDeudasVencidas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTituloDeudasVencidas.ForeColor = Color.White;
+            lblTituloDeudasVencidas.Location = new Point(78, 10);
+            lblTituloDeudasVencidas.Name = "lblTituloDeudasVencidas";
+            lblTituloDeudasVencidas.Size = new Size(158, 23);
+            lblTituloDeudasVencidas.TabIndex = 0;
+            lblTituloDeudasVencidas.Text = "DEUDAS VENCIDAS";
+            // 
+            // panelIngresoPendiente
+            // 
+            panelIngresoPendiente.BackColor = Color.FromArgb(45, 45, 45, 50);
+            panelIngresoPendiente.Controls.Add(lblIngresoPendiente);
+            panelIngresoPendiente.Controls.Add(lblTituloIngresoPendiente);
+            panelIngresoPendiente.Location = new Point(680, 260);
+            panelIngresoPendiente.Name = "panelIngresoPendiente";
+            panelIngresoPendiente.Size = new Size(300, 168);
+            panelIngresoPendiente.TabIndex = 8;
+            panelIngresoPendiente.Tag = "VER_INGRESOS";
+            // 
+            // lblIngresoPendiente
+            // 
+            lblIngresoPendiente.AutoSize = true;
+            lblIngresoPendiente.BackColor = Color.Transparent;
+            lblIngresoPendiente.Font = new Font("Segoe UI", 28F, FontStyle.Bold);
+            lblIngresoPendiente.ForeColor = Color.ForestGreen;
+            lblIngresoPendiente.Location = new Point(3, 42);
+            lblIngresoPendiente.Name = "lblIngresoPendiente";
+            lblIngresoPendiente.Size = new Size(54, 62);
+            lblIngresoPendiente.TabIndex = 1;
+            lblIngresoPendiente.Text = "0";
+            // 
+            // lblTituloIngresoPendiente
+            // 
+            lblTituloIngresoPendiente.AutoSize = true;
+            lblTituloIngresoPendiente.BackColor = Color.ForestGreen;
+            lblTituloIngresoPendiente.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTituloIngresoPendiente.ForeColor = Color.White;
+            lblTituloIngresoPendiente.Location = new Point(70, 10);
+            lblTituloIngresoPendiente.Name = "lblTituloIngresoPendiente";
+            lblTituloIngresoPendiente.Size = new Size(174, 23);
+            lblTituloIngresoPendiente.TabIndex = 0;
+            lblTituloIngresoPendiente.Text = "INGRESO PENDIENTE";
+            // 
             // panel1
             // 
             panel1.BackColor = Color.FromArgb(12, 12, 14);
@@ -358,6 +476,12 @@ namespace UI.DISEÑO
             panelIngresosHoy.PerformLayout();
             panelIngresosMes.ResumeLayout(false);
             panelIngresosMes.PerformLayout();
+            panelDeudasActivas.ResumeLayout(false);
+            panelDeudasActivas.PerformLayout();
+            panelDeudasVencidas.ResumeLayout(false);
+            panelDeudasVencidas.PerformLayout();
+            panelIngresoPendiente.ResumeLayout(false);
+            panelIngresoPendiente.PerformLayout();
             panel1.ResumeLayout(false);
             ResumeLayout(false);
         }
@@ -382,6 +506,15 @@ namespace UI.DISEÑO
         private Label label2;
         private Label lblIngresosHoy;
         private Label lblIngresosMes;
+        private Panel panelDeudasActivas;
+        private Label lblDeudasActivas;
+        private Label lblTituloDeudasActivas;
+        private Panel panelDeudasVencidas;
+        private Label lblDeudasVencidas;
+        private Label lblTituloDeudasVencidas;
+        private Panel panelIngresoPendiente;
+        private Label lblIngresoPendiente;
+        private Label lblTituloIngresoPendiente;
         private Panel panel1;
         private Button btnCaja;
         private Button btnCerrarSesion;

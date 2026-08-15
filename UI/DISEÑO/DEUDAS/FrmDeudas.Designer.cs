@@ -28,13 +28,12 @@ namespace UI
         /// </summary>
         private void InitializeComponent()
         {
-            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             btnPagar = new Button();
             dgvDeudas = new DataGridView();
             btnNuevaDeuda = new Button();
             cmbFiltro = new ComboBox();
             lblFiltro = new Label();
-            btnVerHistorial = new Button();
             btnEnviarWhatsApp = new Button();
             btnActualizar = new Button();
             lblBuscar = new Label();
@@ -44,14 +43,16 @@ namespace UI
             // 
             // btnPagar
             // 
-            btnPagar.BackColor = Color.FromArgb(22, 163, 74);
+            btnPagar.BackColor = SystemColors.MenuHighlight;
+            btnPagar.FlatStyle = FlatStyle.Flat;
             btnPagar.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
             btnPagar.ForeColor = Color.White;
-            btnPagar.Location = new Point(246, 487);
+            btnPagar.Location = new Point(235, 487);
             btnPagar.Name = "btnPagar";
-            btnPagar.Size = new Size(129, 40);
+            btnPagar.Size = new Size(129, 59);
             btnPagar.TabIndex = 0;
-            btnPagar.Text = "COBRAR";
+            btnPagar.Tag = "classic";
+            btnPagar.Text = "ABONAR";
             btnPagar.UseVisualStyleBackColor = false;
             btnPagar.Click += btnPagar_Click;
             // 
@@ -61,14 +62,14 @@ namespace UI
             dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvDeudas.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle1.BackColor = SystemColors.Window;
-            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F);
-            dataGridViewCellStyle1.ForeColor = SystemColors.ControlText;
-            dataGridViewCellStyle1.SelectionBackColor = Color.FromArgb(27, 146, 255);
-            dataGridViewCellStyle1.SelectionForeColor = Color.White;
-            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
-            dgvDeudas.DefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = SystemColors.Window;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle2.ForeColor = SystemColors.ControlText;
+            dataGridViewCellStyle2.SelectionBackColor = Color.FromArgb(27, 146, 255);
+            dataGridViewCellStyle2.SelectionForeColor = Color.White;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.True;
+            dgvDeudas.DefaultCellStyle = dataGridViewCellStyle2;
             dgvDeudas.Dock = DockStyle.Top;
             dgvDeudas.Location = new Point(0, 0);
             dgvDeudas.Name = "dgvDeudas";
@@ -79,13 +80,17 @@ namespace UI
             // 
             // btnNuevaDeuda
             // 
+            btnNuevaDeuda.BackColor = Color.Red;
+            btnNuevaDeuda.FlatStyle = FlatStyle.Flat;
             btnNuevaDeuda.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            btnNuevaDeuda.ForeColor = Color.White;
             btnNuevaDeuda.Location = new Point(63, 487);
             btnNuevaDeuda.Name = "btnNuevaDeuda";
-            btnNuevaDeuda.Size = new Size(165, 40);
+            btnNuevaDeuda.Size = new Size(165, 59);
             btnNuevaDeuda.TabIndex = 3;
+            btnNuevaDeuda.Tag = "classic";
             btnNuevaDeuda.Text = "NUEVA DEUDA";
-            btnNuevaDeuda.UseVisualStyleBackColor = true;
+            btnNuevaDeuda.UseVisualStyleBackColor = false;
             btnNuevaDeuda.Click += btnNuevaDeuda_Click;
             // 
             // cmbFiltro
@@ -109,37 +114,33 @@ namespace UI
             lblFiltro.TabIndex = 5;
             lblFiltro.Text = "FILTRAR:";
             // 
-            // btnVerHistorial
-            // 
-            btnVerHistorial.Font = new Font("Segoe UI", 10F);
-            btnVerHistorial.Location = new Point(400, 487);
-            btnVerHistorial.Name = "btnVerHistorial";
-            btnVerHistorial.Size = new Size(140, 40);
-            btnVerHistorial.TabIndex = 6;
-            btnVerHistorial.Text = "VER HISTORIAL";
-            btnVerHistorial.UseVisualStyleBackColor = true;
-            btnVerHistorial.Click += btnVerHistorial_Click;
-            // 
             // btnEnviarWhatsApp
             // 
-            btnEnviarWhatsApp.Font = new Font("Segoe UI", 10F);
-            btnEnviarWhatsApp.Location = new Point(560, 487);
+            btnEnviarWhatsApp.BackColor = Color.Lime;
+            btnEnviarWhatsApp.FlatStyle = FlatStyle.Flat;
+            btnEnviarWhatsApp.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnEnviarWhatsApp.ForeColor = SystemColors.WindowText;
+            btnEnviarWhatsApp.Location = new Point(373, 487);
             btnEnviarWhatsApp.Name = "btnEnviarWhatsApp";
-            btnEnviarWhatsApp.Size = new Size(180, 40);
+            btnEnviarWhatsApp.Size = new Size(180, 59);
             btnEnviarWhatsApp.TabIndex = 7;
+            btnEnviarWhatsApp.Tag = "classic";
             btnEnviarWhatsApp.Text = "ENVIAR WHATSAPP";
-            btnEnviarWhatsApp.UseVisualStyleBackColor = true;
+            btnEnviarWhatsApp.UseVisualStyleBackColor = false;
             btnEnviarWhatsApp.Click += btnEnviarWhatsApp_Click;
             // 
             // btnActualizar
             // 
-            btnActualizar.Font = new Font("Segoe UI", 10F);
-            btnActualizar.Location = new Point(760, 487);
+            btnActualizar.BackColor = SystemColors.Window;
+            btnActualizar.FlatStyle = FlatStyle.Flat;
+            btnActualizar.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnActualizar.Location = new Point(563, 487);
             btnActualizar.Name = "btnActualizar";
-            btnActualizar.Size = new Size(140, 40);
+            btnActualizar.Size = new Size(140, 59);
             btnActualizar.TabIndex = 8;
+            btnActualizar.Tag = "classic";
             btnActualizar.Text = "ACTUALIZAR";
-            btnActualizar.UseVisualStyleBackColor = true;
+            btnActualizar.UseVisualStyleBackColor = false;
             btnActualizar.Click += btnActualizar_Click;
             // 
             // lblBuscar
@@ -169,7 +170,6 @@ namespace UI
             ClientSize = new Size(1688, 727);
             Controls.Add(btnActualizar);
             Controls.Add(btnEnviarWhatsApp);
-            Controls.Add(btnVerHistorial);
             Controls.Add(txtBuscar);
             Controls.Add(lblBuscar);
             Controls.Add(lblFiltro);
@@ -193,7 +193,6 @@ namespace UI
         private Button btnNuevaDeuda;
         private ComboBox cmbFiltro;
         private Label lblFiltro;
-        private Button btnVerHistorial;
         private Button btnEnviarWhatsApp;
         private Button btnActualizar;
         private Label lblBuscar;

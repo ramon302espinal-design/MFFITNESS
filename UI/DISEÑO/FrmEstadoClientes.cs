@@ -94,6 +94,11 @@ namespace UI.DISEÑO
 
             _estadoUiInicializado = true;
 
+            AppEventos.OnPagoRegistrado -= OnDatosEstadoCambiaron;
+            AppEventos.OnDeudaModificada -= OnDatosEstadoCambiaron;
+            AppEventos.OnPagoRegistrado += OnDatosEstadoCambiaron;
+            AppEventos.OnDeudaModificada += OnDatosEstadoCambiaron;
+
             CargarEstado();
 
             timerActualizacion.Interval = 30000;
@@ -108,8 +113,15 @@ namespace UI.DISEÑO
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            AppEventos.OnPagoRegistrado -= OnDatosEstadoCambiaron;
+            AppEventos.OnDeudaModificada -= OnDatosEstadoCambiaron;
             timerActualizacion.Stop();
             base.OnFormClosed(e);
+        }
+
+        private void OnDatosEstadoCambiaron()
+        {
+            CargarEstado();
         }
 
         private void TimerActualizacion_Tick(object? sender, EventArgs e) 

@@ -19,16 +19,8 @@ namespace UI.Helpers
             Action? onRenovacionExitosa = null)
         {
             var deudaBLL = new DeudaBLL();
-            if (deudaBLL.ClienteBloqueadoPorDeudaPendiente(clienteId, out string motivoDeuda))
-            {
-                MessageBox.Show(
-                    owner,
-                    motivoDeuda,
-                    "Deuda pendiente",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+            if (AvisoDeudaPendiente.BloqueaOperacionDePlan(owner, clienteId, deudaBLL))
                 return false;
-            }
 
             using Form frm = new Form
             {

@@ -140,8 +140,11 @@
 		<Compile Update="DISEÑO\DEUDAS\FrmDeudas.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\DEUDAS\FrmCrearDeuda.cs">
-			<SubType>Form</SubType>
+		<Compile Update="DISEÑO\DEUDAS\FrmModuloDeudas.Designer.cs">
+			<DependentUpon>FrmModuloDeudas.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmModuloDeudas.CrearDeuda.cs">
+			<DependentUpon>FrmModuloDeudas.cs</DependentUpon>
 		</Compile>
 		<Compile Update="DISEÑO\DEUDAS\FrmPagarDeudas.cs">
 			<SubType>Form</SubType>
@@ -152,6 +155,17 @@
 		<Compile Update="DISEÑO\DEUDAS\FrmReporteDeudas.cs">
 			<SubType>Form</SubType>
 		</Compile>
+		<Compile Update="Properties\Resources.Designer.cs">
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		  <DependentUpon>Resources.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Update="Properties\Resources.resx">
+	    <Generator>ResXFileCodeGenerator</Generator>
+	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
 	</ItemGroup>
 
 </Project>

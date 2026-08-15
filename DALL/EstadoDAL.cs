@@ -19,27 +19,37 @@ namespace DL
                 SELECT 
                     c.ID,
                     c.Nombre,
-                    ISNULL(p.Nombre, 'SIN MEMBRESIA') AS Membresia,
+                    ISNULL(
+                        CASE
+                            -- Desactivado: no reflejar plan aunque quede membresía histórica en BD.
+                            WHEN m.Id IS NULL THEN NULL
+                            WHEN {MembresiaEstadoSql.ExpresionUltimaSalida} THEN NULL
+                            WHEN UPPER(LTRIM(RTRIM(ISNULL(p.Nombre, '')))) IN ('PREMIUM', 'PRO', 'MENSUALIDAD', '3X')
+                                THEN p.Nombre
+                            ELSE NULL
+                        END,
+                        'SIN MEMBRESIA') AS Membresia,
                     m.FechaInicio,
                     m.FechaFin,
                     {MembresiaEstadoSql.CasoEstado} AS Estado,
-                    ISNULL(d.Estado, 'N/A') AS EstadoDeuda,
+                    CASE WHEN d.ClienteId IS NULL THEN 'N/A' ELSE 'ACTIVA' END AS EstadoDeuda,
                     ISNULL(d.Saldo, 0) AS SaldoPendiente,
-                    ISNULL(d.MontoTotal, 0) AS MontoFinanciado,
+                    ISNULL(d.MontoFinanciado, 0) AS MontoFinanciado,
                     d.FechaVencimiento AS VencimientoDeuda
                 FROM Clientes c
                 {MembresiaEstadoSql.OuterApplyUltimaMembresia}
                 LEFT JOIN Planes p ON p.Id = m.PlanId
                 LEFT JOIN (
+                    -- Saldo real del cliente: incluye plan financiado y producto a crédito.
+                    -- MontoFinanciado sigue siendo solo del plan (no se mezcla con ventas).
                     SELECT 
                         ClienteId,
-                        Estado,
                         SUM(Saldo) AS Saldo,
-                        SUM(MontoTotal) AS MontoTotal,
+                        SUM(CASE WHEN MembresiaId IS NOT NULL THEN MontoTotal ELSE 0 END) AS MontoFinanciado,
                         MAX(FechaVencimiento) AS FechaVencimiento
                     FROM Deudas
-                    WHERE Estado = 'ACTIVA' AND MembresiaId IS NOT NULL
-                    GROUP BY ClienteId, Estado
+                    WHERE Estado = 'ACTIVA' AND Saldo > 0
+                    GROUP BY ClienteId
                 ) d ON d.ClienteId = c.ID
             ) estado
             WHERE estado.Estado IN ('ACTIVO', 'VENCIDO', 'DESACTIVADO', 'CONGELADO')

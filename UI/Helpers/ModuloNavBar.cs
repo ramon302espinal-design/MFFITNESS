@@ -166,6 +166,7 @@ namespace UI.Helpers
             {
                 using var frm = new UI.FrmModuloDeudas();
                 frm.ShowDialog(host);
+                ObtenerPresentacion()?.CargarDashboard();
             });
             WireClick(panelNav, host, "btnNavEstado", () =>
             {

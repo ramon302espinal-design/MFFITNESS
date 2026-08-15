@@ -685,8 +685,12 @@ VALUES
                 SELECT
                     d.Id,
                     d.Concepto,
+                    d.MontoTotal,
+                    d.MontoPagado,
                     d.Saldo,
                     d.FechaVencimiento,
+                    d.MembresiaId,
+                    d.PlanId,
                     ISNULL(p.Nombre, NULL) AS [Plan]
                 FROM Deudas d
                 LEFT JOIN Planes p ON p.Id = d.PlanId

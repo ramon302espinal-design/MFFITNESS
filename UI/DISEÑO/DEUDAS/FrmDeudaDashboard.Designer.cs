@@ -38,18 +38,10 @@ namespace UI
             panelDeudasActivas = new Panel();
             lblDeudasActivas = new Label();
             label1 = new Label();
-            dgvDeudas = new DataGridView();
-            label4 = new Label();
-            btnCrearDeuda = new Button();
-            btnRegistrarPago = new Button();
-            btnIrAPagarDeuda = new Button();
-            btnDescargarReporte = new Button();
-            txtMontoPago = new TextBox();
             panel1.SuspendLayout();
             panelIngresoPendiente.SuspendLayout();
             panelDeudasVencidas.SuspendLayout();
             panelDeudasActivas.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)dgvDeudas).BeginInit();
             SuspendLayout();
             // 
             // panel1
@@ -166,103 +158,12 @@ namespace UI
             label1.TabIndex = 0;
             label1.Text = "DEUDAS ACTIVAS";
             // 
-            // dgvDeudas
-            // 
-            dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
-            dgvDeudas.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvDeudas.Location = new Point(28, 275);
-            dgvDeudas.Name = "dgvDeudas";
-            dgvDeudas.RowHeadersWidth = 51;
-            dgvDeudas.Size = new Size(1188, 228);
-            dgvDeudas.TabIndex = 1;
-            dgvDeudas.SelectionChanged += dgvDeudas_SelectionChanged;
-            // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.BackColor = Color.Transparent;
-            label4.Font = new Font("Segoe UI", 25F, FontStyle.Bold);
-            label4.ForeColor = Color.Black;
-            label4.Location = new Point(631, 215);
-            label4.Name = "label4";
-            label4.Size = new Size(192, 57);
-            label4.TabIndex = 2;
-            label4.Text = "DEUDAS";
-            // 
-            // btnCrearDeuda
-            // 
-            btnCrearDeuda.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnCrearDeuda.Location = new Point(10, 555);
-            btnCrearDeuda.Name = "btnCrearDeuda";
-            btnCrearDeuda.Size = new Size(167, 29);
-            btnCrearDeuda.TabIndex = 3;
-            btnCrearDeuda.Text = "CREAR DEUDA";
-            btnCrearDeuda.UseVisualStyleBackColor = true;
-            btnCrearDeuda.Click += btnCrearDeuda_Click;
-            // 
-            // btnRegistrarPago
-            // 
-            btnRegistrarPago.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnRegistrarPago.Location = new Point(183, 555);
-            btnRegistrarPago.Name = "btnRegistrarPago";
-            btnRegistrarPago.Size = new Size(167, 29);
-            btnRegistrarPago.TabIndex = 5;
-            btnRegistrarPago.Text = "REGISTRAR PAGO";
-            btnRegistrarPago.UseVisualStyleBackColor = true;
-            btnRegistrarPago.Click += btnRegistrarPago_Click;
-            // 
-            // btnIrAPagarDeuda
-            // 
-            btnIrAPagarDeuda.BackColor = Color.FromArgb(22, 163, 74);
-            btnIrAPagarDeuda.FlatAppearance.BorderSize = 0;
-            btnIrAPagarDeuda.FlatStyle = FlatStyle.Flat;
-            btnIrAPagarDeuda.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnIrAPagarDeuda.ForeColor = Color.White;
-            btnIrAPagarDeuda.Location = new Point(541, 555);
-            btnIrAPagarDeuda.Name = "btnIrAPagarDeuda";
-            btnIrAPagarDeuda.Size = new Size(166, 29);
-            btnIrAPagarDeuda.TabIndex = 6;
-            btnIrAPagarDeuda.Text = "COBRAR";
-            btnIrAPagarDeuda.UseVisualStyleBackColor = false;
-            btnIrAPagarDeuda.Click += btnIrAPagarDeuda_Click;
-            // 
-            // btnDescargarReporte
-            // 
-            btnDescargarReporte.BackColor = Color.White;
-            btnDescargarReporte.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
-            btnDescargarReporte.FlatStyle = FlatStyle.Flat;
-            btnDescargarReporte.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnDescargarReporte.ForeColor = Color.FromArgb(15, 23, 42);
-            btnDescargarReporte.Location = new Point(713, 555);
-            btnDescargarReporte.Name = "btnDescargarReporte";
-            btnDescargarReporte.Size = new Size(267, 29);
-            btnDescargarReporte.TabIndex = 7;
-            btnDescargarReporte.Text = "DESCARGAR REPORTE";
-            btnDescargarReporte.UseVisualStyleBackColor = false;
-            btnDescargarReporte.Click += btnDescargarReporte_Click;
-            // 
-            // txtMontoPago
-            // 
-            txtMontoPago.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            txtMontoPago.Location = new Point(1236, 354);
-            txtMontoPago.Name = "txtMontoPago";
-            txtMontoPago.Size = new Size(226, 52);
-            txtMontoPago.TabIndex = 8;
-            // 
             // FrmDeudaDashboard
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ControlDark;
             ClientSize = new Size(1563, 673);
-            Controls.Add(txtMontoPago);
-            Controls.Add(btnDescargarReporte);
-            Controls.Add(btnIrAPagarDeuda);
-            Controls.Add(btnRegistrarPago);
-            Controls.Add(btnCrearDeuda);
-            Controls.Add(label4);
-            Controls.Add(dgvDeudas);
             Controls.Add(panel1);
             Name = "FrmDeudaDashboard";
             Text = "DEUDAS ";
@@ -275,9 +176,7 @@ namespace UI
             panelDeudasVencidas.PerformLayout();
             panelDeudasActivas.ResumeLayout(false);
             panelDeudasActivas.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)dgvDeudas).EndInit();
             ResumeLayout(false);
-            PerformLayout();
         }
 
         #endregion
@@ -292,12 +191,6 @@ namespace UI
         private Label lblDeudasActivas;
         private Label lblIngresoPendiente;
         private Label lblDeudasVencidas;
-        private DataGridView dgvDeudas;
         private Label label4;
-        private Button btnCrearDeuda;
-        private Button btnRegistrarPago;
-        private Button btnIrAPagarDeuda;
-        private Button btnDescargarReporte;
-        private TextBox txtMontoPago;
     }
 }

@@ -15,7 +15,10 @@ namespace UI.DISEÑO
         private System.Windows.Forms.Timer? _timerDashboard;
         private volatile bool _whatsappAutomatizacionEnCurso;
         private readonly DeudaBLL deudaNotificacionBLL = new DeudaBLL();
+        // KPI de deudas: instancia propia; la de notificaciones corre en hilo aparte.
+        private readonly DeudaBLL deudaKpiBLL = new DeudaBLL();
         private bool _puedeVerIngresos = true;
+        private bool _puedeVerDeudas = true;
         private bool _dashboardStyled;
         private Label? _lblDashWelcome;
         private Label? _lblDashDateTime;
@@ -57,6 +60,10 @@ namespace UI.DISEÑO
 
                 // 5️⃣ WhatsApp: recordatorios de deuda y membresías
                 IniciarAutomatizacionWhatsApp();
+
+                // 6️⃣ Deudas en vivo: cualquier cobro o nueva deuda refresca las tarjetas.
+                AppEventos.OnPagoRegistrado += RefrescarKpiDeudas;
+                AppEventos.OnDeudaModificada += RefrescarKpiDeudas;
 
                 string? advertenciaWhatsApp = TwilioSettings.ObtenerAdvertenciaConfiguracion();
                 if (!string.IsNullOrWhiteSpace(advertenciaWhatsApp))
@@ -134,6 +141,9 @@ namespace UI.DISEÑO
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            AppEventos.OnPagoRegistrado -= RefrescarKpiDeudas;
+            AppEventos.OnDeudaModificada -= RefrescarKpiDeudas;
+
             if (_timerWhatsApp != null)
             {
                 _timerWhatsApp.Stop();
@@ -183,6 +193,12 @@ namespace UI.DISEÑO
                 panelClientesVencidos, label2, lblClientesVencidos,
                 panelIngresosHoy, label3, lblIngresosHoy,
                 panelIngresosMes, label4, lblIngresosMes);
+
+            PresentacionDashboardStyle.ApplyDebtRow(
+                panelDashboard,
+                panelDeudasActivas, lblTituloDeudasActivas, lblDeudasActivas,
+                panelDeudasVencidas, lblTituloDeudasVencidas, lblDeudasVencidas,
+                panelIngresoPendiente, lblTituloIngresoPendiente, lblIngresoPendiente);
 
             _lblDashDateTime = panelDashboard.Controls["lblDashDateTime"] as Label;
             PresentacionDashboardStyle.ActualizarEncabezado(_lblDashWelcome, _lblDashDateTime);
@@ -293,10 +309,18 @@ namespace UI.DISEÑO
                 btnDeudas.Visible = false;
             }
 
-            // Los 4 paneles KPI siempre visibles; el permiso solo oculta montos.
+            // Montos: solo ADMIN o quien tenga VER_INGRESOS.
             _puedeVerIngresos = Sesion.TienePermiso("VER_INGRESOS") || rol == "ADMIN";
-            panelIngresosHoy.Visible = true;
+
+            // Caja 1 / 2 / 3 (rol CAJERO): sin panel de ingresos del día.
+            panelIngresosHoy.Visible = rol != "CAJERO";
             panelIngresosMes.Visible = true;
+
+            // Tarjetas de deudas: misma regla que el módulo de Deudas.
+            _puedeVerDeudas = btnDeudas.Visible;
+            panelDeudasActivas.Visible = _puedeVerDeudas;
+            panelDeudasVencidas.Visible = _puedeVerDeudas;
+            panelIngresoPendiente.Visible = _puedeVerDeudas;
         }
 
         private void MostrarTodos()
@@ -509,12 +533,77 @@ namespace UI.DISEÑO
 
                 lblClientesActivos.ForeColor = AppTheme.Success;
                 lblClientesVencidos.ForeColor = AppTheme.Error;
+
+                // 3. Deudas: activas, vencidas e ingreso pendiente por cobrar.
+                CargarKpiDeudas();
+
                 PresentacionDashboardStyle.ActualizarEncabezado(_lblDashWelcome, _lblDashDateTime);
             }
             catch (Exception ex)
             {
                 AppDialog.Warning(this, "Error al actualizar indicadores: " + ex.Message, "Dashboard");
             }
+        }
+
+        /// <summary>
+        /// Tarjetas de deudas. Falla en silencio para no tumbar el resto del dashboard.
+        /// </summary>
+        private void CargarKpiDeudas()
+        {
+            if (!_puedeVerDeudas)
+                return;
+
+            try
+            {
+                int activas = deudaKpiBLL.DeudasActivas();
+                int vencidas = deudaKpiBLL.DeudasVencidas();
+
+                lblDeudasActivas.Text = activas.ToString();
+                lblDeudasVencidas.Text = vencidas.ToString();
+                lblDeudasActivas.ForeColor = activas > 0 ? Color.FromArgb(147, 51, 234) : AppTheme.TextMuted;
+                lblDeudasVencidas.ForeColor = vencidas > 0 ? AppTheme.Error : AppTheme.TextMuted;
+
+                if (_puedeVerIngresos)
+                {
+                    decimal pendiente = deudaKpiBLL.IngresoPendiente();
+                    lblIngresoPendiente.Text = pendiente.ToString("C");
+                    lblIngresoPendiente.ForeColor = pendiente > 0 ? AppTheme.Success : AppTheme.TextMuted;
+                }
+                else
+                {
+                    lblIngresoPendiente.Text = "—";
+                    lblIngresoPendiente.ForeColor = AppTheme.TextMuted;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("KPI deudas: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Refresco puntual de las deudas al registrarse un pago o moverse una deuda,
+        /// sin recargar todo el dashboard.
+        /// </summary>
+        private void RefrescarKpiDeudas()
+        {
+            if (IsDisposed || Disposing || !_puedeVerDeudas)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(RefrescarKpiDeudas));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                return;
+            }
+
+            CargarKpiDeudas();
         }
         private void MostrarAlertas()
         {

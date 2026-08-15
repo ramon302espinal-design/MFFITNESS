@@ -588,15 +588,8 @@ namespace UI.DISEÑO
 
                 if (!ConfirmarPerfilCliente(clienteId)) return;
 
-                if (deudaBLL.ClienteBloqueadoPorDeudaPendiente(clienteId, out string motivoDeuda))
-                {
-                    MessageBox.Show(
-                        motivoDeuda,
-                        "Deuda pendiente",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
+                if (AvisoDeudaPendiente.BloqueaOperacionDePlan(this, clienteId, deudaBLL))
                     return;
-                }
 
                 // Con financiamiento: vencido/desactivado/sin plan puede activarse a crédito.
                 // Sin financiamiento: ofrecer renovación (misma regla que Estado) si aplica.

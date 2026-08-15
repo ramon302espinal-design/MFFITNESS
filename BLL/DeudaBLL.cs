@@ -1,6 +1,7 @@
 using DL;
 using CORE;
 using System;
+using System.Collections.Generic;
 using System.Data;
 
 namespace BLL
@@ -332,8 +333,9 @@ namespace BLL
             clienteId > 0 && dal.TieneDeudasActivas(clienteId);
 
         /// <summary>
-        /// Bloquea compra/renovación de plan si el cliente figura en Deudas con saldo pendiente.
-        /// Motivo incluye el plan registrado y el monto de la deuda.
+        /// Bloquea compra/renovación de plan si el cliente tiene deuda de MEMBRESÍA con saldo pendiente.
+        /// Las deudas de venta (producto a crédito) no bloquean: solo generan aviso
+        /// (ver <see cref="TieneAvisoDeudaProducto"/>).
         /// </summary>
         public bool ClienteBloqueadoPorDeudaPendiente(int clienteId, out string motivo)
         {
@@ -341,18 +343,17 @@ namespace BLL
             if (clienteId <= 0)
                 return false;
 
-            var deudas = dal.ObtenerDeudasActivasCliente(clienteId);
-            if (deudas == null || deudas.Rows.Count == 0)
+            var deudas = ObtenerDeudasActivas(clienteId, deMembresia: true);
+            if (deudas.Count == 0)
                 return false;
 
-            var cliente = clienteDAL.ObtenerClientePorId(clienteId);
-            string nombre = cliente?["Nombre"]?.ToString() ?? "El cliente";
+            string nombre = ObtenerNombreCliente(clienteId);
             decimal total = 0m;
             var lineas = new System.Text.StringBuilder();
 
-            foreach (DataRow row in deudas.Rows)
+            foreach (DataRow row in deudas)
             {
-                decimal saldo = row["Saldo"] != DBNull.Value ? Convert.ToDecimal(row["Saldo"]) : 0m;
+                decimal saldo = LeerSaldo(row);
                 total += saldo;
 
                 string plan = row["Plan"]?.ToString()?.Trim() ?? string.Empty;
@@ -360,7 +361,7 @@ namespace BLL
                     plan = row["Concepto"]?.ToString()?.Trim() ?? "plan financiado";
 
                 string concepto = row["Concepto"]?.ToString()?.Trim() ?? string.Empty;
-                if (deudas.Rows.Count == 1)
+                if (deudas.Count == 1)
                 {
                     motivo =
                         $"{nombre} ya tiene registrado el plan {plan} y tiene una deuda pendiente de RD$ {saldo:N2}.\n\n" +
@@ -378,6 +379,131 @@ namespace BLL
                 $"Deuda total: RD$ {total:N2}\n\n" +
                 "Debe saldar esas deudas en el módulo de Deudas antes de renovar o comprar un plan.";
             return true;
+        }
+
+        /// <summary>
+        /// Aviso informativo (NO bloquea) cuando el cliente financió una venta
+        /// mediante "producto a crédito" y aún tiene saldo pendiente.
+        /// </summary>
+        public bool TieneAvisoDeudaProducto(int clienteId, out string aviso)
+        {
+            aviso = string.Empty;
+            if (clienteId <= 0)
+                return false;
+
+            var deudas = ObtenerDeudasActivas(clienteId, deMembresia: false);
+            if (deudas.Count == 0)
+                return false;
+
+            string nombre = ObtenerNombreCliente(clienteId);
+
+            if (deudas.Count == 1)
+            {
+                DataRow row = deudas[0];
+                decimal saldo = LeerSaldo(row);
+                string concepto = row["Concepto"]?.ToString()?.Trim() ?? string.Empty;
+                string detalle = string.IsNullOrWhiteSpace(concepto) ? "un producto a credito" : concepto;
+                string abonado = DescribirAbono(row);
+
+                aviso =
+                    $"{nombre} ya tiene registrado {detalle} y tiene una deuda pendiente de RD$ {saldo:N2}.\n\n" +
+                    (string.IsNullOrWhiteSpace(concepto) ? string.Empty : $"Concepto: {concepto}\n") +
+                    (string.IsNullOrWhiteSpace(abonado) ? string.Empty : $"{abonado}\n") +
+                    "\nDebe saldar esa deuda.";
+                return true;
+            }
+
+            decimal total = 0m;
+            var lineas = new System.Text.StringBuilder();
+            foreach (DataRow row in deudas)
+            {
+                decimal saldo = LeerSaldo(row);
+                total += saldo;
+
+                string concepto = row["Concepto"]?.ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(concepto))
+                    concepto = "producto a credito";
+
+                string abonado = DescribirAbono(row);
+                lineas.Append($"• {concepto}: RD$ {saldo:N2}");
+                lineas.AppendLine(string.IsNullOrWhiteSpace(abonado) ? string.Empty : $" ({abonado})");
+            }
+
+            aviso =
+                $"{nombre} ya tiene productos a credito con deuda pendiente:\n\n" +
+                $"{lineas}\n" +
+                $"Deuda total: RD$ {total:N2}\n\n" +
+                "Debe saldar esa deuda.";
+            return true;
+        }
+
+        /// <summary>
+        /// Detalle del abono para que el saldo del aviso sea verificable
+        /// contra el módulo de Deudas (total original menos lo ya pagado).
+        /// </summary>
+        private static string DescribirAbono(DataRow row)
+        {
+            if (!row.Table.Columns.Contains("MontoPagado") || !row.Table.Columns.Contains("MontoTotal"))
+                return string.Empty;
+
+            decimal pagado = row["MontoPagado"] != DBNull.Value ? Convert.ToDecimal(row["MontoPagado"]) : 0m;
+            if (pagado <= 0)
+                return string.Empty;
+
+            decimal montoTotal = row["MontoTotal"] != DBNull.Value ? Convert.ToDecimal(row["MontoTotal"]) : 0m;
+            return $"total RD$ {montoTotal:N2} - abonado RD$ {pagado:N2}";
+        }
+
+        /// <summary>
+        /// Deudas activas del cliente separadas por origen: membresía (financiamiento de plan)
+        /// o venta (producto a crédito). Sin columnas de origen se asume membresía (fail-closed).
+        /// </summary>
+        private List<DataRow> ObtenerDeudasActivas(int clienteId, bool deMembresia)
+        {
+            var resultado = new List<DataRow>();
+            var deudas = dal.ObtenerDeudasActivasCliente(clienteId);
+            if (deudas == null || deudas.Rows.Count == 0)
+                return resultado;
+
+            foreach (DataRow row in deudas.Rows)
+            {
+                if (EsDeudaDeMembresia(row) == deMembresia)
+                    resultado.Add(row);
+            }
+
+            return resultado;
+        }
+
+        private static bool EsDeudaDeMembresia(DataRow row)
+        {
+            bool tieneColumnasOrigen =
+                row.Table.Columns.Contains("PlanId") && row.Table.Columns.Contains("MembresiaId");
+            if (!tieneColumnasOrigen)
+                return true;
+
+            if (TieneReferencia(row, "PlanId") || TieneReferencia(row, "MembresiaId"))
+                return true;
+
+            // Deudas legacy de plan que se insertaron sin PlanId/MembresiaId: siguen bloqueando.
+            string concepto = row["Concepto"]?.ToString() ?? string.Empty;
+            return concepto.IndexOf("membres", StringComparison.OrdinalIgnoreCase) >= 0
+                || concepto.IndexOf("financiamiento", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool TieneReferencia(DataRow row, string columna)
+        {
+            object valor = row[columna];
+            return valor != DBNull.Value && Convert.ToInt32(valor) > 0;
+        }
+
+        private static decimal LeerSaldo(DataRow row) =>
+            row["Saldo"] != DBNull.Value ? Convert.ToDecimal(row["Saldo"]) : 0m;
+
+        private string ObtenerNombreCliente(int clienteId)
+        {
+            var cliente = clienteDAL.ObtenerClientePorId(clienteId);
+            string nombre = cliente?["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+            return string.IsNullOrWhiteSpace(nombre) ? "El cliente" : nombre;
         }
 
         /// <summary>

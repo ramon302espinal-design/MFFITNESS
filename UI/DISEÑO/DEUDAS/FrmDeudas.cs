@@ -519,8 +519,14 @@ namespace UI
         // ===============================
         private void btnNuevaDeuda_Click(object sender, EventArgs e)
         {
-            FrmCrearDeuda frm = new FrmCrearDeuda();
-            frm.ShowDialog();
+            if (ModuloDeudasHost.AbrirCrearDeuda(this))
+                return;
+
+            MessageBox.Show(
+                "Abra el módulo de Deudas y use la pestaña \"Nueva Deuda\".",
+                "Nueva deuda",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         // ===============================
@@ -602,15 +608,6 @@ namespace UI
         private void btnActualizar_Click(object sender, EventArgs e)
         {
             CargarDeudas();
-        }
-
-        // ===============================
-        // VER HISTORIAL
-        // ===============================
-        private void btnVerHistorial_Click(object sender, EventArgs e)
-        {
-            FrmHistorialDeudas frm = new FrmHistorialDeudas();
-            frm.ShowDialog();
         }
 
         // ===============================

@@ -1,4 +1,4 @@
-﻿using BLL;
+using BLL;
 using BLL.Commands;
 using CORE;
 using System;
@@ -10,8 +10,11 @@ using UI.Helpers;
 
 namespace UI
 {
-    [System.ComponentModel.DesignerCategory("Form")]
-    public partial class FrmCrearDeuda : Form
+    /// <summary>
+    /// Lógica de la pantalla "Nueva Deuda" (tabCrear): financiamiento de plan y
+    /// venta de producto a crédito. Los controles viven en el diseñador de tabCrear.
+    /// </summary>
+    public partial class FrmModuloDeudas
     {
         /// <summary>Sentinel en cmbTipoPlan: no es un Plan de membresía.</summary>
         private const int PlanIdProductoCredito = -1;
@@ -35,6 +38,7 @@ namespace UI
         private decimal _precioUnitarioPendiente;
         private decimal _precioPlan;
         private bool _suppressProductoSearch;
+        private bool _crearDeudaInicializado;
 
         private sealed class LineaProductoCredito
         {
@@ -46,13 +50,38 @@ namespace UI
             public decimal Total => Math.Round(PrecioUnitario * Cantidad, 2, MidpointRounding.AwayFromZero);
         }
 
-        public FrmCrearDeuda()
+        /// <summary>
+        /// Atiende la petición de un formulario hijo de abrir la pantalla "Nueva Deuda":
+        /// activa la pestaña, o avisa si el rol no tiene el permiso.
+        /// </summary>
+        public bool AbrirCrearDeuda()
         {
-            InitializeComponent();
+            if (!tabControl.TabPages.Contains(tabCrear))
+            {
+                MessageBox.Show(
+                    "No tiene permiso para crear deudas.",
+                    "Permisos",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return true;
+            }
+
+            tabControl.SelectedTab = tabCrear;
+            CargarCrear();
+            return true;
         }
 
-        private void FrmCrearDeuda_Load(object sender, EventArgs e)
+        /// <summary>
+        /// Carga catálogos y valores por defecto. Idempotente: corre la primera vez
+        /// que se entra al tab, nunca en el diseñador.
+        /// </summary>
+        private void InicializarCrearDeuda()
         {
+            if (_crearDeudaInicializado)
+                return;
+
+            _crearDeudaInicializado = true;
+
             dtpFechaVencimientodeuda.Value = DateTime.Today.AddDays(30);
             dtpFechaVencimientodeuda.MinDate = DateTime.Today;
 
@@ -89,12 +118,20 @@ namespace UI
             {
                 DataTable tabla = planBLL.ObtenerPlanes().Copy();
                 DataView dv = tabla.DefaultView;
-                // Mismos planes del flujo de renovación / activación.
+                // Solo planes reales de membresía (PRODUCTO A CRÉDITO no es un plan).
                 dv.RowFilter = "Nombre IN ('PREMIUM', 'PRO', 'MENSUALIDAD', '3x')";
 
                 DataTable opciones = tabla.Clone();
+                if (!opciones.Columns.Contains("Etiqueta"))
+                    opciones.Columns.Add("Etiqueta", typeof(string));
+
                 foreach (DataRowView row in dv)
+                {
                     opciones.ImportRow(row.Row);
+                    DataRow importada = opciones.Rows[opciones.Rows.Count - 1];
+                    string nombrePlan = importada["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+                    importada["Etiqueta"] = "Plan: " + nombrePlan;
+                }
 
                 DataRow credito = opciones.NewRow();
                 credito["Id"] = PlanIdProductoCredito;
@@ -102,11 +139,12 @@ namespace UI
                 credito["Precio"] = 0m;
                 if (opciones.Columns.Contains("DuracionDias"))
                     credito["DuracionDias"] = 0;
+                credito["Etiqueta"] = "Producto a crédito (venta)";
                 opciones.Rows.Add(credito);
 
-                cmbTipoPlan.DataSource = opciones;
-                cmbTipoPlan.DisplayMember = "Nombre";
+                cmbTipoPlan.DisplayMember = "Etiqueta";
                 cmbTipoPlan.ValueMember = "Id";
+                cmbTipoPlan.DataSource = opciones;
                 cmbTipoPlan.SelectedIndex = -1;
 
                 txtMonto.Text = "0.00";
@@ -616,8 +654,28 @@ namespace UI
             if (planId <= 0)
                 return false;
 
-            nombrePlan = cmbTipoPlan.Text?.Trim() ?? string.Empty;
+            if (cmbTipoPlan.SelectedItem is DataRowView row)
+                nombrePlan = row["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+            else
+                nombrePlan = cmbTipoPlan.Text?.Trim() ?? string.Empty;
+
+            // Defensa: solo planes reales de membresía.
+            if (!EsNombrePlanMembresia(nombrePlan))
+                return false;
+
             return true;
+        }
+
+        private static bool EsNombrePlanMembresia(string? nombre)
+        {
+            if (string.IsNullOrWhiteSpace(nombre))
+                return false;
+
+            string n = nombre.Trim();
+            return n.Equals("PREMIUM", StringComparison.OrdinalIgnoreCase)
+                || n.Equals("PRO", StringComparison.OrdinalIgnoreCase)
+                || n.Equals("MENSUALIDAD", StringComparison.OrdinalIgnoreCase)
+                || n.Equals("3x", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool VerificarCajaSiHayPagoInicial(decimal pagoInicial)
@@ -646,7 +704,7 @@ namespace UI
 
             if (!TryObtenerPlanSeleccionado(out _, out _))
             {
-                MessageBox.Show("Seleccione un tipo de plan (PREMIUM, PRO, MENSUALIDAD, 3x o PRODUCTO A CRÉDITO).");
+                MessageBox.Show("Seleccione una operación: plan PREMIUM, PRO, MENSUALIDAD, 3x, o Producto a crédito.");
                 return false;
             }
 
@@ -725,16 +783,6 @@ namespace UI
                 if (!VerificarCajaSiHayPagoInicial(pagoInicio))
                     return;
 
-                if (deudaBLL.ClienteBloqueadoPorDeudaPendiente(clienteId, out string motivoDeuda))
-                {
-                    MessageBox.Show(
-                        motivoDeuda,
-                        "Deuda pendiente",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    return;
-                }
-
                 string usuario = string.IsNullOrWhiteSpace(Sesion.Usuario) ? "ADMIN" : Sesion.Usuario;
                 string conceptoPago = string.IsNullOrWhiteSpace(txtConcepto.Text)
                     ? (EsProductoCreditoSeleccionado()
@@ -746,11 +794,15 @@ namespace UI
                     ? dtpFechaVencimientodeuda.Value.Date
                     : null;
 
+                // Producto a crédito: no bloquea por deuda pendiente (es venta, no plan).
                 if (EsProductoCreditoSeleccionado())
                 {
                     GuardarProductoCredito(clienteId, pagoInicio, saldo, conceptoPago, fechaVencimientoDeuda, usuario);
                     return;
                 }
+
+                if (AvisoDeudaPendiente.BloqueaOperacionDePlan(this, clienteId, deudaBLL))
+                    return;
 
                 if (membresiaBLL.ClienteNoElegibleParaFinanciamiento(clienteId, out string motivoFin))
                 {
@@ -783,6 +835,7 @@ namespace UI
                 }
 
                 AppEventos.PagoRegistrado();
+                AppEventos.DeudaModificada();
                 MostrarExitoYLimpiar(nombrePlan, pagoInicio, saldo);
             }
             catch (Exception ex)
@@ -850,6 +903,7 @@ namespace UI
             }
 
             AppEventos.PagoRegistrado();
+            AppEventos.DeudaModificada();
             CargarProductosInventario();
             MostrarExitoYLimpiar(NombreProductoCredito, pagoInicio, saldo, esProducto: true);
         }
@@ -882,17 +936,10 @@ namespace UI
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
-            if (!TopLevel)
-            {
-                LimpiarFormulario();
-                return;
-            }
-
-            DialogResult = DialogResult.OK;
-            Close();
+            LimpiarFormularioCrearDeuda();
         }
 
-        private void LimpiarFormulario()
+        private void LimpiarFormularioCrearDeuda()
         {
             cbClientes.SelectedIndex = -1;
             cmbTipoPlan.SelectedIndex = -1;
@@ -909,13 +956,7 @@ namespace UI
 
         private void btnCancelar_Click(object sender, EventArgs e)
         {
-            if (!TopLevel)
-            {
-                LimpiarFormulario();
-                return;
-            }
-
-            Close();
+            LimpiarFormularioCrearDeuda();
         }
     }
 }

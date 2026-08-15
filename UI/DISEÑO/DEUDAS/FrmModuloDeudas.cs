@@ -14,7 +14,6 @@ namespace UI
         // Instancias de los formularios hijos (se crearán una sola vez)
         private FrmDeudaDashboard? dashboardForm;
         private FrmDeudas? gestionForm;
-        private FrmCrearDeuda? crearForm;
         private FrmHistorialDeudas? historialForm;
         private readonly int? _clienteIdParaGestion;
         private bool _navegacionInicialPendiente;
@@ -290,21 +289,9 @@ namespace UI
         // ===============================
         private void CargarCrear()
         {
-            if (crearForm == null || crearForm.IsDisposed)
-            {
-                crearForm = new FrmCrearDeuda
-                {
-                    TopLevel = false,
-                    FormBorderStyle = FormBorderStyle.None,
-                    Dock = DockStyle.Fill
-                };
-                tabCrear.Controls.Add(crearForm);
-                crearForm.Show();
-            }
-            else
-            {
-                crearForm.BringToFront();
-            }
+            // Los controles ya están en tabCrear desde el diseñador; solo se cargan
+            // catálogos la primera vez que se entra al tab (llamada idempotente).
+            InicializarCrearDeuda();
         }
 
         // ===============================
@@ -337,7 +324,6 @@ namespace UI
         {
             CerrarFormularioHijo(ref dashboardForm);
             CerrarFormularioHijo(ref gestionForm);
-            CerrarFormularioHijo(ref crearForm);
             CerrarFormularioHijo(ref historialForm);
 
             base.OnFormClosing(e);

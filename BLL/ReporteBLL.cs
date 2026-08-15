@@ -302,5 +302,150 @@ namespace BLL
 
             File.WriteAllBytes(ruta, ms.ToArray());
         }
+
+        /// <summary>
+        /// PDF del historial de deudas/pagos filtrado: tabla ordenada + resumen financiero.
+        /// </summary>
+        public void GenerarPdfHistorialDeudas(
+            DataTable datos,
+            string ruta,
+            string usuario,
+            DateTime desde,
+            DateTime hasta,
+            string filtroTipo,
+            string filtroCliente,
+            decimal totalDeudas,
+            decimal totalPagos,
+            decimal balance)
+        {
+            if (datos == null || datos.Rows.Count == 0)
+                throw new Exception("No hay movimientos para exportar.");
+            if (string.IsNullOrWhiteSpace(ruta))
+                throw new Exception("Ruta de PDF inválida.");
+
+            using MemoryStream ms = new MemoryStream();
+            using (PdfWriter writer = new PdfWriter(ms))
+            using (PdfDocument pdf = new PdfDocument(writer))
+            using (Document doc = new Document(pdf, iText.Kernel.Geom.PageSize.A4.Rotate()))
+            {
+                var fontBold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+                var fontNormal = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+                doc.SetMargins(24, 24, 24, 24);
+
+                doc.Add(new Paragraph("HISTORIAL DE DEUDAS Y PAGOS - MF FITNESS")
+                    .SetFont(fontBold).SetFontSize(16));
+                doc.Add(new Paragraph($"Generado: {DateTime.Now:dd/MM/yyyy HH:mm:ss}    ·    Usuario: {usuario ?? "-"}")
+                    .SetFont(fontNormal).SetFontSize(9));
+                doc.Add(new Paragraph(
+                    $"Período: {desde:dd/MM/yyyy} — {hasta:dd/MM/yyyy}" +
+                    $"    ·    Tipo: {(string.IsNullOrWhiteSpace(filtroTipo) ? "Todos" : filtroTipo)}" +
+                    $"    ·    Cliente: {(string.IsNullOrWhiteSpace(filtroCliente) ? "Todos" : filtroCliente)}" +
+                    $"    ·    Registros: {datos.Rows.Count}")
+                    .SetFont(fontNormal).SetFontSize(9).SetMarginBottom(10));
+
+                Table resumen = new Table(UnitValue.CreatePercentArray(new float[] { 33, 33, 34 }))
+                    .UseAllAvailableWidth()
+                    .SetMarginBottom(12);
+
+                void CeldaResumen(string titulo, string valor, DeviceRgb fondo)
+                {
+                    resumen.AddCell(new Cell()
+                        .Add(new Paragraph(titulo).SetFont(fontBold).SetFontSize(8).SetFontColor(ColorConstants.WHITE))
+                        .Add(new Paragraph(valor).SetFont(fontBold).SetFontSize(11).SetFontColor(ColorConstants.WHITE))
+                        .SetBackgroundColor(fondo)
+                        .SetPadding(6)
+                        .SetTextAlignment(TextAlignment.CENTER));
+                }
+
+                CeldaResumen("TOTAL DEUDAS", $"RD$ {totalDeudas:N2}", new DeviceRgb(178, 34, 34));
+                CeldaResumen("TOTAL PAGOS", $"RD$ {totalPagos:N2}", new DeviceRgb(34, 139, 34));
+                CeldaResumen("BALANCE", $"RD$ {balance:N2}",
+                    balance > 0 ? new DeviceRgb(178, 34, 34)
+                    : balance < 0 ? new DeviceRgb(34, 139, 34)
+                    : new DeviceRgb(70, 70, 70));
+
+                doc.Add(resumen);
+
+                string[] headers =
+                {
+                    "Cliente", "Tipo", "Descripción", "Pago inicial",
+                    "Fecha límite", "Monto", "Fecha", "Usuario"
+                };
+
+                Table tabla = new Table(UnitValue.CreatePercentArray(new float[]
+                {
+                    16, 10, 22, 10, 10, 10, 12, 10
+                })).UseAllAvailableWidth();
+
+                foreach (string h in headers)
+                {
+                    tabla.AddHeaderCell(new Cell()
+                        .Add(new Paragraph(h).SetFont(fontBold).SetFontSize(8))
+                        .SetBackgroundColor(ColorConstants.DARK_GRAY)
+                        .SetFontColor(ColorConstants.WHITE)
+                        .SetPadding(4));
+                }
+
+                bool tieneAporte = datos.Columns.Contains("AporteInicial");
+                bool tieneLimite = datos.Columns.Contains("FechaLimitePago");
+
+                foreach (DataRow row in datos.Rows)
+                {
+                    string tipo = Convert.ToString(row["Tipo"])?.Trim().ToUpperInvariant() ?? "";
+                    DeviceRgb? colorTipo = ColorTipoMovimiento(tipo);
+
+                    string cliente = Convert.ToString(row["Nombre"]) ?? "";
+                    string descripcion = Convert.ToString(row["Descripcion"]) ?? "";
+                    string aporte = tieneAporte ? (Convert.ToString(row["AporteInicial"]) ?? "") : "";
+                    string limite = !tieneLimite || row["FechaLimitePago"] == DBNull.Value
+                        ? "-"
+                        : Convert.ToDateTime(row["FechaLimitePago"]).ToString("dd/MM/yyyy");
+                    decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
+                    string fecha = row["Fecha"] == DBNull.Value
+                        ? "-"
+                        : Convert.ToDateTime(row["Fecha"]).ToString("dd/MM/yyyy HH:mm");
+                    string user = Convert.ToString(row["Usuario"]) ?? "";
+
+                    void Celda(string texto, bool resaltarTipo = false)
+                    {
+                        var p = new Paragraph(texto).SetFont(fontNormal).SetFontSize(7);
+                        if (resaltarTipo && colorTipo != null)
+                            p.SetFontColor(colorTipo).SetFont(fontBold);
+                        else if (colorTipo != null && texto.StartsWith("RD$", StringComparison.Ordinal))
+                            p.SetFontColor(colorTipo).SetFont(fontBold);
+
+                        tabla.AddCell(new Cell().Add(p).SetPadding(3));
+                    }
+
+                    Celda(cliente);
+                    Celda(tipo, resaltarTipo: true);
+                    Celda(descripcion);
+                    Celda(string.IsNullOrWhiteSpace(aporte) ? "-" : aporte);
+                    Celda(limite);
+                    Celda($"RD$ {monto:N2}");
+                    Celda(fecha);
+                    Celda(user);
+                }
+
+                doc.Add(tabla);
+
+                doc.Add(new Paragraph(
+                    $"Resumen · Deudas RD$ {totalDeudas:N2}  ·  Pagos RD$ {totalPagos:N2}  ·  Balance RD$ {balance:N2}")
+                    .SetFont(fontBold).SetFontSize(10).SetMarginTop(12));
+            }
+
+            File.WriteAllBytes(ruta, ms.ToArray());
+        }
+
+        private static DeviceRgb? ColorTipoMovimiento(string tipo) => tipo switch
+        {
+            "DEUDA" => new DeviceRgb(178, 34, 34),
+            "PAGO_INICIAL" => new DeviceRgb(65, 105, 225),
+            "PAGO" => new DeviceRgb(34, 139, 34),
+            "REVERSO_PAGO" => new DeviceRgb(255, 140, 0),
+            "ANULACION" => new DeviceRgb(105, 105, 105),
+            _ => null
+        };
     }
 }
