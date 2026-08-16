@@ -648,6 +648,31 @@ namespace UI.DISEÑO
             DateTime fin,
             string usuario)
         {
+            decimal pagoInicial = decimal.TryParse(txtPagoInicial.Text, out decimal p) ? p : 0;
+
+            EjecutarVentaFinanciada(
+                clienteId,
+                planId,
+                plan,
+                fin,
+                usuario,
+                pagoInicial,
+                dtpFechaVencimiento.Value.Date);
+        }
+
+        /// <summary>
+        /// Cobro a crédito de un plan: el pago inicial entra a caja y la diferencia
+        /// queda como deuda activa dentro de la misma transacción del BLL.
+        /// </summary>
+        private void EjecutarVentaFinanciada(
+            int clienteId,
+            int planId,
+            PlanDTO plan,
+            DateTime fin,
+            string usuario,
+            decimal pagoInicial,
+            DateTime fechaLimiteDeuda)
+        {
             if (membresiaBLL.ClienteNoElegibleParaFinanciamiento(clienteId, out string motivoFinanciamiento))
             {
                 MessageBox.Show(
@@ -658,8 +683,6 @@ namespace UI.DISEÑO
                 chkFinanciamiento.Checked = false;
                 return;
             }
-
-            decimal pagoInicial = decimal.TryParse(txtPagoInicial.Text, out decimal p) ? p : 0;
 
             if (pagoInicial < 0 || pagoInicial > plan.Precio)
             {
@@ -672,7 +695,7 @@ namespace UI.DISEÑO
             string metodoPago = "Efectivo";
 
             DateTime? fechaVencimientoDeuda = saldo > 0
-                ? dtpFechaVencimiento.Value.Date
+                ? fechaLimiteDeuda
                 : null;
 
             var result = MembresiaCommandService.VenderMembresiaFinanciada(
@@ -704,6 +727,10 @@ namespace UI.DISEÑO
 
             ProgramarRefrescoTrasPago();
 
+            // Deudas, dashboard e historial escuchan este evento para refrescar el saldo nuevo.
+            if (saldo > 0)
+                CORE.AppEventos.DeudaModificada();
+
             if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
             {
                 string? nota = saldo > 0
@@ -733,6 +760,14 @@ namespace UI.DISEÑO
             if (!decimal.TryParse(txtMonto.Text, out decimal monto) || monto <= 0)
             {
                 MessageBox.Show("Monto inválido.");
+                return;
+            }
+
+            // Cobro parcial del plan: la diferencia no puede quedar sin registrar,
+            // se convierte en deuda activa por la vía financiada.
+            if (monto < plan.Precio)
+            {
+                CobrarMembresiaConSaldoPendiente(clienteId, planId, plan, fin, usuario, monto);
                 return;
             }
 
@@ -770,6 +805,46 @@ namespace UI.DISEÑO
                     metodoPago,
                     opPago);
             }
+        }
+
+        /// <summary>
+        /// El cajero cobró menos que el precio del plan: se confirma y se procesa como
+        /// financiamiento para que el resto quede como deuda activa del cliente.
+        /// </summary>
+        private void CobrarMembresiaConSaldoPendiente(
+            int clienteId,
+            int planId,
+            PlanDTO plan,
+            DateTime fin,
+            string usuario,
+            decimal pagoInicial)
+        {
+            decimal saldo = plan.Precio - pagoInicial;
+            DateTime fechaLimite = dtpFechaVencimiento.Value.Date < DateTime.Today
+                ? DateTime.Today.AddDays(30)
+                : dtpFechaVencimiento.Value.Date;
+
+            var respuesta = MessageBox.Show(
+                $"El monto cobrado (RD$ {pagoInicial:N2}) es menor al precio del plan " +
+                $"{plan.Nombre} (RD$ {plan.Precio:N2}).\n\n" +
+                $"Se registrará como pago inicial y RD$ {saldo:N2} quedará como deuda " +
+                $"activa con fecha límite {fechaLimite:dd/MM/yyyy}.\n\n" +
+                "¿Continuar?",
+                "Pago parcial del plan",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (respuesta != DialogResult.Yes)
+                return;
+
+            EjecutarVentaFinanciada(
+                clienteId,
+                planId,
+                plan,
+                fin,
+                usuario,
+                pagoInicial,
+                fechaLimite);
         }
 
         /// <summary>

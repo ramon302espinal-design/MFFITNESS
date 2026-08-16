@@ -456,7 +456,9 @@ namespace BLL
                         tx,
                         pagoInicial,
                         conceptoCaja,
-                        usuario);
+                        usuario,
+                        metodoPago,
+                        clienteId);
                 }
 
                 historialDAL.Registrar(

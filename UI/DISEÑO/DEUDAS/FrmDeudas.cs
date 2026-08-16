@@ -18,6 +18,8 @@ namespace UI
         private readonly BindingSource _bsDeudas = new BindingSource();
         private int? _clienteIdPreseleccionado;
         private bool _seleccionClientePendiente;
+        private int? _clienteHistorialId;
+        private string _clienteHistorialNombre = string.Empty;
 
         public FrmDeudas() : this(null)
         {
@@ -127,6 +129,22 @@ namespace UI
                 }
             }
 
+            // 🔥 MONTOS: EL SALDO MANDA. EN DEUDAS PAGADAS LOS IMPORTES SON HISTÓRICOS
+            string nombreColumna = dgvDeudas.Columns[e.ColumnIndex].Name;
+
+            if (nombreColumna == "Saldo" && e.Value != null && e.Value != DBNull.Value)
+            {
+                decimal saldoFila = Convert.ToDecimal(e.Value);
+                e.CellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
+                e.CellStyle.ForeColor = saldoFila > 0 ? Color.Firebrick : Color.Green;
+            }
+
+            if ((nombreColumna == "MontoTotal" || nombreColumna == "MontoPagado")
+                && EsFilaSaldada(e.RowIndex))
+            {
+                e.CellStyle.ForeColor = Color.Gray;
+            }
+
             // 🔥 RESALTAR FILA COMPLETA SI ESTÁ VENCIDA
             try
             {
@@ -158,6 +176,25 @@ namespace UI
             }
         }
 
+        /// <summary>
+        /// Una fila saldada ya no representa dinero por cobrar: sus importes se
+        /// muestran atenuados para que no se lean como deuda vigente.
+        /// </summary>
+        private bool EsFilaSaldada(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dgvDeudas.Rows.Count)
+                return false;
+
+            if (!dgvDeudas.Columns.Contains("Saldo"))
+                return false;
+
+            var valor = dgvDeudas.Rows[rowIndex].Cells["Saldo"].Value;
+            if (valor == null || valor == DBNull.Value)
+                return false;
+
+            return Convert.ToDecimal(valor) <= 0;
+        }
+
         // ===============================
         // LOAD
         // ===============================
@@ -185,7 +222,6 @@ namespace UI
             cmbFiltro.Items.Clear();
             cmbFiltro.Items.Add("Todas");
             cmbFiltro.Items.Add("Activas");
-            cmbFiltro.Items.Add("Pagadas");
             cmbFiltro.Items.Add("Vencidas");
             cmbFiltro.SelectedIndex = 0; // "Todas" por defecto
         }
@@ -247,7 +283,8 @@ namespace UI
 
             try
             {
-                DataTable? dt = deudaBLL.ObtenerDeudas();
+                DataTable? dt = deudaBLL.ObtenerDeudas(
+                    incluirHistorial: RequiereHistorialCompleto());
                 if (dt == null)
                 {
                     MessageBox.Show("No se pudieron obtener las deudas.", "Error");
@@ -279,6 +316,7 @@ namespace UI
                 AplicarFiltros();
 
                 FormatearGrid();
+                ActualizarResumenCliente(dt);
             }
             catch (ObjectDisposedException)
             {
@@ -305,6 +343,19 @@ namespace UI
             CargarDeudas();
         }
 
+        /// <summary>
+        /// "Todas" incluye las deudas ya liquidadas; "Activas" y "Vencidas"
+        /// siguen consultando solo lo pendiente, como siempre.
+        /// </summary>
+        private bool RequiereHistorialCompleto()
+        {
+            if (_clienteHistorialId.HasValue)
+                return true;
+
+            string filtroCombo = cmbFiltro?.SelectedItem?.ToString() ?? "Todas";
+            return filtroCombo == "Todas";
+        }
+
         // ===============================
         // APLICAR FILTROS (COMBO + BUSCADOR)
         // ===============================
@@ -315,14 +366,26 @@ namespace UI
 
             var filtros = new System.Collections.Generic.List<string>();
 
+            // Doble clic en Nombre: el cliente queda enfocado y se muestran todas
+            // sus deudas, sin mezclar el filtro de estado ni el buscador general.
+            if (_clienteHistorialId.HasValue)
+            {
+                filtros.Add($"ClienteId = {_clienteHistorialId.Value}");
+                try
+                {
+                    _bsDeudas.Filter = string.Join(" AND ", filtros);
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                return;
+            }
+
             string filtroCombo = cmbFiltro?.SelectedItem?.ToString() ?? "Todas";
             switch (filtroCombo)
             {
                 case "Activas":
                     filtros.Add("Estado = 'ACTIVA'");
-                    break;
-                case "Pagadas":
-                    filtros.Add("Estado = 'PAGADA'");
                     break;
                 case "Vencidas":
                     filtros.Add("Estado = 'ACTIVA' AND DiasRestantes < 0");
@@ -344,6 +407,9 @@ namespace UI
 
         private void txtBuscar_TextChanged(object sender, EventArgs e)
         {
+            if (_clienteHistorialId.HasValue)
+                return;
+
             AplicarFiltros();
 
             if (_seleccionClientePendiente)
@@ -355,7 +421,81 @@ namespace UI
         // ===============================
         private void cmbFiltro_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_clienteHistorialId.HasValue)
+                return;
+
             CargarDeudas();
+        }
+
+        /// <summary>
+        /// Enfoca todo el historial de deudas del cliente únicamente cuando el
+        /// doble clic se realiza sobre la columna Nombre.
+        /// </summary>
+        private void dgvDeudas_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            if (!string.Equals(
+                    dgvDeudas.Columns[e.ColumnIndex].Name,
+                    "Nombre",
+                    StringComparison.OrdinalIgnoreCase))
+                return;
+
+            DataGridViewRow row = dgvDeudas.Rows[e.RowIndex];
+            object? clienteIdValue = row.Cells["ClienteId"].Value;
+            if (clienteIdValue == null || clienteIdValue == DBNull.Value)
+                return;
+
+            _clienteHistorialId = Convert.ToInt32(clienteIdValue);
+            _clienteHistorialNombre = row.Cells["Nombre"].Value?.ToString()?.Trim() ?? "Cliente";
+
+            // Recarga especial: incluye activas, pagadas y anuladas del cliente.
+            CargarDeudas();
+        }
+
+        /// <summary>
+        /// Lo que el cliente debe es la suma de saldos pendientes; el financiado y
+        /// lo pagado se muestran como contexto histórico de todas sus operaciones.
+        /// </summary>
+        private void ActualizarResumenCliente(DataTable? datos)
+        {
+            if (!_clienteHistorialId.HasValue || datos == null)
+            {
+                lblDebe.Visible = false;
+                lblDebe.Text = string.Empty;
+                return;
+            }
+
+            decimal saldoPendiente = 0m;
+            decimal totalFinanciado = 0m;
+            decimal totalPagado = 0m;
+
+            foreach (DataRow row in datos.Rows)
+            {
+                if (row["ClienteId"] == DBNull.Value ||
+                    Convert.ToInt32(row["ClienteId"]) != _clienteHistorialId.Value)
+                    continue;
+
+                saldoPendiente += LeerMonto(row, "Saldo");
+                totalFinanciado += LeerMonto(row, "MontoTotal");
+                totalPagado += LeerMonto(row, "MontoPagado");
+            }
+
+            lblDebe.Text =
+                $"{_clienteHistorialNombre} debe RD$ {saldoPendiente:N2}" +
+                $"   |   Financiado histórico RD$ {totalFinanciado:N2}" +
+                $"  ·  Pagado RD$ {totalPagado:N2}";
+            lblDebe.Visible = true;
+            lblDebe.BringToFront();
+        }
+
+        private static decimal LeerMonto(DataRow row, string columna)
+        {
+            if (!row.Table.Columns.Contains(columna) || row[columna] == DBNull.Value)
+                return 0m;
+
+            return Convert.ToDecimal(row[columna]);
         }
 
         // ===============================
@@ -382,7 +522,7 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "MontoTotal", col =>
             {
                 col.DefaultCellStyle.Format = "N2";
-                col.HeaderText = "Monto Total";
+                col.HeaderText = "Monto Financiado";
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "MontoPagado", col =>
@@ -394,6 +534,7 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "Saldo", col =>
             {
                 col.DefaultCellStyle.Format = "N2";
+                col.HeaderText = "Saldo Pendiente";
                 col.DefaultCellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
             });
 
@@ -437,12 +578,13 @@ namespace UI
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Plan", 2);
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "AporteInicial", 3);
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoTotal", 4);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Saldo", 5);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaVencimiento", 6);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "DiasRestantes", 7);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Estado", 8);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaInicioMembresia", 9);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaFinMembresia", 10);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoPagado", 5);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Saldo", 6);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaVencimiento", 7);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "DiasRestantes", 8);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Estado", 9);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaInicioMembresia", 10);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaFinMembresia", 11);
 
             if (_seleccionClientePendiente)
                 AplicarSeleccionClientePendiente();
@@ -607,6 +749,10 @@ namespace UI
         // ===============================
         private void btnActualizar_Click(object sender, EventArgs e)
         {
+            _clienteHistorialId = null;
+            _clienteHistorialNombre = string.Empty;
+            lblDebe.Visible = false;
+            lblDebe.Text = string.Empty;
             CargarDeudas();
         }
 

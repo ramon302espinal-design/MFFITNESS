@@ -1,6 +1,8 @@
 using BLL;
 using CORE.Update;
 using System;
+using System.Globalization;
+using System.Threading;
 using System.Windows.Forms;
 using UI.DISEÑO;
 using UI.Facturas;
@@ -12,6 +14,7 @@ namespace UI
         [STAThread]
         static void Main()
         {
+            ConfigurarFormatoHora12();
             ApplicationConfiguration.Initialize();
             FacturaMembresiaPdfService.ConfigurarLicencia();
 
@@ -67,6 +70,23 @@ namespace UI
             }
 
             Application.Run(new FrmLogin());
+        }
+
+        /// <summary>
+        /// Hora visible del sistema en 12 horas (AM/PM), manteniendo es-DO.
+        /// </summary>
+        private static void ConfigurarFormatoHora12()
+        {
+            var cultura = (CultureInfo)CultureInfo.GetCultureInfo("es-DO").Clone();
+            cultura.DateTimeFormat.AMDesignator = "AM";
+            cultura.DateTimeFormat.PMDesignator = "PM";
+            cultura.DateTimeFormat.ShortTimePattern = "hh:mm tt";
+            cultura.DateTimeFormat.LongTimePattern = "hh:mm:ss tt";
+
+            CultureInfo.DefaultThreadCurrentCulture = cultura;
+            CultureInfo.DefaultThreadCurrentUICulture = cultura;
+            Thread.CurrentThread.CurrentCulture = cultura;
+            Thread.CurrentThread.CurrentUICulture = cultura;
         }
     }
 }

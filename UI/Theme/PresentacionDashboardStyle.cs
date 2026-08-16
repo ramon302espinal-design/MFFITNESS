@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
+using CORE;
 
 namespace UI.Theme
 {
@@ -101,7 +102,7 @@ namespace UI.Theme
             if (clock != null && !clock.IsDisposed)
             {
                 var cultura = new CultureInfo("es-DO");
-                clock.Text = DateTime.Now.ToString("dddd, d 'de' MMMM yyyy  ·  HH:mm:ss", cultura);
+                clock.Text = DateTime.Now.ToString($"dddd, d 'de' MMMM yyyy  ·  {FechaHoraFormats.HoraSegundos}", cultura);
                 if (clock.Parent is Panel host)
                     PositionClock(host, clock);
             }

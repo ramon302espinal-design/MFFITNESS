@@ -2,6 +2,7 @@ using DL;
 using System.Data;
 using System;
 using ClosedXML.Excel;
+using CORE;
 
 // 👇 IMPORTANTE: usar alias para evitar conflicto
 using IOPath = System.IO.Path;
@@ -204,7 +205,7 @@ namespace BLL
                 doc.SetMargins(28, 28, 28, 28);
                 doc.Add(new Paragraph("REPORTE DE DEUDAS - MF FITNESS")
                     .SetFont(fontBold).SetFontSize(16));
-                doc.Add(new Paragraph($"Generado: {DateTime.Now:dd/MM/yyyy hh:mm tt}")
+                doc.Add(new Paragraph($"Generado: {DateTime.Now.ToString(FechaHoraFormats.FechaHora)}")
                     .SetFont(fontNormal).SetFontSize(10));
 
                 decimal totalPendiente = 0m;
@@ -269,7 +270,7 @@ namespace BLL
                     string vencidas = Convert.ToString(row["DeudasVencidas"]) ?? "0";
                     string fechaHora = row["FechaHoraDeuda"] == DBNull.Value
                         ? "-"
-                        : Convert.ToDateTime(row["FechaHoraDeuda"]).ToString("dd/MM/yyyy hh:mm tt");
+                        : Convert.ToDateTime(row["FechaHoraDeuda"]).ToString(FechaHoraFormats.FechaHora);
                     decimal pagoInicial = row["PagoInicial"] == DBNull.Value
                         ? 0m : Convert.ToDecimal(row["PagoInicial"]);
                     string fechaVence = row["FechaAVencer"] == DBNull.Value
@@ -335,7 +336,7 @@ namespace BLL
 
                 doc.Add(new Paragraph("HISTORIAL DE DEUDAS Y PAGOS - MF FITNESS")
                     .SetFont(fontBold).SetFontSize(16));
-                doc.Add(new Paragraph($"Generado: {DateTime.Now:dd/MM/yyyy HH:mm:ss}    ·    Usuario: {usuario ?? "-"}")
+                doc.Add(new Paragraph($"Generado: {DateTime.Now.ToString(FechaHoraFormats.FechaHoraSegundos)}    ·    Usuario: {usuario ?? "-"}")
                     .SetFont(fontNormal).SetFontSize(9));
                 doc.Add(new Paragraph(
                     $"Período: {desde:dd/MM/yyyy} — {hasta:dd/MM/yyyy}" +
@@ -404,7 +405,7 @@ namespace BLL
                     decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
                     string fecha = row["Fecha"] == DBNull.Value
                         ? "-"
-                        : Convert.ToDateTime(row["Fecha"]).ToString("dd/MM/yyyy HH:mm");
+                        : Convert.ToDateTime(row["Fecha"]).ToString(FechaHoraFormats.FechaHora);
                     string user = Convert.ToString(row["Usuario"]) ?? "";
 
                     void Celda(string texto, bool resaltarTipo = false)

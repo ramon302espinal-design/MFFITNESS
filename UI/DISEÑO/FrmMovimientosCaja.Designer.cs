@@ -30,7 +30,6 @@
         {
             lblTitulo = new Label();
             dgvMovimientos = new DataGridView();
-            btnCerrar = new Button();
             ((System.ComponentModel.ISupportInitialize)dgvMovimientos).BeginInit();
             SuspendLayout();
             // 
@@ -58,21 +57,11 @@
             dgvMovimientos.Size = new Size(1115, 188);
             dgvMovimientos.TabIndex = 1;
             // 
-            // btnCerrar
-            // 
-            btnCerrar.Location = new Point(29, 300);
-            btnCerrar.Name = "btnCerrar";
-            btnCerrar.Size = new Size(94, 29);
-            btnCerrar.TabIndex = 2;
-            btnCerrar.Text = "Cerrar";
-            btnCerrar.UseVisualStyleBackColor = true;
-            // 
             // FrmMovimientosCaja
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1156, 450);
-            Controls.Add(btnCerrar);
             Controls.Add(dgvMovimientos);
             Controls.Add(lblTitulo);
             Name = "FrmMovimientosCaja";

@@ -1,7 +1,10 @@
 using BLL;
+using CORE;
 using System;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
+using System.Text;
 using System.Windows.Forms;
 using UI.Helpers;
 using UI.Theme;
@@ -12,8 +15,10 @@ namespace UI
     public partial class FrmReportes : Form
     {
         private ReporteBLL reporteBLL = new ReporteBLL();
+        private DataTable datosFuente = new DataTable();
         private DataTable datosActuales = new DataTable();
-        private bool estaExportando = false; // Prevención de doble clic accidental
+        private bool estaExportando = false;
+        private bool _cargandoUi;
 
         public FrmReportes()
         {
@@ -41,12 +46,15 @@ namespace UI
 
         private void CalcularTotal()
         {
-            if (datosActuales == null || datosActuales.Rows.Count == 0) return;
+            if (datosActuales == null || datosActuales.Rows.Count == 0)
+            {
+                lblTotal.Text = "TOTAL: " + 0m.ToString("C");
+                return;
+            }
 
             decimal total = 0;
             foreach (DataRow row in datosActuales.Rows)
             {
-                // Auditoría de nulos en el cálculo
                 if (datosActuales.Columns.Contains("Monto") && row["Monto"] != DBNull.Value)
                     total += Convert.ToDecimal(row["Monto"]);
                 else if (datosActuales.Columns.Contains("Total") && row["Total"] != DBNull.Value)
@@ -55,21 +63,193 @@ namespace UI
             lblTotal.Text = "TOTAL: " + total.ToString("C");
         }
 
-        private void btnGenerarReporte_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Recarga el grid según categoría y rango. Sustituye al botón GENERAR REPORTE.
+        /// </summary>
+        private void CargarReporte()
         {
+            if (_cargandoUi || IsDisposed || Disposing)
+                return;
+
             try
             {
-                string tipo = cmbReporte.SelectedItem?.ToString();
-                if (string.IsNullOrEmpty(tipo)) { MessageBox.Show("Seleccione un tipo de reporte"); return; }
-                if (dtDesde.Value.Date > dtHasta.Value.Date) { MessageBox.Show("Rango de fechas inválido"); return; }
+                string? tipo = cmbReporte.SelectedItem?.ToString();
+                if (string.IsNullOrEmpty(tipo))
+                {
+                    datosActuales = new DataTable();
+                    dgvMostrarDatos.DataSource = datosActuales;
+                    lblTotal.Text = "TOTAL: " + 0m.ToString("C");
+                    return;
+                }
 
-                datosActuales = reporteBLL.ObtenerReporte(tipo, dtDesde.Value.Date, dtHasta.Value.Date);
-                dgvMostrarDatos.DataSource = datosActuales;
+                if (dtDesde.Value.Date > dtHasta.Value.Date)
+                {
+                    lblTotal.Text = "TOTAL: —";
+                    return;
+                }
+
+                datosFuente = reporteBLL.ObtenerReporte(tipo, dtDesde.Value.Date, dtHasta.Value.Date);
+                AplicarBusquedaInteligente();
                 dgvMostrarDatos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-
-                CalcularTotal();
+                FormatearColumnasReporte(tipo);
             }
-            catch (Exception ex) { MessageBox.Show("Error al obtener datos: " + ex.Message); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al obtener datos: " + ex.Message);
+            }
+        }
+
+        private void FormatearColumnasReporte(string tipo)
+        {
+            if (dgvMostrarDatos.Columns.Count == 0)
+                return;
+
+            if (dgvMostrarDatos.Columns.Contains("Fecha"))
+                dgvMostrarDatos.Columns["Fecha"].DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
+
+            if (dgvMostrarDatos.Columns.Contains("FechaPago"))
+                dgvMostrarDatos.Columns["FechaPago"].DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
+
+            if (dgvMostrarDatos.Columns.Contains("Monto"))
+                dgvMostrarDatos.Columns["Monto"].DefaultCellStyle.Format = "N2";
+
+            if (dgvMostrarDatos.Columns.Contains("Total"))
+                dgvMostrarDatos.Columns["Total"].DefaultCellStyle.Format = "N2";
+
+            if (string.Equals(tipo, "CAJA", StringComparison.OrdinalIgnoreCase))
+            {
+                if (dgvMostrarDatos.Columns.Contains("Método de Pago"))
+                    dgvMostrarDatos.Columns["Método de Pago"].HeaderText = "Método de Pago";
+                if (dgvMostrarDatos.Columns.Contains("MIEMBRO"))
+                    dgvMostrarDatos.Columns["MIEMBRO"].HeaderText = "MIEMBRO";
+                if (dgvMostrarDatos.Columns.Contains("USUARIO"))
+                    dgvMostrarDatos.Columns["USUARIO"].HeaderText = "USUARIO";
+            }
+        }
+
+        private void cmbReporte_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            CargarReporte();
+        }
+
+        private void txtBusca_TextChanged(object? sender, EventArgs e)
+        {
+            AplicarBusquedaInteligente();
+        }
+
+        /// <summary>
+        /// Búsqueda inmediata en todas las columnas visibles. Ignora acentos,
+        /// mayúsculas y signos; admite varias palabras en cualquier orden.
+        /// </summary>
+        private void AplicarBusquedaInteligente()
+        {
+            if (datosFuente == null)
+                return;
+
+            string consulta = NormalizarTexto(txtBusca?.Text);
+            string[] terminos = consulta.Split(
+                ' ',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (terminos.Length == 0)
+            {
+                datosActuales = datosFuente;
+            }
+            else
+            {
+                DataTable filtrados = datosFuente.Clone();
+
+                foreach (DataRow row in datosFuente.Rows)
+                {
+                    string contenido = ConstruirTextoBusqueda(row);
+                    bool coincide = true;
+
+                    foreach (string termino in terminos)
+                    {
+                        if (!contenido.Contains(termino, StringComparison.Ordinal))
+                        {
+                            coincide = false;
+                            break;
+                        }
+                    }
+
+                    if (coincide)
+                        filtrados.ImportRow(row);
+                }
+
+                datosActuales = filtrados;
+            }
+
+            dgvMostrarDatos.DataSource = datosActuales;
+            CalcularTotal();
+        }
+
+        private static string ConstruirTextoBusqueda(DataRow row)
+        {
+            var texto = new StringBuilder();
+
+            foreach (DataColumn columna in row.Table.Columns)
+            {
+                object valor = row[columna];
+                if (valor == null || valor == DBNull.Value)
+                    continue;
+
+                texto.Append(' ').Append(NormalizarTexto(columna.ColumnName));
+
+                if (valor is DateTime fecha)
+                {
+                    texto.Append(' ').Append(fecha.ToString(FechaHoraFormats.FechaHora));
+                    texto.Append(' ').Append(fecha.ToString("yyyy-MM-dd hh:mm tt"));
+                    texto.Append(' ').Append(fecha.ToString(FechaHoraFormats.Hora));
+                    texto.Append(' ').Append(fecha.ToString(FechaHoraFormats.HoraSegundos));
+                    texto.Append(' ').Append(fecha.ToString("dd MMMM yyyy", CultureInfo.GetCultureInfo("es-DO")));
+                }
+                else if (valor is decimal monto)
+                {
+                    texto.Append(' ').Append(monto.ToString("0.00", CultureInfo.InvariantCulture));
+                    texto.Append(' ').Append(monto.ToString("N2", CultureInfo.GetCultureInfo("es-DO")));
+                }
+                else
+                {
+                    texto.Append(' ').Append(Convert.ToString(valor, CultureInfo.CurrentCulture));
+                }
+            }
+
+            return NormalizarTexto(texto.ToString());
+        }
+
+        private static string NormalizarTexto(string? texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+                return string.Empty;
+
+            string descompuesto = texto
+                .Trim()
+                .ToUpperInvariant()
+                .Normalize(NormalizationForm.FormD);
+
+            var resultado = new StringBuilder(descompuesto.Length);
+            bool espacioAnterior = false;
+
+            foreach (char caracter in descompuesto)
+            {
+                UnicodeCategory categoria = CharUnicodeInfo.GetUnicodeCategory(caracter);
+                if (categoria == UnicodeCategory.NonSpacingMark)
+                    continue;
+
+                if (char.IsLetterOrDigit(caracter))
+                {
+                    resultado.Append(caracter);
+                    espacioAnterior = false;
+                }
+                else if (!espacioAnterior)
+                {
+                    resultado.Append(' ');
+                    espacioAnterior = true;
+                }
+            }
+
+            return resultado.ToString().Trim();
         }
 
         private void btnGenerarPDF_Click(object sender, EventArgs e)
@@ -80,7 +260,7 @@ namespace UI
             {
                 if (datosActuales == null || datosActuales.Rows.Count == 0)
                 {
-                    MessageBox.Show("No hay datos para exportar. Genere el reporte primero.");
+                    MessageBox.Show("No hay datos para exportar. Seleccione una categoría con movimientos.");
                     return;
                 }
 
@@ -89,7 +269,6 @@ namespace UI
                     sfd.Filter = "PDF (*.pdf)|*.pdf";
                     sfd.DefaultExt = "pdf";
                     sfd.AddExtension = true;
-                    // Nombre sugerido basado en el tipo de reporte seleccionado
                     string tipo = cmbReporte.SelectedItem?.ToString() ?? "Reporte";
                     sfd.FileName = $"{tipo}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
 
@@ -98,7 +277,6 @@ namespace UI
                         estaExportando = true;
                         this.Cursor = Cursors.WaitCursor;
 
-                        // Mandamos la ruta validada por el SaveFileDialog
                         reporteBLL.GenerarReporteDesdeDataTable(datosActuales, sfd.FileName, ".pdf");
 
                         MessageBox.Show("PDF generado con éxito", "MFFITNESS", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -143,15 +321,27 @@ namespace UI
 
         private void FrmReportes_Load(object sender, EventArgs e)
         {
-            cmbReporte.Items.Clear();
-            cmbReporte.Items.AddRange(new string[] { "CAJA", "VENTAS", "PAGOS" });
-            cmbReporte.SelectedIndex = 0;
-            ActualizarLblTiempo();
+            _cargandoUi = true;
+            try
+            {
+                cmbReporte.DropDownStyle = ComboBoxStyle.DropDownList;
+                cmbReporte.Items.Clear();
+                cmbReporte.Items.AddRange(new string[] { "CAJA", "VENTAS", "PAGOS" });
+                cmbReporte.SelectedIndex = 0;
+                ActualizarLblTiempo();
+            }
+            finally
+            {
+                _cargandoUi = false;
+            }
+
+            CargarReporte();
         }
 
         private void RangoFechas_ValueChanged(object? sender, EventArgs e)
         {
             ActualizarLblTiempo();
+            CargarReporte();
         }
 
         /// <summary>

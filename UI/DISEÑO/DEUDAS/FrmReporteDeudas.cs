@@ -1,4 +1,5 @@
 using BLL;
+using CORE;
 using System;
 using System.Data;
 using System.Diagnostics;
@@ -43,7 +44,7 @@ namespace UI
 
                 lblResumen.Text = _datos.Rows.Count == 0
                     ? "No hay deudas activas."
-                    : $"{_datos.Rows.Count} registro(s) · TOTAL MONTO PENDIENTE: RD$ {totalPendiente:N2} · Generado {DateTime.Now:dd/MM/yyyy hh:mm tt}";
+                    : $"{_datos.Rows.Count} registro(s) · TOTAL MONTO PENDIENTE: RD$ {totalPendiente:N2} · Generado {DateTime.Now.ToString(FechaHoraFormats.FechaHora)}";
             }
             catch (Exception ex)
             {
@@ -81,7 +82,7 @@ namespace UI
             if (dgvReporte.Columns["PagoInicial"] is DataGridViewColumn c2)
                 c2.DefaultCellStyle.Format = "N2";
             if (dgvReporte.Columns["FechaHoraDeuda"] is DataGridViewColumn c3)
-                c3.DefaultCellStyle.Format = "dd/MM/yyyy hh:mm tt";
+                c3.DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
             if (dgvReporte.Columns["FechaAVencer"] is DataGridViewColumn c4)
                 c4.DefaultCellStyle.Format = "dd/MM/yyyy";
 

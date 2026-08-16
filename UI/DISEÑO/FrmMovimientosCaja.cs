@@ -2,6 +2,7 @@
 using BLL;
 using CORE;
 using System;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using UI.Helpers;
 using UI.Theme;
@@ -11,6 +12,10 @@ namespace UI.DISEÑO
     [System.ComponentModel.DesignerCategory("Form")]
     public partial class FrmMovimientosCaja : Form
     {
+
+        private static readonly Regex VentaProductoIdRegex = new(
+            @"Venta de productos\s*\(Id\s*(\d+)\)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         private CajaBLL cajaBLL = new CajaBLL();
 
@@ -53,6 +58,12 @@ namespace UI.DISEÑO
                 dgvMovimientos.DataSource = cajaBLL.MovimientosHoy();
                 dgvMovimientos.ClearSelection();
                 DataGridViewHelper.HideColumn(dgvMovimientos, "ClienteId");
+                if (dgvMovimientos.Columns["Id"] is DataGridViewColumn colId)
+                {
+                    colId.HeaderText = "Id";
+                    colId.DisplayIndex = 0;
+                    colId.FillWeight = 40;
+                }
                 if (dgvMovimientos.Columns["NombreCliente"] is DataGridViewColumn colNombre)
                     colNombre.HeaderText = "Cliente";
                 if (dgvMovimientos.Columns["TipoMovimiento"] is DataGridViewColumn colTipo)
@@ -81,18 +92,32 @@ namespace UI.DISEÑO
 
         private void DgvMovimientos_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0) return;
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
 
             try
             {
                 var row = dgvMovimientos.Rows[e.RowIndex];
+                string concepto = row.Cells["Concepto"].Value?.ToString() ?? string.Empty;
+
+                // Doble clic en Id de una venta de productos → Historial / tab PRODUCTOS.
+                if (EsColumnaId(e.ColumnIndex) &&
+                    TryExtraerVentaProductoId(concepto, out int ventaId))
+                {
+                    AbrirHistorialProductos(ventaId);
+                    return;
+                }
+
+                if (!EsColumnaId(e.ColumnIndex))
+                    return;
 
                 if (row.Cells["ClienteId"].Value == null || row.Cells["ClienteId"].Value == DBNull.Value)
                 {
-                    MessageBox.Show("Este movimiento no está asociado a ningún cliente.", 
-                                    "Sin cliente", 
-                                    MessageBoxButtons.OK, 
-                                    MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        "Este movimiento no está asociado a ningún cliente ni a una venta de productos.",
+                        "Sin vínculo",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
                     return;
                 }
 
@@ -106,17 +131,44 @@ namespace UI.DISEÑO
                     MessageBoxIcon.Question);
 
                 if (result == DialogResult.Yes)
-                {
                     AbrirHistorialMembresia(clienteId);
-                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al procesar el movimiento: " + ex.Message, 
-                                "Error", 
-                                MessageBoxButtons.OK, 
-                                MessageBoxIcon.Error);
+                MessageBox.Show(
+                    "Error al procesar el movimiento: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
+        }
+
+        private bool EsColumnaId(int columnIndex)
+        {
+            return string.Equals(
+                dgvMovimientos.Columns[columnIndex].Name,
+                "Id",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool TryExtraerVentaProductoId(string concepto, out int ventaId)
+        {
+            ventaId = 0;
+            if (string.IsNullOrWhiteSpace(concepto))
+                return false;
+
+            Match match = VentaProductoIdRegex.Match(concepto);
+            if (!match.Success)
+                return false;
+
+            return int.TryParse(match.Groups[1].Value, out ventaId) && ventaId > 0;
+        }
+
+        private void AbrirHistorialProductos(int ventaId)
+        {
+            Form owner = formularioAnterior ?? this;
+            using var frmHistorial = new FrmHistorialVentas(owner, ventaId, seleccionarProducto: true);
+            frmHistorial.ShowDialog(this);
         }
 
         private void AbrirHistorialMembresia(int clienteId)
@@ -129,11 +181,5 @@ namespace UI.DISEÑO
         {
             this.Close();
         }
-
-
-
-
-
-
     }
 }

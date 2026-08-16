@@ -57,7 +57,14 @@ namespace DL
         // ===============================
         // INSERTAR MOVIMIENTO (CORRECTO)
         // ===============================
-        public int InsertarMovimiento(int cajaId, string tipoMovimiento, string concepto, decimal monto, string usuario)
+        public int InsertarMovimiento(
+            int cajaId,
+            string tipoMovimiento,
+            string concepto,
+            decimal monto,
+            string usuario,
+            string? metodoPago = null,
+            int? clienteId = null)
         {
             if (cajaId <= 0)
                 throw new Exception("Caja inválida");
@@ -76,10 +83,10 @@ namespace DL
 
             string query = @"
             INSERT INTO DetalleCaja 
-            (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario)
+            (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario, MetodoPago, ClienteId)
             OUTPUT INSERTED.Id
             VALUES 
-            (@CajaId, @TipoMovimiento, @Concepto, @Monto, GETDATE(), @Usuario)";
+            (@CajaId, @TipoMovimiento, @Concepto, @Monto, GETDATE(), @Usuario, @MetodoPago, @ClienteId)";
 
             SqlParameter[] parametros =
             {
@@ -87,15 +94,27 @@ namespace DL
                 new SqlParameter("@TipoMovimiento", tipoMovimiento.ToUpper().Trim()),
                 new SqlParameter("@Concepto", concepto.Trim()),
                 new SqlParameter("@Monto", monto),
-                new SqlParameter("@Usuario", usuario.Trim())
+                new SqlParameter("@Usuario", usuario.Trim()),
+                new SqlParameter("@MetodoPago", (object?)NormalizarMetodoPago(metodoPago) ?? DBNull.Value),
+                new SqlParameter("@ClienteId", clienteId.HasValue && clienteId.Value > 0
+                    ? clienteId.Value
+                    : DBNull.Value)
             };
 
             object? result = db.ExecuteScalar(query, parametros);
             return Convert.ToInt32(result);
         }
 
-        public int InsertarMovimientoConId(SqlConnection conn, SqlTransaction tx,
-             int cajaId, string tipoMovimiento, string concepto, decimal monto, string usuario)
+        public int InsertarMovimientoConId(
+             SqlConnection conn,
+             SqlTransaction tx,
+             int cajaId,
+             string tipoMovimiento,
+             string concepto,
+             decimal monto,
+             string usuario,
+             string? metodoPago = null,
+             int? clienteId = null)
         {
             if (cajaId <= 0)
                 throw new Exception("Caja inválida");
@@ -114,10 +133,10 @@ namespace DL
 
             string query = @"
                 INSERT INTO DetalleCaja 
-                (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario)
+                (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario, MetodoPago, ClienteId)
                 OUTPUT INSERTED.Id
                 VALUES 
-                (@CajaId, @TipoMovimiento, @Concepto, @Monto, GETDATE(), @Usuario)";
+                (@CajaId, @TipoMovimiento, @Concepto, @Monto, GETDATE(), @Usuario, @MetodoPago, @ClienteId)";
 
             using (SqlCommand cmd = new SqlCommand(query, conn, tx))
             {
@@ -126,9 +145,23 @@ namespace DL
                 cmd.Parameters.AddWithValue("@Concepto", concepto.Trim());
                 cmd.Parameters.AddWithValue("@Monto", monto);
                 cmd.Parameters.AddWithValue("@Usuario", usuario.Trim());
+                cmd.Parameters.AddWithValue(
+                    "@MetodoPago",
+                    (object?)NormalizarMetodoPago(metodoPago) ?? DBNull.Value);
+                cmd.Parameters.AddWithValue(
+                    "@ClienteId",
+                    clienteId.HasValue && clienteId.Value > 0 ? clienteId.Value : DBNull.Value);
 
                 return Convert.ToInt32(cmd.ExecuteScalar());
             }
+        }
+
+        private static string? NormalizarMetodoPago(string? metodoPago)
+        {
+            if (string.IsNullOrWhiteSpace(metodoPago))
+                return null;
+
+            return metodoPago.Trim();
         }
 
         public int ObtenerUltimoMovimientoIdPorConcepto(int cajaId, string concepto)
@@ -155,7 +188,7 @@ namespace DL
         // ===============================
         public DataTable ObtenerMovimientos(int cajaId)
         {
-            // NombreCliente: enlaza Pagos/Ventas/Deudas. Membresía/renovación usan "(Cliente {id})" en Concepto.
+            // Preferir columnas nativas; heurísticas solo como respaldo histórico.
             string query = @"
 SELECT
     dc.Id,
@@ -164,11 +197,13 @@ SELECT
     dc.Monto,
     dc.Fecha,
     dc.Usuario,
-    COALESCE(pm.ClienteId, v.ClienteId, dm.ClienteId) AS ClienteId,
-    COALESCE(pm.Nombre, c2.Nombre, dm.Nombre) AS NombreCliente
+    ISNULL(NULLIF(LTRIM(RTRIM(dc.MetodoPago)), ''), COALESCE(v.MetodoPago, pm.MetodoPago, pd.MetodoPago)) AS MetodoPago,
+    COALESCE(dc.ClienteId, pm.ClienteId, v.ClienteId, dm.ClienteId) AS ClienteId,
+    COALESCE(cDirecto.Nombre, pm.Nombre, c2.Nombre, dm.Nombre) AS NombreCliente
 FROM DetalleCaja dc
+LEFT JOIN Clientes cDirecto ON cDirecto.ID = dc.ClienteId
 OUTER APPLY (
-    SELECT TOP 1 p.ClienteId, c.Nombre
+    SELECT TOP 1 p.ClienteId, c.Nombre, p.MetodoPago
     FROM Pagos p
     INNER JOIN Clientes c ON c.ID = p.ClienteId
     WHERE CAST(p.FechaPago AS DATE) = CAST(dc.Fecha AS DATE)
@@ -179,10 +214,26 @@ OUTER APPLY (
       )
     ORDER BY ABS(DATEDIFF(SECOND, p.FechaPago, dc.Fecha)), p.Id DESC
 ) pm
-LEFT JOIN Ventas v
-       ON dc.Concepto LIKE '%Venta%'
-      AND CAST(dc.Fecha AS DATE) = CAST(v.Fecha AS DATE)
-      AND ABS(dc.Monto - ISNULL(v.MontoPagado, v.Total)) < 0.01
+OUTER APPLY (
+    -- TOP 1: varias ventas del día pueden coincidir en monto y duplicarían la fila.
+    SELECT TOP 1 vv.ClienteId, vv.MetodoPago
+    FROM Ventas vv
+    WHERE dc.Concepto LIKE '%Venta de productos (Id ' + CAST(vv.Id AS varchar(20)) + ')%'
+       OR (
+            dc.Concepto LIKE '%Venta%'
+        AND dc.Concepto NOT LIKE '%(Id %'
+        AND CAST(dc.Fecha AS DATE) = CAST(vv.Fecha AS DATE)
+        AND ABS(dc.Monto - ISNULL(vv.MontoPagado, vv.Total)) < 0.01
+       )
+    ORDER BY
+        CASE
+            WHEN dc.Concepto LIKE '%Venta de productos (Id ' + CAST(vv.Id AS varchar(20)) + ')%'
+                THEN 0
+            ELSE 1
+        END,
+        ABS(DATEDIFF(SECOND, vv.Fecha, dc.Fecha)),
+        vv.Id DESC
+) v
 LEFT JOIN Clientes c2 ON c2.ID = v.ClienteId
 OUTER APPLY (
     SELECT TOP 1 d.ClienteId, c.Nombre
@@ -195,6 +246,15 @@ OUTER APPLY (
       )
     ORDER BY d.Id DESC
 ) dm
+OUTER APPLY (
+    SELECT TOP 1 pd.MetodoPago
+    FROM PagosDeuda pd
+    WHERE CAST(pd.Fecha AS DATE) = CAST(dc.Fecha AS DATE)
+      AND ABS(pd.Monto - dc.Monto) < 0.01
+      AND ABS(DATEDIFF(SECOND, pd.Fecha, dc.Fecha)) <= 120
+      AND (dc.Concepto LIKE '%deuda%' OR dc.Concepto LIKE '%Abono%')
+    ORDER BY ABS(DATEDIFF(SECOND, pd.Fecha, dc.Fecha)), pd.Id DESC
+) pd
 WHERE dc.CajaId = @CajaId
 ORDER BY dc.Fecha DESC";
 
@@ -230,7 +290,8 @@ ORDER BY dc.Fecha DESC";
         public void RevertirMovimientoEnTransaccion(SqlConnection conn, SqlTransaction tx, int movimientoId, string usuario)
         {
             SqlCommand cmdGet = new SqlCommand(@"
-                    SELECT dc.CajaId, dc.TipoMovimiento, dc.Concepto, dc.Monto, c.Estado AS EstadoCaja
+                    SELECT dc.CajaId, dc.TipoMovimiento, dc.Concepto, dc.Monto,
+                           dc.MetodoPago, dc.ClienteId, c.Estado AS EstadoCaja
                     FROM DetalleCaja dc
                     INNER JOIN Caja c ON c.Id = dc.CajaId
                     WHERE dc.Id = @MovimientoId", conn, tx);
@@ -242,6 +303,8 @@ ORDER BY dc.Fecha DESC";
             string conceptoOriginal;
             decimal monto;
             string estadoCaja;
+            string? metodoPago;
+            int? clienteId;
 
             using (var reader = cmdGet.ExecuteReader())
             {
@@ -253,6 +316,12 @@ ORDER BY dc.Fecha DESC";
                 conceptoOriginal = reader["Concepto"]?.ToString() ?? "";
                 monto = Convert.ToDecimal(reader["Monto"]);
                 estadoCaja = reader["EstadoCaja"]?.ToString()?.ToUpperInvariant() ?? "";
+                metodoPago = reader["MetodoPago"] == DBNull.Value
+                    ? null
+                    : reader["MetodoPago"]?.ToString();
+                clienteId = reader["ClienteId"] == DBNull.Value
+                    ? null
+                    : Convert.ToInt32(reader["ClienteId"]);
             }
 
             if (estadoCaja != "ABIERTA")
@@ -283,15 +352,19 @@ ORDER BY dc.Fecha DESC";
 
             SqlCommand cmdInsert = new SqlCommand(@"
                     INSERT INTO DetalleCaja
-                    (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario)
+                    (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario, MetodoPago, ClienteId)
                     VALUES
-                    (@CajaId, @TipoMovimiento, @Concepto, @Monto, GETDATE(), @Usuario)", conn, tx);
+                    (@CajaId, @TipoMovimiento, @Concepto, @Monto, GETDATE(), @Usuario, @MetodoPago, @ClienteId)", conn, tx);
 
             cmdInsert.Parameters.Add("@CajaId", SqlDbType.Int).Value = cajaId;
             cmdInsert.Parameters.Add("@TipoMovimiento", SqlDbType.NVarChar, 50).Value = tipoInverso;
             cmdInsert.Parameters.Add("@Concepto", SqlDbType.NVarChar, 200).Value = conceptoReverso;
             cmdInsert.Parameters.Add("@Monto", SqlDbType.Decimal).Value = monto;
             cmdInsert.Parameters.Add("@Usuario", SqlDbType.NVarChar, 100).Value = usuario;
+            cmdInsert.Parameters.Add("@MetodoPago", SqlDbType.NVarChar, 50).Value =
+                (object?)NormalizarMetodoPago(metodoPago) ?? DBNull.Value;
+            cmdInsert.Parameters.Add("@ClienteId", SqlDbType.Int).Value =
+                clienteId.HasValue && clienteId.Value > 0 ? clienteId.Value : DBNull.Value;
             cmdInsert.ExecuteNonQuery();
         }
 

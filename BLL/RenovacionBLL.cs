@@ -58,7 +58,9 @@ namespace BLL
                 result.CajaMovimientoId = txService.RegistrarIngresoConId(conn, tx,
                     precio,
                     CajaConceptoHelper.IngresoRenovacion(clienteId, nombreCliente),
-                    usuario);
+                    usuario,
+                    "EFECTIVO",
+                    clienteId);
 
                 result.FechaFinMembresia = fin;
 

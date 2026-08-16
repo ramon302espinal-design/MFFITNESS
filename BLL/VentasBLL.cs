@@ -88,7 +88,8 @@ namespace BLL
                 }
 
                 if (montoPagado > 0)
-                    result.CajaMovimientoId = RegistrarIngresoEnCajaConId(montoPagado, ventaId);
+                    result.CajaMovimientoId = RegistrarIngresoEnCajaConId(
+                        montoPagado, ventaId, metodo, clienteId);
 
                 decimal saldo = total - montoPagado;
                 if (saldo > 0)
@@ -146,7 +147,11 @@ namespace BLL
             ventasDAL.AnularVenta(operacion.VentaId);
         }
 
-        private int RegistrarIngresoEnCajaConId(decimal total, int ventaId)
+        private int RegistrarIngresoEnCajaConId(
+            decimal total,
+            int ventaId,
+            string metodoPago,
+            int? clienteId)
         {
             if (total <= 0)
                 return 0;
@@ -164,7 +169,8 @@ namespace BLL
 
             txService.Ejecutar((conn, tx) =>
             {
-                movimientoId = txService.RegistrarIngresoConId(conn, tx, total, concepto, usuarioActual);
+                movimientoId = txService.RegistrarIngresoConId(
+                    conn, tx, total, concepto, usuarioActual, metodoPago, clienteId);
             });
 
             if (movimientoId <= 0)

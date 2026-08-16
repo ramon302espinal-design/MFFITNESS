@@ -31,8 +31,14 @@ namespace BLL.Services
             }
         }
 
-        public int RegistrarIngresoConId(SqlConnection conn, SqlTransaction tx,
-            decimal monto, string concepto, string usuario)
+        public int RegistrarIngresoConId(
+            SqlConnection conn,
+            SqlTransaction tx,
+            decimal monto,
+            string concepto,
+            string usuario,
+            string? metodoPago = null,
+            int? clienteId = null)
         {
             CajaDAL cajaDAL = new CajaDAL();
 
@@ -50,7 +56,9 @@ namespace BLL.Services
                 "INGRESO",
                 concepto,
                 monto,
-                usuario
+                usuario,
+                metodoPago,
+                clienteId
             );
         }
     }

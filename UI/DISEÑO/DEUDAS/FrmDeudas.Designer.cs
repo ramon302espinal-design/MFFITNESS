@@ -38,6 +38,7 @@ namespace UI
             btnActualizar = new Button();
             lblBuscar = new Label();
             txtBuscar = new TextBox();
+            lblDebe = new Label();
             ((System.ComponentModel.ISupportInitialize)dgvDeudas).BeginInit();
             SuspendLayout();
             // 
@@ -76,6 +77,7 @@ namespace UI
             dgvDeudas.RowHeadersWidth = 51;
             dgvDeudas.Size = new Size(1688, 402);
             dgvDeudas.TabIndex = 1;
+            dgvDeudas.CellDoubleClick += dgvDeudas_CellDoubleClick;
             dgvDeudas.CellFormatting += dgvDeudas_CellFormatting;
             // 
             // btnNuevaDeuda
@@ -163,11 +165,23 @@ namespace UI
             txtBuscar.TabIndex = 10;
             txtBuscar.TextChanged += txtBuscar_TextChanged;
             // 
+            // lblDebe
+            // 
+            lblDebe.AutoSize = true;
+            lblDebe.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            lblDebe.ForeColor = Color.Firebrick;
+            lblDebe.Location = new Point(820, 493);
+            lblDebe.Name = "lblDebe";
+            lblDebe.Size = new Size(0, 32);
+            lblDebe.TabIndex = 11;
+            lblDebe.Visible = false;
+            // 
             // FrmDeudas
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1688, 727);
+            Controls.Add(lblDebe);
             Controls.Add(btnActualizar);
             Controls.Add(btnEnviarWhatsApp);
             Controls.Add(txtBuscar);
@@ -197,5 +211,6 @@ namespace UI
         private Button btnActualizar;
         private Label lblBuscar;
         private TextBox txtBuscar;
+        private Label lblDebe;
     }
 }

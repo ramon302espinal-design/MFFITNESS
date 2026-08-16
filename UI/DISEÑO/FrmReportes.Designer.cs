@@ -44,12 +44,13 @@ namespace UI
             label2 = new Label();
             lbltiempo = new Label();
             cmbReporte = new ComboBox();
-            btnGenerarReporte = new Button();
             btnGenerarPDF = new Button();
             btnGenerarExcel = new Button();
             dgvMostrarDatos = new DataGridView();
             label3 = new Label();
             lblTotal = new Label();
+            label4 = new Label();
+            txtBusca = new TextBox();
             panelNav.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvMostrarDatos).BeginInit();
             SuspendLayout();
@@ -69,7 +70,7 @@ namespace UI
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1150, 52);
+            panelNav.Size = new Size(1513, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -216,22 +217,13 @@ namespace UI
             // 
             // cmbReporte
             // 
+            cmbReporte.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbReporte.FormattingEnabled = true;
             cmbReporte.Location = new Point(317, 147);
             cmbReporte.Name = "cmbReporte";
             cmbReporte.Size = new Size(223, 28);
             cmbReporte.TabIndex = 4;
-            // 
-            // btnGenerarReporte
-            // 
-            btnGenerarReporte.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnGenerarReporte.Location = new Point(36, 309);
-            btnGenerarReporte.Name = "btnGenerarReporte";
-            btnGenerarReporte.Size = new Size(175, 29);
-            btnGenerarReporte.TabIndex = 5;
-            btnGenerarReporte.Text = "GENERAR REPORTE";
-            btnGenerarReporte.UseVisualStyleBackColor = true;
-            btnGenerarReporte.Click += btnGenerarReporte_Click;
+            cmbReporte.SelectedIndexChanged += cmbReporte_SelectedIndexChanged;
             // 
             // btnGenerarPDF
             // 
@@ -257,11 +249,13 @@ namespace UI
             // 
             // dgvMostrarDatos
             // 
+            dgvMostrarDatos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvMostrarDatos.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvMostrarDatos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvMostrarDatos.Location = new Point(36, 378);
+            dgvMostrarDatos.Location = new Point(0, 378);
             dgvMostrarDatos.Name = "dgvMostrarDatos";
             dgvMostrarDatos.RowHeadersWidth = 51;
-            dgvMostrarDatos.Size = new Size(639, 340);
+            dgvMostrarDatos.Size = new Size(1080, 340);
             dgvMostrarDatos.TabIndex = 8;
             // 
             // label3
@@ -284,17 +278,37 @@ namespace UI
             lblTotal.TabIndex = 10;
             lblTotal.Text = "0";
             // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            label4.Location = new Point(670, 313);
+            label4.Name = "label4";
+            label4.Size = new Size(68, 20);
+            label4.TabIndex = 12;
+            label4.Text = "BUSCAR";
+            // 
+            // txtBusca
+            // 
+            txtBusca.Location = new Point(744, 310);
+            txtBusca.Name = "txtBusca";
+            txtBusca.PlaceholderText = "Producto, miembro, método, usuario, fecha o monto...";
+            txtBusca.Size = new Size(293, 27);
+            txtBusca.TabIndex = 13;
+            txtBusca.TextChanged += txtBusca_TextChanged;
+            // 
             // FrmReportes
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1150, 797);
+            ClientSize = new Size(1513, 853);
+            Controls.Add(txtBusca);
+            Controls.Add(label4);
             Controls.Add(lblTotal);
             Controls.Add(label3);
             Controls.Add(dgvMostrarDatos);
             Controls.Add(btnGenerarExcel);
             Controls.Add(btnGenerarPDF);
-            Controls.Add(btnGenerarReporte);
             Controls.Add(cmbReporte);
             Controls.Add(lbltiempo);
             Controls.Add(label2);
@@ -331,11 +345,12 @@ namespace UI
         private Label label2;
         private Label lbltiempo;
         private ComboBox cmbReporte;
-        private Button btnGenerarReporte;
         private Button btnGenerarPDF;
         private Button btnGenerarExcel;
         private DataGridView dgvMostrarDatos;
         private Label label3;
         private Label lblTotal;
+        private Label label4;
+        private TextBox txtBusca;
     }
 }

@@ -1,4 +1,5 @@
 using BLL;
+using CORE;
 using Microsoft.VisualBasic;
 using System;
 using System.Data;
@@ -88,7 +89,7 @@ namespace UI.DISEÑO
             if (grid.Columns["FechaCierre"] is DataGridViewColumn colCierre)
             {
                 colCierre.HeaderText = "Cerrado el";
-                colCierre.DefaultCellStyle.Format = "dd/MM/yyyy hh:mm tt";
+                colCierre.DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
                 colCierre.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
 

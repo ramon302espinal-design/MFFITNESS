@@ -74,7 +74,7 @@ namespace BLL
             sb.AppendLine("Enviando mensaje de prueba via plantilla BD...");
             bool enviado = mensajeBLL.EnviarMensajeTemplado(clienteId, "PRUEBA_SISTEMA", new System.Collections.Generic.Dictionary<string, string>
             {
-                ["FECHA"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")
+                ["FECHA"] = DateTime.Now.ToString(FechaHoraFormats.FechaHoraSegundos)
             });
 
             sb.AppendLine(enviado

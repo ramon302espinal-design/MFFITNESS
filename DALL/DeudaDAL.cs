@@ -94,13 +94,15 @@ namespace DL
                         // 🔹 CAJA (EGRESO)
                         SqlCommand cmdCaja = new SqlCommand(@"
                 INSERT INTO DetalleCaja
-                (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario)
+                (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario, MetodoPago, ClienteId)
                 VALUES
-                (@CajaId, 'EGRESO', 'Reverso pago deuda', @Monto, GETDATE(), @Usuario)", conn, tx);
+                (@CajaId, 'EGRESO', 'Reverso pago deuda', @Monto, GETDATE(), @Usuario, 'REVERSO',
+                 (SELECT ClienteId FROM Deudas WHERE Id = @DeudaId))", conn, tx);
 
                         cmdCaja.Parameters.Add("@CajaId", SqlDbType.Int).Value = cajaId;
                         cmdCaja.Parameters.Add("@Monto", SqlDbType.Decimal).Value = monto;
                         cmdCaja.Parameters.Add("@Usuario", SqlDbType.VarChar, 100).Value = usuario;
+                        cmdCaja.Parameters.Add("@DeudaId", SqlDbType.Int).Value = deudaId;
                         cmdCaja.ExecuteNonQuery();
 
                         tx.Commit();
@@ -199,14 +201,17 @@ namespace DL
                         // 🔥 CAJA (MISMA TRANSACCIÓN)
                         SqlCommand cmdCaja = new SqlCommand(@"
                 INSERT INTO DetalleCaja
-                (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario)
+                (CajaId, TipoMovimiento, Concepto, Monto, Fecha, Usuario, MetodoPago, ClienteId)
                 VALUES
-                (@CajaId, 'INGRESO', @Concepto, @Monto, GETDATE(), @Usuario)", conn, tx);
+                (@CajaId, 'INGRESO', @Concepto, @Monto, GETDATE(), @Usuario, @MetodoPago, @ClienteId)", conn, tx);
 
                         cmdCaja.Parameters.Add("@CajaId", SqlDbType.Int).Value = cajaId;
                         cmdCaja.Parameters.Add("@Concepto", SqlDbType.VarChar, 200).Value = $"Pago deuda Cliente {clienteId}";
                         cmdCaja.Parameters.Add("@Monto", SqlDbType.Decimal).Value = monto;
                         cmdCaja.Parameters.Add("@Usuario", SqlDbType.VarChar, 100).Value = usuario;
+                        cmdCaja.Parameters.Add("@MetodoPago", SqlDbType.NVarChar, 50).Value =
+                            string.IsNullOrWhiteSpace(metodo) ? DBNull.Value : metodo.Trim();
+                        cmdCaja.Parameters.Add("@ClienteId", SqlDbType.Int).Value = clienteId;
                         cmdCaja.ExecuteNonQuery();
 
                         tx.Commit();
@@ -504,9 +509,10 @@ VALUES
         // ===============================
         // OBTENER DEUDAS (CON INFO DE PLANES)
         // ===============================
-        public DataTable ObtenerDeudas()
+        public DataTable ObtenerDeudas(bool soloActivas = true)
         {
-            string query = @"
+            string condicionEstado = soloActivas ? "WHERE d.Estado = 'ACTIVA'" : string.Empty;
+            string query = $@"
             SELECT 
                 d.Id, 
                 d.ClienteId, 
@@ -536,7 +542,7 @@ VALUES
                   AND h.TipoMovimiento = 'PAGO_INICIAL'
                 ORDER BY h.Fecha ASC
             ) pi
-            WHERE d.Estado = 'ACTIVA'
+            {condicionEstado}
             ORDER BY d.FechaVencimiento ASC";
 
             return db.ExecuteQuery(query);

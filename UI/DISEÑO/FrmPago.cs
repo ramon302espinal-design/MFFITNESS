@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Media;
 using System.Windows.Forms;
 using BLL.Models;
+using CORE;
 using UI.Theme;
 
 namespace UI.DISEÑO
@@ -200,7 +201,7 @@ namespace UI.DISEÑO
             string preview =
                 "========== MFFITNESS ==========\r\n" +
                 "VISTA PREVIA DE PAGO\r\n" +
-                $"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}\r\n" +
+                $"Fecha: {DateTime.Now.ToString(FechaHoraFormats.FechaHora)}\r\n" +
                 "--------------------------------\r\n" +
                 $"TOTAL:      {FormatearMoneda(_totalAPagar)}\r\n" +
                 $"RECIBIDO:   {FormatearMoneda(recibido)}\r\n" +

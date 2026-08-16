@@ -52,7 +52,8 @@ namespace BLL
                     clienteId, fechaPago, fechaVencimiento,
                     monto, metodoPago, concepto, usuario);
 
-                cajaMovId = txService.RegistrarIngresoConId(conn, tx, monto, conceptoCaja, usuario);
+                cajaMovId = txService.RegistrarIngresoConId(
+                    conn, tx, monto, conceptoCaja, usuario, metodoPago, clienteId);
             });
 
             return (pagoId, cajaMovId);

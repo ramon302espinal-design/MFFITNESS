@@ -166,8 +166,8 @@ namespace UI.Helpers
             if (session == null)
                 return "Sin sesiones locales recientes.";
 
-            string when = session.CompletedAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
-                          ?? session.StartedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+            string when = session.CompletedAtUtc?.ToLocalTime().ToString(FechaHoraFormats.FechaHora)
+                          ?? session.StartedAtUtc.ToLocalTime().ToString(FechaHoraFormats.FechaHora);
 
             return $"Última sesión: {session.Status} · {when}"
                    + (string.IsNullOrWhiteSpace(session.AppVersionTarget)

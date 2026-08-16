@@ -15,6 +15,8 @@ namespace UI.DISEÑO
         private readonly int? _clienteIdParaSeleccionar;
         private readonly string? _nombreClienteParaSeleccionar;
         private bool _seleccionClienteAplicada;
+        private readonly int? _ventaIdParaSeleccionar;
+        private bool _seleccionVentaAplicada;
 
         private readonly PagoBLL pagoBLL = new PagoBLL();
         private readonly VentasBLL ventasBLL = new VentasBLL();
@@ -33,6 +35,15 @@ namespace UI.DISEÑO
         {
             _clienteIdParaSeleccionar = clienteId;
             _nombreClienteParaSeleccionar = nombreCliente;
+        }
+
+        /// <summary>
+        /// Abre el historial enfocado en PRODUCTOS y selecciona la venta indicada.
+        /// </summary>
+        public FrmHistorialVentas(Form frm, int ventaId, bool seleccionarProducto) : this(frm)
+        {
+            if (seleccionarProducto && ventaId > 0)
+                _ventaIdParaSeleccionar = ventaId;
         }
 
         private void ActualizarHistorial()
@@ -157,6 +168,9 @@ namespace UI.DISEÑO
 
             if (_clienteIdParaSeleccionar.HasValue && !_seleccionClienteAplicada)
                 AplicarSeleccionClientePendiente();
+
+            if (_ventaIdParaSeleccionar.HasValue && !_seleccionVentaAplicada)
+                AplicarSeleccionVentaPendiente();
         }
 
         private void AplicarSeleccionClientePendiente()
@@ -166,6 +180,57 @@ namespace UI.DISEÑO
 
             if (SeleccionarUltimaAccionCliente(_clienteIdParaSeleccionar.Value, _nombreClienteParaSeleccionar))
                 _seleccionClienteAplicada = true;
+        }
+
+        private void AplicarSeleccionVentaPendiente()
+        {
+            if (!_ventaIdParaSeleccionar.HasValue || _seleccionVentaAplicada)
+                return;
+
+            if (SeleccionarVentaProducto(_ventaIdParaSeleccionar.Value))
+                _seleccionVentaAplicada = true;
+        }
+
+        /// <summary>
+        /// Activa tabProductos, selecciona la venta y carga su detalle.
+        /// </summary>
+        private bool SeleccionarVentaProducto(int ventaId)
+        {
+            if (tabControl1 == null || tabProductos == null || dgvVentasProductos == null)
+                return false;
+
+            tabControl1.SelectedTab = tabProductos;
+
+            if (!dgvVentasProductos.Columns.Contains("Id"))
+                return false;
+
+            foreach (DataGridViewRow row in dgvVentasProductos.Rows)
+            {
+                if (row.IsNewRow)
+                    continue;
+
+                var valor = row.Cells["Id"].Value;
+                if (valor == null || valor == DBNull.Value)
+                    continue;
+
+                if (Convert.ToInt32(valor) != ventaId)
+                    continue;
+
+                dgvVentasProductos.ClearSelection();
+                row.Selected = true;
+
+                var celdaVisible = ObtenerPrimeraCeldaVisible(row);
+                if (celdaVisible != null)
+                    dgvVentasProductos.CurrentCell = celdaVisible;
+
+                if (row.Index >= 0 && row.Index < dgvVentasProductos.RowCount)
+                    dgvVentasProductos.FirstDisplayedScrollingRowIndex = row.Index;
+
+                dgvDetalleProductos.DataSource = ventasBLL.ListarDetalleVenta(ventaId);
+                return true;
+            }
+
+            return false;
         }
 
         private void FrmHistorialVentas_Load(object sender, EventArgs e)

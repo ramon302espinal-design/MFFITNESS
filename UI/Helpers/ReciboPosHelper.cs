@@ -3,6 +3,7 @@ using System.Data;
 using System.Text;
 using System.Windows.Forms;
 using BLL.Models;
+using CORE;
 using UI;
 
 namespace UI.Helpers
@@ -22,7 +23,7 @@ namespace UI.Helpers
             var sb = new StringBuilder();
             sb.AppendLine("========== MFFITNESS ==========");
             sb.AppendLine("RECIBO DE VENTA");
-            sb.AppendLine($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}");
+            sb.AppendLine($"Fecha: {DateTime.Now.ToString(FechaHoraFormats.FechaHora)}");
             sb.AppendLine($"Usuario: {usuario}");
             sb.AppendLine($"Cliente: {clienteNombre ?? "Consumidor final"}");
             sb.AppendLine("--------------------------------");
@@ -60,7 +61,7 @@ namespace UI.Helpers
             var sb = new StringBuilder();
             sb.AppendLine("========== MFFITNESS ==========");
             sb.AppendLine("RECIBO DE MEMBRESÍA");
-            sb.AppendLine($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}");
+            sb.AppendLine($"Fecha: {DateTime.Now.ToString(FechaHoraFormats.FechaHora)}");
             sb.AppendLine($"Usuario: {usuario}");
             sb.AppendLine($"Cliente: {clienteNombre}");
             sb.AppendLine($"Plan: {planNombre}");

@@ -298,7 +298,7 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Fecha", col =>
             {
                 col.HeaderText = "Fecha";
-                col.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
+                col.DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
                 col.Width = 150;
             });
 
@@ -636,7 +636,7 @@ namespace UI
             sb.AppendLine("═══════════════════════════════════════════════════════════");
             sb.AppendLine("        HISTORIAL DE DEUDAS Y PAGOS - MF FITNESS");
             sb.AppendLine("═══════════════════════════════════════════════════════════");
-            sb.AppendLine($"Fecha de generación: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+            sb.AppendLine($"Fecha de generación: {DateTime.Now.ToString(FechaHoraFormats.FechaHoraSegundos)}");
             sb.AppendLine($"Usuario: {Sesion.Usuario}");
             sb.AppendLine($"Período: {dtpDesde.Value:dd/MM/yyyy} - {dtpHasta.Value:dd/MM/yyyy}");
             sb.AppendLine("═══════════════════════════════════════════════════════════");
@@ -655,7 +655,7 @@ namespace UI
                 string monto = row.Cells["Monto"].Value != null ? 
                     Convert.ToDecimal(row.Cells["Monto"].Value).ToString("C2") : "$0.00";
                 string fecha = row.Cells["Fecha"].Value != null ? 
-                    Convert.ToDateTime(row.Cells["Fecha"].Value).ToString("dd/MM/yyyy HH:mm") : "";
+                    Convert.ToDateTime(row.Cells["Fecha"].Value).ToString(FechaHoraFormats.FechaHora) : "";
                 string usuario = row.Cells["Usuario"].Value?.ToString() ?? "";
 
                 sb.AppendLine($"Cliente: {cliente}");

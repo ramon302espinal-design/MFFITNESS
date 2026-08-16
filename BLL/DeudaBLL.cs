@@ -149,9 +149,9 @@ namespace BLL
         /// Obtiene todas las deudas del sistema
         /// </summary>
         /// <returns>DataTable con todas las deudas y sus datos</returns>
-        public DataTable ObtenerDeudas()
+        public DataTable ObtenerDeudas(bool incluirHistorial = false)
         {
-            var dt = dal.ObtenerDeudas();
+            var dt = dal.ObtenerDeudas(soloActivas: !incluirHistorial);
             EnriquecerAporteInicial(dt);
             EnriquecerFechasPlanMembresia(dt);
             return dt;

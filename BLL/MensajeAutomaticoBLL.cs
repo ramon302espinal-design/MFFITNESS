@@ -204,7 +204,7 @@ namespace BLL
                 {
                     ["PLAN"] = nombrePlan,
                     ["MONTO"] = FormatearMonto(monto),
-                    ["FECHA_PAGO"] = fechaPago.ToString("dd/MM/yyyy HH:mm"),
+                    ["FECHA_PAGO"] = fechaPago.ToString(FechaHoraFormats.FechaHora),
                     ["FECHA_VENCE"] = fechaVencimiento.ToString("dd/MM/yyyy"),
                     ["NUMERO_RECIBO"] = numeroRecibo,
                     ["METODO_PAGO"] = metodoPago

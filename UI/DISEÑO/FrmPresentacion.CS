@@ -19,6 +19,7 @@ namespace UI.DISEÑO
         private readonly DeudaBLL deudaKpiBLL = new DeudaBLL();
         private bool _puedeVerIngresos = true;
         private bool _puedeVerDeudas = true;
+        private bool _puedeVerIngresoPendiente = true;
         private bool _dashboardStyled;
         private Label? _lblDashWelcome;
         private Label? _lblDashDateTime;
@@ -312,15 +313,19 @@ namespace UI.DISEÑO
             // Montos: solo ADMIN o quien tenga VER_INGRESOS.
             _puedeVerIngresos = Sesion.TienePermiso("VER_INGRESOS") || rol == "ADMIN";
 
-            // Caja 1 / 2 / 3 (rol CAJERO): sin panel de ingresos del día.
+            // Caja 1 / 2 / 3 (rol CAJERO): sin paneles de ingresos realizados.
             panelIngresosHoy.Visible = rol != "CAJERO";
-            panelIngresosMes.Visible = true;
+            panelIngresosMes.Visible = rol != "CAJERO";
 
             // Tarjetas de deudas: misma regla que el módulo de Deudas.
             _puedeVerDeudas = btnDeudas.Visible;
             panelDeudasActivas.Visible = _puedeVerDeudas;
             panelDeudasVencidas.Visible = _puedeVerDeudas;
-            panelIngresoPendiente.Visible = _puedeVerDeudas;
+
+            // El pendiente por cobrar es un indicador operativo para Caja 1 / 2 / 3,
+            // sin otorgar acceso al módulo de Deudas ni a los ingresos realizados.
+            _puedeVerIngresoPendiente = _puedeVerDeudas || rol == "CAJERO";
+            panelIngresoPendiente.Visible = _puedeVerIngresoPendiente;
         }
 
         private void MostrarTodos()
@@ -550,29 +555,27 @@ namespace UI.DISEÑO
         /// </summary>
         private void CargarKpiDeudas()
         {
-            if (!_puedeVerDeudas)
+            if (!_puedeVerDeudas && !_puedeVerIngresoPendiente)
                 return;
 
             try
             {
-                int activas = deudaKpiBLL.DeudasActivas();
-                int vencidas = deudaKpiBLL.DeudasVencidas();
+                if (_puedeVerDeudas)
+                {
+                    int activas = deudaKpiBLL.DeudasActivas();
+                    int vencidas = deudaKpiBLL.DeudasVencidas();
 
-                lblDeudasActivas.Text = activas.ToString();
-                lblDeudasVencidas.Text = vencidas.ToString();
-                lblDeudasActivas.ForeColor = activas > 0 ? Color.FromArgb(147, 51, 234) : AppTheme.TextMuted;
-                lblDeudasVencidas.ForeColor = vencidas > 0 ? AppTheme.Error : AppTheme.TextMuted;
+                    lblDeudasActivas.Text = activas.ToString();
+                    lblDeudasVencidas.Text = vencidas.ToString();
+                    lblDeudasActivas.ForeColor = activas > 0 ? Color.FromArgb(147, 51, 234) : AppTheme.TextMuted;
+                    lblDeudasVencidas.ForeColor = vencidas > 0 ? AppTheme.Error : AppTheme.TextMuted;
+                }
 
-                if (_puedeVerIngresos)
+                if (_puedeVerIngresoPendiente)
                 {
                     decimal pendiente = deudaKpiBLL.IngresoPendiente();
                     lblIngresoPendiente.Text = pendiente.ToString("C");
                     lblIngresoPendiente.ForeColor = pendiente > 0 ? AppTheme.Success : AppTheme.TextMuted;
-                }
-                else
-                {
-                    lblIngresoPendiente.Text = "—";
-                    lblIngresoPendiente.ForeColor = AppTheme.TextMuted;
                 }
             }
             catch (Exception ex)
@@ -587,7 +590,7 @@ namespace UI.DISEÑO
         /// </summary>
         private void RefrescarKpiDeudas()
         {
-            if (IsDisposed || Disposing || !_puedeVerDeudas)
+            if (IsDisposed || Disposing || (!_puedeVerDeudas && !_puedeVerIngresoPendiente))
                 return;
 
             if (InvokeRequired)
