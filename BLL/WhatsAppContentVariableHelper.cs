@@ -100,6 +100,27 @@ namespace BLL
         }
 
         /// <summary>
+        /// Variables de la plantilla UTILITY de avisos de cuenta:
+        /// {{1}} miembro, {{2}} asunto, {{3}} detalle, {{4}} fecha.
+        /// </summary>
+        public static string SerializarAvisoCuenta(
+            string miembro,
+            string asunto,
+            string detalle,
+            string fecha)
+        {
+            return JsonSerializer.Serialize(
+                new System.Collections.Generic.Dictionary<string, string>
+                {
+                    ["1"] = Cortar(Sanitizar(miembro), 60),
+                    ["2"] = Cortar(Sanitizar(asunto), 60),
+                    ["3"] = Cortar(Sanitizar(detalle), 500),
+                    ["4"] = Cortar(Sanitizar(fecha), 40)
+                },
+                JsonOpciones);
+        }
+
+        /// <summary>
         /// Variables plantilla twilio/media (Meta-compliant):
         /// media = https://dominio/{{1}}
         /// body  = texto fijo con {{2}}..{{6}} (nunca empieza ni termina en variable).

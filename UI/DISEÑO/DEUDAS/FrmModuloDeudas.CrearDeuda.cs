@@ -118,8 +118,9 @@ namespace UI
             {
                 DataTable tabla = planBLL.ObtenerPlanes().Copy();
                 DataView dv = tabla.DefaultView;
-                // Solo planes reales de membresía (PRODUCTO A CRÉDITO no es un plan).
-                dv.RowFilter = "Nombre IN ('PREMIUM', 'PRO', 'MENSUALIDAD', '3x')";
+                // Todos los planes reales de Planes; el pseudo-plan PRODUCTO A CRÉDITO
+                // se agrega aparte más abajo. Sin nombres a mano: M-A y futuros planes entran solos.
+                dv.RowFilter = $"Nombre <> '{NombreProductoCredito}'";
 
                 DataTable opciones = tabla.Clone();
                 if (!opciones.Columns.Contains("Etiqueta"))
@@ -666,16 +667,16 @@ namespace UI
             return true;
         }
 
+        /// <summary>
+        /// Plan real de membresía: cualquier nombre que venga de Planes.
+        /// Solo se descarta el pseudo-plan de producto a crédito, que se valida por su Id.
+        /// </summary>
         private static bool EsNombrePlanMembresia(string? nombre)
         {
             if (string.IsNullOrWhiteSpace(nombre))
                 return false;
 
-            string n = nombre.Trim();
-            return n.Equals("PREMIUM", StringComparison.OrdinalIgnoreCase)
-                || n.Equals("PRO", StringComparison.OrdinalIgnoreCase)
-                || n.Equals("MENSUALIDAD", StringComparison.OrdinalIgnoreCase)
-                || n.Equals("3x", StringComparison.OrdinalIgnoreCase);
+            return !nombre.Trim().Equals(NombreProductoCredito, StringComparison.OrdinalIgnoreCase);
         }
 
         private bool VerificarCajaSiHayPagoInicial(decimal pagoInicial)
@@ -704,7 +705,7 @@ namespace UI
 
             if (!TryObtenerPlanSeleccionado(out _, out _))
             {
-                MessageBox.Show("Seleccione una operación: plan PREMIUM, PRO, MENSUALIDAD, 3x, o Producto a crédito.");
+                MessageBox.Show("Seleccione una operación: un plan de membresía o Producto a crédito.");
                 return false;
             }
 

@@ -47,7 +47,6 @@ namespace UI
             btnGenerarPDF = new Button();
             btnGenerarExcel = new Button();
             dgvMostrarDatos = new DataGridView();
-            label3 = new Label();
             lblTotal = new Label();
             label4 = new Label();
             txtBusca = new TextBox();
@@ -258,16 +257,6 @@ namespace UI
             dgvMostrarDatos.Size = new Size(1080, 340);
             dgvMostrarDatos.TabIndex = 8;
             // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            label3.Location = new Point(36, 734);
-            label3.Name = "label3";
-            label3.Size = new Size(126, 20);
-            label3.TabIndex = 9;
-            label3.Text = "TOTAL GENERAL";
-            // 
             // lblTotal
             // 
             lblTotal.AutoSize = true;
@@ -305,7 +294,6 @@ namespace UI
             Controls.Add(txtBusca);
             Controls.Add(label4);
             Controls.Add(lblTotal);
-            Controls.Add(label3);
             Controls.Add(dgvMostrarDatos);
             Controls.Add(btnGenerarExcel);
             Controls.Add(btnGenerarPDF);
@@ -348,7 +336,6 @@ namespace UI
         private Button btnGenerarPDF;
         private Button btnGenerarExcel;
         private DataGridView dgvMostrarDatos;
-        private Label label3;
         private Label lblTotal;
         private Label label4;
         private TextBox txtBusca;

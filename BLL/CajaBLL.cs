@@ -106,12 +106,16 @@ namespace BLL
 
         public decimal IngresosHoy()
         {
-            return SumarMovimientosCajaAbierta("INGRESO");
+            // Ingresos vigentes: el ingreso original de un reverso deja de contar
+            // (marca REVERSO (Ref #id)), igual que los paneles y el cuadre.
+            return SumarIngresosNetosCajaAbierta();
         }
 
         public decimal EgresosHoy()
         {
-            return SumarMovimientosCajaAbierta("EGRESO");
+            // Solo gastos operativos. Los egresos de reverso (corrección de pago
+            // inicial / deshacer) no inflan el panel de Gastos.
+            return SumarGastosOperativosCajaAbierta();
         }
 
         public decimal BalanceActual()
@@ -119,18 +123,84 @@ namespace BLL
             return ObtenerMontoInicial() + IngresosHoy() - EgresosHoy();
         }
 
-        private decimal SumarMovimientosCajaAbierta(string tipo)
+        private decimal SumarIngresosNetosCajaAbierta()
         {
             DataTable dt = MovimientosHoy();
-            decimal total = 0;
+            if (dt.Rows.Count == 0)
+                return 0m;
 
+            var idsRevertidos = new System.Collections.Generic.HashSet<int>();
             foreach (DataRow row in dt.Rows)
             {
-                if (string.Equals(row["TipoMovimiento"]?.ToString(), tipo, StringComparison.OrdinalIgnoreCase))
-                    total += Convert.ToDecimal(row["Monto"]);
+                string concepto = row["Concepto"]?.ToString() ?? string.Empty;
+                string metodo = dt.Columns.Contains("MetodoPago")
+                    ? row["MetodoPago"]?.ToString() ?? string.Empty
+                    : string.Empty;
+
+                if (!CajaConceptoHelper.EsReverso(concepto, metodo))
+                    continue;
+
+                if (TryExtraerIdReverso(concepto, out int refId))
+                    idsRevertidos.Add(refId);
+            }
+
+            decimal total = 0m;
+            foreach (DataRow row in dt.Rows)
+            {
+                if (!string.Equals(row["TipoMovimiento"]?.ToString(), "INGRESO", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string concepto = row["Concepto"]?.ToString() ?? string.Empty;
+                if (concepto.StartsWith("REVERSO (Ref #", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                int id = Convert.ToInt32(row["Id"]);
+                if (idsRevertidos.Contains(id))
+                    continue;
+
+                total += Convert.ToDecimal(row["Monto"]);
             }
 
             return total;
+        }
+
+        private decimal SumarGastosOperativosCajaAbierta()
+        {
+            DataTable dt = MovimientosHoy();
+            decimal total = 0m;
+
+            foreach (DataRow row in dt.Rows)
+            {
+                if (!string.Equals(row["TipoMovimiento"]?.ToString(), "EGRESO", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string concepto = row["Concepto"]?.ToString() ?? string.Empty;
+                string metodo = dt.Columns.Contains("MetodoPago")
+                    ? row["MetodoPago"]?.ToString() ?? string.Empty
+                    : string.Empty;
+
+                if (CajaConceptoHelper.EsReverso(concepto, metodo))
+                    continue;
+
+                total += Convert.ToDecimal(row["Monto"]);
+            }
+
+            return total;
+        }
+
+        private static bool TryExtraerIdReverso(string concepto, out int movimientoId)
+        {
+            movimientoId = 0;
+            const string marca = "REVERSO (Ref #";
+            if (!concepto.StartsWith(marca, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            int start = marca.Length;
+            int end = concepto.IndexOf(')', start);
+            if (end <= start)
+                return false;
+
+            return int.TryParse(concepto.AsSpan(start, end - start), out movimientoId) && movimientoId > 0;
         }
     }
 }

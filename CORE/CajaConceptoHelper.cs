@@ -1,3 +1,5 @@
+using System;
+
 namespace CORE
 {
     /// <summary>
@@ -31,6 +33,35 @@ namespace CORE
             string nombre = NombreSeguro(nombreCliente, clienteId);
             string det = string.IsNullOrWhiteSpace(detalle) ? "Pago inicial" : detalle.Trim();
             return $"Pago membresía - {nombre} (Cliente {clienteId}) - {det}";
+        }
+
+        /// <summary>
+        /// True si el movimiento es un reverso (deshacer / corrección de pago inicial),
+        /// no un gasto operativo. No debe sumar al panel de Gastos.
+        /// </summary>
+        public static bool EsReverso(string? concepto, string? metodoPago = null)
+        {
+            if (!string.IsNullOrWhiteSpace(metodoPago) &&
+                metodoPago.Trim().Equals("REVERSO", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (string.IsNullOrWhiteSpace(concepto))
+                return false;
+
+            string c = concepto.Trim();
+            return c.StartsWith("REVERSO", StringComparison.OrdinalIgnoreCase)
+                || c.StartsWith("Reverso", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Etiqueta de tipo para el grid: REVERSO en lugar de EGRESO.</summary>
+        public static string TipoVisible(string? tipoMovimiento, string? concepto, string? metodoPago = null)
+        {
+            if (EsReverso(concepto, metodoPago))
+                return "REVERSO";
+
+            return string.IsNullOrWhiteSpace(tipoMovimiento)
+                ? string.Empty
+                : tipoMovimiento.Trim().ToUpperInvariant();
         }
     }
 }

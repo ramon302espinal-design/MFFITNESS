@@ -1,6 +1,7 @@
 using DL;
 using System.Data;
 using System;
+using System.Globalization;
 using ClosedXML.Excel;
 using CORE;
 
@@ -138,6 +139,97 @@ namespace BLL
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// PDF de reportes de Caja/Ventas/Pagos con metadatos del rango y total final.
+        /// </summary>
+        public void GenerarReportePdfDetallado(
+            DataTable datos,
+            string ruta,
+            string categoria,
+            DateTime desde,
+            DateTime hasta,
+            DateTime fechaDescarga,
+            decimal montoTotal)
+        {
+            if (datos == null || datos.Rows.Count == 0)
+                throw new InvalidOperationException("No hay datos para exportar.");
+            if (string.IsNullOrWhiteSpace(ruta))
+                throw new InvalidOperationException("La ruta de destino es inválida.");
+            if (desde.Date > hasta.Date)
+                throw new InvalidOperationException("La fecha desde no puede ser mayor que la fecha hasta.");
+
+            int dias = (hasta.Date - desde.Date).Days;
+            string textoDias = dias == 1 ? "1 DÍA" : $"{dias} DÍAS";
+            CultureInfo cultura = CultureInfo.GetCultureInfo("es-DO");
+
+            using var memoria = new MemoryStream();
+            using (var writer = new PdfWriter(memoria))
+            using (var pdf = new PdfDocument(writer))
+            using (var doc = new Document(
+                pdf,
+                iText.Kernel.Geom.PageSize.A4.Rotate()))
+            {
+                doc.SetMargins(28, 24, 28, 24);
+
+                PdfFont negrita = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+                PdfFont normal = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+                doc.Add(new Paragraph($"REPORTE DE {categoria.Trim().ToUpperInvariant()} - MFFITNESS")
+                    .SetFont(negrita)
+                    .SetFontSize(16)
+                    .SetTextAlignment(TextAlignment.CENTER));
+
+                doc.Add(new Paragraph(
+                        $"Fecha y hora de descarga: {fechaDescarga.ToString(FechaHoraFormats.FechaHoraSegundos, cultura)}")
+                    .SetFont(normal)
+                    .SetFontSize(10));
+
+                doc.Add(new Paragraph(
+                        $"Desde {desde:dd/MM/yyyy} hasta {hasta:dd/MM/yyyy}  {textoDias}")
+                    .SetFont(negrita)
+                    .SetFontSize(11)
+                    .SetMarginBottom(12));
+
+                var tabla = new Table(datos.Columns.Count).UseAllAvailableWidth();
+                foreach (DataColumn columna in datos.Columns)
+                {
+                    tabla.AddHeaderCell(new Cell()
+                        .Add(new Paragraph(columna.ColumnName).SetFont(negrita).SetFontSize(8))
+                        .SetBackgroundColor(ColorConstants.BLACK)
+                        .SetFontColor(ColorConstants.WHITE));
+                }
+
+                foreach (DataRow fila in datos.Rows)
+                {
+                    foreach (DataColumn columna in datos.Columns)
+                    {
+                        object valor = fila[columna];
+                        string texto = valor switch
+                        {
+                            null or DBNull => string.Empty,
+                            DateTime fecha => fecha.ToString(FechaHoraFormats.FechaHora, cultura),
+                            decimal monto => monto.ToString("N2", cultura),
+                            double monto => monto.ToString("N2", cultura),
+                            float monto => monto.ToString("N2", cultura),
+                            _ => Convert.ToString(valor, cultura) ?? string.Empty
+                        };
+
+                        tabla.AddCell(new Cell()
+                            .Add(new Paragraph(texto).SetFont(normal).SetFontSize(7)));
+                    }
+                }
+
+                doc.Add(tabla);
+                doc.Add(new Paragraph($"MONTO TOTAL: RD$ {montoTotal.ToString("N2", cultura)}")
+                    .SetFont(negrita)
+                    .SetFontSize(13)
+                    .SetTextAlignment(TextAlignment.RIGHT)
+                    .SetMarginTop(14));
+            }
+
+            File.WriteAllBytes(ruta, memoria.ToArray());
         }
         // ===============================
         // 🔥 AUTOMÁTICO DIARIO (PRO)
@@ -445,6 +537,8 @@ namespace BLL
             "PAGO_INICIAL" => new DeviceRgb(65, 105, 225),
             "PAGO" => new DeviceRgb(34, 139, 34),
             "REVERSO_PAGO" => new DeviceRgb(255, 140, 0),
+            "REVERSO_PAGO_INICIAL" => new DeviceRgb(255, 140, 0),
+            "EDICION" => new DeviceRgb(72, 61, 139),
             "ANULACION" => new DeviceRgb(105, 105, 105),
             _ => null
         };

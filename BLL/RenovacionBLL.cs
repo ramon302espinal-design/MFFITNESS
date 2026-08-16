@@ -15,7 +15,6 @@ namespace BLL
         private readonly PagoDAL pagoDAL = new PagoDAL();
         private readonly HistorialMembresiaDAL HistorialMembresiaDAL = new HistorialMembresiaDAL();
         private readonly PlanDAL planDAL = new PlanDAL();
-        private readonly MensajeAutomaticoBLL mensajeBLL = new MensajeAutomaticoBLL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
 
         public RenovacionOperacionResult RenovarClienteConResultado(int clienteId, int planId, decimal precio, string usuario)
@@ -75,40 +74,8 @@ namespace BLL
                 new CongelacionDAL().CerrarActiva(conn, tx, clienteId, DateTime.Today);
             });
 
-            // WhatsApp fuera de la transacción SQL (no bloquear el cobro 4-12s).
-            try
-            {
-                var plan = planDAL.ObtenerPlan(planId);
-                DateTime inicio = CORE.TimeZoneHelper.NowDominicanRepublic();
-                DateTime fin = MembresiaHelper.CalcularFechaVencimiento(inicio);
-                string numeroRecibo = result.PagoId > 0
-                    ? $"MF-{result.PagoId}"
-                    : $"MF-{clienteId}-{inicio:yyyyMMddHHmm}";
-
-                System.Threading.Tasks.Task.Run(() =>
-                {
-                    try
-                    {
-                        mensajeBLL.EnviarFacturaMembresia(
-                            clienteId,
-                            plan?.Nombre ?? "Membresia",
-                            precio,
-                            inicio,
-                            fin,
-                            numeroRecibo,
-                            "EFECTIVO",
-                            result.PagoId);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error WhatsApp renovación (bg): {ex.Message}");
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error preparando WhatsApp renovación: {ex.Message}");
-            }
+            // WhatsApp de factura lo dispara la UI (RenovacionMembresiaDialog)
+            // para evitar doble envío y garantizar solo el PDF adjunto.
 
             return result;
         }

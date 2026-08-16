@@ -26,14 +26,16 @@ namespace UI.DISEÑO
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             AppEventos.OnCajaCambiada -= RefrescarEstadoCaja;
+            AppEventos.OnPagoRegistrado -= ActualizarIngresosYBalance;
+            AppEventos.OnDeudaModificada -= ActualizarIngresosYBalance;
             base.OnFormClosed(e);
         }
         private void RefrescarEstadoCaja()
         {
-          
-
             bool cajaAbierta = cajaBLL.ObtenerEstadoCaja();
             ActualizarEstadoCaja(cajaAbierta);
+            // Apertura/cierre: refresco completo (incluye inicial y gastos).
+            ActualizarDashboard();
         }
        
         private void ActualizarEstadoCaja(bool cajaAbierta)
@@ -63,6 +65,10 @@ namespace UI.DISEÑO
             ActualizarEstadoCaja(cajaAbierta);
 
             AppEventos.OnCajaCambiada += RefrescarEstadoCaja;
+            // Edición de deudas / pagos: solo ingresos y balance. El reverso no toca
+            // monto inicial ni el panel de gastos.
+            AppEventos.OnPagoRegistrado += ActualizarIngresosYBalance;
+            AppEventos.OnDeudaModificada += ActualizarIngresosYBalance;
 
             ActualizarDashboard();
         }
@@ -74,6 +80,15 @@ namespace UI.DISEÑO
         {
             try
             {
+                if (IsDisposed || Disposing)
+                    return;
+
+                if (InvokeRequired)
+                {
+                    BeginInvoke(new Action(ActualizarDashboard));
+                    return;
+                }
+
                 lblMontoInicial.Text = cajaBLL.ObtenerMontoInicial().ToString("C");
                 lblIngresosHoy.Text = cajaBLL.IngresosHoy().ToString("C");
                 lblGastosHoy.Text = cajaBLL.EgresosHoy().ToString("C");
@@ -82,6 +97,33 @@ namespace UI.DISEÑO
             catch (Exception ex)
             {
                 MessageBox.Show("Error cargando caja: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Refresco en vivo de panel1 (ingresos) y panelBalance tras un pago o la
+        /// edición de una deuda. No toca panelMontoInicial ni panelGastos: el reverso
+        /// del pago inicial no es un gasto y el fondo de apertura no cambia.
+        /// </summary>
+        private void ActualizarIngresosYBalance()
+        {
+            try
+            {
+                if (IsDisposed || Disposing)
+                    return;
+
+                if (InvokeRequired)
+                {
+                    BeginInvoke(new Action(ActualizarIngresosYBalance));
+                    return;
+                }
+
+                lblIngresosHoy.Text = cajaBLL.IngresosHoy().ToString("C");
+                lblBalance.Text = cajaBLL.BalanceActual().ToString("C");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Error refrescando ingresos/balance: " + ex.Message);
             }
         }
 
@@ -200,6 +242,7 @@ namespace UI.DISEÑO
         {
             FrmRegistrarGasto frm = new FrmRegistrarGasto();
             frm.ShowDialog();
+            // Gasto real: sí actualiza panelGastos (y el resto).
             ActualizarDashboard();
         }
 
@@ -210,6 +253,8 @@ namespace UI.DISEÑO
         {
             FrmMovimientosCaja frm = new FrmMovimientosCaja(this); // ✅
             frm.ShowDialog();
+            // Al volver, relee ingresos/balance por si hubo cambios en otra ventana.
+            ActualizarIngresosYBalance();
         }
 
         // ================================

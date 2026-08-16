@@ -2,6 +2,7 @@
 using BLL;
 using CORE;
 using System;
+using System.Drawing;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using UI.Helpers;
@@ -16,6 +17,8 @@ namespace UI.DISEÑO
         private static readonly Regex VentaProductoIdRegex = new(
             @"Venta de productos\s*\(Id\s*(\d+)\)",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+        private static readonly Color ColorReverso = Color.Firebrick;
 
         private CajaBLL cajaBLL = new CajaBLL();
 
@@ -42,6 +45,9 @@ namespace UI.DISEÑO
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            AppEventos.OnPagoRegistrado -= CargarMovimientos;
+            AppEventos.OnDeudaModificada -= CargarMovimientos;
+            AppEventos.OnCajaCambiada -= CargarMovimientos;
             base.OnFormClosed(e);
         }
 
@@ -49,9 +55,12 @@ namespace UI.DISEÑO
         {
             try
             {
+                if (IsDisposed || Disposing)
+                    return;
+
                 if (InvokeRequired)
                 {
-                    Invoke(new Action(CargarMovimientos));
+                    BeginInvoke(new Action(CargarMovimientos));
                     return;
                 }
 
@@ -88,6 +97,55 @@ namespace UI.DISEÑO
         private void ConfigurarEventos()
         {
             dgvMovimientos.CellDoubleClick += DgvMovimientos_CellDoubleClick;
+            dgvMovimientos.CellFormatting += DgvMovimientos_CellFormatting;
+
+            // Si la ventana sigue abierta (poco habitual como diálogo) se alinea con
+            // pagos, edición de deudas y apertura/cierre de caja.
+            AppEventos.OnPagoRegistrado += CargarMovimientos;
+            AppEventos.OnDeudaModificada += CargarMovimientos;
+            AppEventos.OnCajaCambiada += CargarMovimientos;
+        }
+
+        /// <summary>
+        /// Los egresos de corrección se muestran como REVERSO (en rojo), no como gasto.
+        /// </summary>
+        private void DgvMovimientos_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            DataGridViewRow row = dgvMovimientos.Rows[e.RowIndex];
+            if (row.IsNewRow)
+                return;
+
+            if (!dgvMovimientos.Columns.Contains("Concepto"))
+                return;
+
+            string concepto = row.Cells["Concepto"].Value?.ToString() ?? string.Empty;
+            string metodo = dgvMovimientos.Columns.Contains("MetodoPago")
+                ? row.Cells["MetodoPago"].Value?.ToString() ?? string.Empty
+                : string.Empty;
+
+            if (!CajaConceptoHelper.EsReverso(concepto, metodo))
+                return;
+
+            string columna = dgvMovimientos.Columns[e.ColumnIndex].Name;
+
+            if (string.Equals(columna, "TipoMovimiento", StringComparison.OrdinalIgnoreCase))
+            {
+                e.Value = "REVERSO";
+                e.FormattingApplied = true;
+            }
+
+            DataGridViewCellStyle estilo = e.CellStyle ?? new DataGridViewCellStyle();
+            estilo.ForeColor = ColorReverso;
+            estilo.SelectionForeColor = ColorReverso;
+            if (string.Equals(columna, "TipoMovimiento", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(columna, "Monto", StringComparison.OrdinalIgnoreCase))
+            {
+                estilo.Font = new Font(dgvMovimientos.Font, FontStyle.Bold);
+            }
+            e.CellStyle = estilo;
         }
 
         private void DgvMovimientos_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)

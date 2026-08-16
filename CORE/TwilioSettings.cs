@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 
 namespace CORE
 {
@@ -81,12 +83,12 @@ namespace CORE
         public static int DiasRecordatorioMembresia =>
             int.TryParse(ConfigurationManager.AppSettings["DiasRecordatorioMembresia"], out int dias) && dias > 0
                 ? dias
-                : DiasRecordatorioDeuda;
+                : 10;
 
         public static int DiasRecordatorioMembresiaUrgente =>
             int.TryParse(ConfigurationManager.AppSettings["DiasRecordatorioMembresiaUrgente"], out int dias) && dias >= 0
                 ? dias
-                : 1;
+                : 3;
 
         public static int IntervaloAutomatizacionMinutos =>
             int.TryParse(ConfigurationManager.AppSettings["IntervaloAutomatizacionMinutos"], out int minutos) && minutos > 0
@@ -117,6 +119,30 @@ namespace CORE
             string.IsNullOrWhiteSpace(ConfigurationManager.AppSettings["TwilioContentVariableKey"])
                 ? "1"
                 : ConfigurationManager.AppSettings["TwilioContentVariableKey"]!.Trim();
+
+        /// <summary>
+        /// Plantilla de texto categoria UTILITY para avisos de cuenta
+        /// (desactivacion, vencimientos, deudas). Variables:
+        /// {{1}} miembro, {{2}} asunto, {{3}} detalle, {{4}} fecha.
+        /// Meta bloquea con error 63049 las plantillas categorizadas MARKETING,
+        /// por eso los avisos transaccionales deben ir por esta.
+        /// </summary>
+        public static string ContentSidAvisoUtility =>
+            ConfigurationManager.AppSettings["TwilioContentSidAvisoUtility"]?.Trim() ?? string.Empty;
+
+        /// <summary>
+        /// Candidatos separados por ';': Meta puede tardar o rechazar una redaccion,
+        /// asi que se declara mas de una y el cliente usa la primera aprobada.
+        /// </summary>
+        public static IReadOnlyList<string> ContentSidsAvisoUtility =>
+            ContentSidAvisoUtility
+                .Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(sid => sid.Trim())
+                .Where(sid => sid.Length > 0)
+                .ToArray();
+
+        public static bool UsaPlantillaAvisoUtility =>
+            ContentSidsAvisoUtility.Count > 0;
 
         /// <summary>
         /// Plantilla ContentSid tipo twilio/media (PDF) aprobada en Meta.

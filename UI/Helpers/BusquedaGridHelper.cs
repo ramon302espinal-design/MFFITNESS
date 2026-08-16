@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace UI.Helpers
 {
@@ -96,6 +97,61 @@ namespace UI.Helpers
                    $"OR Convert(PrecioVenta, 'System.String') LIKE {like} " +
                    $"OR Convert(StockActual, 'System.String') LIKE {like} " +
                    $"OR Convert(StockMinimo, 'System.String') LIKE {like}";
+        }
+
+        /// <summary>
+        /// Historial de ventas de productos: multi-token (AND), fechas inteligentes
+        /// (hoy/ayer/dd/MM/yyyy) y coincidencia por cliente, metodo, usuario o producto vendido.
+        /// </summary>
+        public static string ConstruirFiltroHistorialVentasProductos(string termino)
+        {
+            if (string.IsNullOrWhiteSpace(termino))
+                return string.Empty;
+
+            var partes = new List<string>();
+            var rangoCompleto = BusquedaCierreCajaHelper.IntentarResolverFechaInteligente(termino);
+            if (rangoCompleto != null)
+            {
+                if (rangoCompleto.Desde != null)
+                    partes.Add($"Fecha >= #{rangoCompleto.Desde.Value:MM/dd/yyyy}#");
+                if (rangoCompleto.Hasta != null)
+                    partes.Add($"Fecha < #{rangoCompleto.Hasta.Value.AddDays(1):MM/dd/yyyy}#");
+                return string.Join(" AND ", partes);
+            }
+
+            foreach (string tokenBruto in termino.Split(
+                         new[] { ' ', '\t', ',', ';' },
+                         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var rangoToken = BusquedaCierreCajaHelper.IntentarResolverFechaInteligente(tokenBruto);
+                if (rangoToken != null)
+                {
+                    if (rangoToken.Desde != null)
+                        partes.Add($"Fecha >= #{rangoToken.Desde.Value:MM/dd/yyyy}#");
+                    if (rangoToken.Hasta != null)
+                        partes.Add($"Fecha < #{rangoToken.Hasta.Value.AddDays(1):MM/dd/yyyy}#");
+                    continue;
+                }
+
+                string valor = EscaparFiltroDataView(tokenBruto);
+                string like = $"'%{valor}%'";
+                partes.Add(
+                    "(" +
+                    $"Convert(Id, 'System.String') LIKE {like} " +
+                    $"OR Convert(ClienteId, 'System.String') LIKE {like} " +
+                    $"OR Cliente LIKE {like} " +
+                    $"OR Telefono LIKE {like} " +
+                    $"OR Productos LIKE {like} " +
+                    $"OR MetodoPago LIKE {like} " +
+                    $"OR Usuario LIKE {like} " +
+                    $"OR Convert(Total, 'System.String') LIKE {like} " +
+                    $"OR Convert(MontoPagado, 'System.String') LIKE {like} " +
+                    $"OR Convert(Saldo, 'System.String') LIKE {like} " +
+                    $"OR Convert(Fecha, 'System.String') LIKE {like}" +
+                    ")");
+            }
+
+            return partes.Count == 0 ? string.Empty : string.Join(" AND ", partes);
         }
     }
 }

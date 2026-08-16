@@ -157,7 +157,7 @@ namespace UI.Helpers
                         return;
                     }
 
-                    // Capturar datos; PDF/WhatsApp fuera del modal (evita freeze al confirmar).
+                    // Capturar datos; PDF + WhatsApp (solo archivo) fuera del modal.
                     if (result.Payload is RenovacionOperacionResult opRen)
                     {
                         int pagoIdBg = opRen.PagoId;
@@ -166,20 +166,24 @@ namespace UI.Helpers
                         DateTime finBg = opRen.FechaFinMembresia == default
                             ? MembresiaHelper.CalcularFechaVencimiento(DateTime.Now)
                             : opRen.FechaFinMembresia;
+                        DateTime pagoBg = DateTime.Now;
                         string planNombreBg = plan.Nombre ?? "PLAN";
                         decimal precioBg = plan.Precio;
+                        int planIdBg = planId;
+                        const string metodoBg = "Efectivo";
 
                         System.Threading.Tasks.Task.Run(() =>
                         {
                             try
                             {
+                                // 1) PDF + upload (Supabase / host) para que Twilio pueda adjuntarlo.
                                 FacturaMembresiaPdfService.GenerarDesdeOperacion(
                                     owner: null,
                                     clienteId,
                                     planNombreBg,
                                     precioBg,
                                     finBg,
-                                    "Efectivo",
+                                    metodoBg,
                                     new MembresiaOperacionResult
                                     {
                                         MembresiaId = membresiaIdBg,
@@ -188,10 +192,27 @@ namespace UI.Helpers
                                         FechaFinMembresia = finBg
                                     },
                                     abrirPdf: false);
+
+                                // 2) Solo el PDF al WhatsApp del cliente (sin texto adicional).
+                                if (pagoIdBg > 0)
+                                {
+                                    string? wa = new MembresiaBLL().EnviarWhatsAppTrasPagoMembresia(
+                                        clienteId,
+                                        planIdBg,
+                                        precioBg,
+                                        pagoBg,
+                                        finBg,
+                                        metodoBg,
+                                        pagoIdBg);
+
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[WhatsApp renovación] {wa ?? "(sin detalle)"}");
+                                }
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"[PDF renovación] {ex.Message}");
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[PDF/WhatsApp renovación] {ex.Message}");
                             }
                         });
                     }
@@ -240,7 +261,9 @@ namespace UI.Helpers
             DataView dv = planes.DefaultView;
             try
             {
-                dv.RowFilter = "Nombre IN ('PREMIUM', 'PRO', '3x', 'MENSUALIDAD')";
+                // Todos los planes reales de Planes; solo se excluye el pseudo-plan de
+                // producto a crédito. Así un plan nuevo (M-A) es renovable sin tocar código.
+                dv.RowFilter = "Nombre <> 'PRODUCTO A CRÉDITO'";
                 DataTable filtrada = dv.ToTable();
                 return filtrada.Rows.Count > 0 ? filtrada : planes.Copy();
             }

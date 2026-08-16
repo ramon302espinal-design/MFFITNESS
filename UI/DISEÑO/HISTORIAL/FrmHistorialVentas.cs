@@ -22,6 +22,7 @@ namespace UI.DISEÑO
         private readonly VentasBLL ventasBLL = new VentasBLL();
         private readonly HistorialMembresiaBLL historialBLL = new HistorialMembresiaBLL();
         private readonly BindingSource _bsHistorialMembresia = new BindingSource();
+        private readonly BindingSource _bsVentasProductos = new BindingSource();
 
         public FrmHistorialVentas(Form frm)
         {
@@ -200,6 +201,10 @@ namespace UI.DISEÑO
                 return false;
 
             tabControl1.SelectedTab = tabProductos;
+
+            // Quitar filtro para garantizar que la venta exista en la vista.
+            if (txtBuscarProductos != null && !string.IsNullOrWhiteSpace(txtBuscarProductos.Text))
+                txtBuscarProductos.Clear();
 
             if (!dgvVentasProductos.Columns.Contains("Id"))
                 return false;
@@ -391,13 +396,107 @@ namespace UI.DISEÑO
 
         private void CargarVentas()
         {
-            dgvVentasProductos.DataSource = ventasBLL.ListarVentas();
+            string filtroActual = txtBuscarProductos?.Text?.Trim() ?? string.Empty;
+
+            _bsVentasProductos.DataSource = ventasBLL.ListarVentas();
+            dgvVentasProductos.DataSource = _bsVentasProductos;
+
+            ConfigurarColumnasVentasProductos();
+
+            if (!string.IsNullOrEmpty(filtroActual) && txtBuscarProductos != null)
+                txtBuscarProductos.Text = filtroActual;
+
+            AplicarFiltroBusquedaProductos();
+            dgvVentasProductos.ClearSelection();
+            dgvDetalleProductos.DataSource = null;
+        }
+
+        private void txtBuscarProductos_TextChanged(object? sender, EventArgs e)
+        {
+            AplicarFiltroBusquedaProductos();
+        }
+
+        private void AplicarFiltroBusquedaProductos()
+        {
+            if (_bsVentasProductos.DataSource == null)
+                return;
+
+            var termino = txtBuscarProductos?.Text?.Trim() ?? string.Empty;
+            try
+            {
+                string filtro = BusquedaGridHelper.ConstruirFiltroHistorialVentasProductos(termino);
+                _bsVentasProductos.Filter = string.IsNullOrEmpty(filtro) ? null : filtro;
+
+                if (_bsVentasProductos.Count == 1 && dgvVentasProductos.Rows.Count > 0)
+                {
+                    dgvVentasProductos.ClearSelection();
+                    dgvVentasProductos.Rows[0].Selected = true;
+                    var celda = ObtenerPrimeraCeldaVisible(dgvVentasProductos.Rows[0]);
+                    if (celda != null)
+                        dgvVentasProductos.CurrentCell = celda;
+                }
+                else if (_bsVentasProductos.Count == 0)
+                {
+                    dgvDetalleProductos.DataSource = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Filtro historial ventas productos: {ex.Message}");
+                _bsVentasProductos.RemoveFilter();
+            }
+        }
+
+        private void ConfigurarColumnasVentasProductos()
+        {
+            if (dgvVentasProductos.Columns.Count == 0)
+                return;
+
+            DataGridViewHelper.HideColumn(dgvVentasProductos, "ClienteId");
+            DataGridViewHelper.HideColumn(dgvVentasProductos, "Telefono");
+
+            if (dgvVentasProductos.Columns["Productos"] is DataGridViewColumn colProd)
+            {
+                colProd.HeaderText = "Productos";
+                colProd.DisplayIndex = 2;
+            }
+
+            if (dgvVentasProductos.Columns["Fecha"] is DataGridViewColumn colFecha)
+            {
+                colFecha.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
+                colFecha.HeaderText = "Fecha";
+            }
+
+            foreach (var nombre in new[] { "Total", "MontoPagado", "Saldo" })
+            {
+                if (dgvVentasProductos.Columns[nombre] is DataGridViewColumn colMonto)
+                {
+                    colMonto.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
+                    colMonto.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+            }
+
+            if (dgvVentasProductos.Columns["MontoPagado"] != null)
+                dgvVentasProductos.Columns["MontoPagado"]!.HeaderText = "Pagado";
+            if (dgvVentasProductos.Columns["MetodoPago"] != null)
+                dgvVentasProductos.Columns["MetodoPago"]!.HeaderText = "Método";
+            if (dgvVentasProductos.Columns["Usuario"] != null)
+                dgvVentasProductos.Columns["Usuario"]!.HeaderText = "Atendió";
+
+            dgvVentasProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvVentasProductos.ReadOnly = true;
+            dgvVentasProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvVentasProductos.RowHeadersVisible = false;
         }
 
         private void dgvVentasProductos_SelectionChanged(object sender, EventArgs e)
         {
             var val = dgvVentasProductos.CurrentRow?.Cells["Id"]?.Value;
-            if (val == null) return;
+            if (val == null || val == DBNull.Value)
+            {
+                dgvDetalleProductos.DataSource = null;
+                return;
+            }
 
             int ventaId = Convert.ToInt32(val);
             dgvDetalleProductos.DataSource = ventasBLL.ListarDetalleVenta(ventaId);

@@ -158,6 +158,12 @@
 		<Compile Update="DISEÑO\DEUDAS\FrmPagarDeudas.cs">
 			<SubType>Form</SubType>
 		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmEditarDeuda.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmEditarDeuda.Designer.cs">
+			<DependentUpon>FrmEditarDeuda.cs</DependentUpon>
+		</Compile>
 		<Compile Update="DISEÑO\DEUDAS\FrmHistorialDeudas.cs">
 			<SubType>Form</SubType>
 		</Compile>

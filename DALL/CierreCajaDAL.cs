@@ -8,14 +8,41 @@ namespace DL
     {
         private readonly DBHelper db = new DBHelper();
 
+        /// <summary>
+        /// Totales de la caja abierta alineados con los paneles:
+        /// INGRESO = ingresos vigentes (sin los ya reversados);
+        /// EGRESO = solo gastos operativos (sin movimientos de reverso).
+        /// </summary>
         public decimal ObtenerTotalPorCaja(int cajaId, string tipo)
         {
-            string query = @"SELECT ISNULL(SUM(Monto),0) FROM DetalleCaja 
-                             WHERE CajaId = @CajaId AND TipoMovimiento = @Tipo";
+            string tipoNorm = (tipo ?? string.Empty).Trim().ToUpperInvariant();
 
-            SqlParameter[] p = {
-                new SqlParameter("@CajaId", cajaId),
-                new SqlParameter("@Tipo", tipo)
+            string query = tipoNorm == "INGRESO"
+                ? @"
+            SELECT ISNULL(SUM(dc.Monto), 0)
+            FROM DetalleCaja dc
+            WHERE dc.CajaId = @CajaId
+              AND dc.TipoMovimiento = 'INGRESO'
+              AND dc.Concepto NOT LIKE 'REVERSO (Ref #%'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM DetalleCaja rev
+                  WHERE rev.CajaId = dc.CajaId
+                    AND rev.TipoMovimiento = 'EGRESO'
+                    AND rev.Concepto LIKE CONCAT('REVERSO (Ref #', dc.Id, '):%')
+              )"
+                : @"
+            SELECT ISNULL(SUM(dc.Monto), 0)
+            FROM DetalleCaja dc
+            WHERE dc.CajaId = @CajaId
+              AND dc.TipoMovimiento = 'EGRESO'
+              AND ISNULL(dc.MetodoPago, '') <> 'REVERSO'
+              AND dc.Concepto NOT LIKE 'REVERSO%'
+              AND dc.Concepto NOT LIKE 'Reverso%'";
+
+            SqlParameter[] p =
+            {
+                new SqlParameter("@CajaId", cajaId)
             };
 
             return Convert.ToDecimal(db.ExecuteScalar(query, p));
@@ -101,11 +128,32 @@ namespace DL
 
         public decimal ObtenerTotalPorTipoMovimientoHoy(string tipoMovimiento)
         {
-            string query = @"SELECT ISNULL(SUM(Monto),0) FROM DetalleCaja
-                             WHERE TipoMovimiento = @TipoMovimiento
-                             AND CAST(Fecha AS DATE) = CAST(GETDATE() AS DATE)";
-            SqlParameter[] p = { new SqlParameter("@TipoMovimiento", tipoMovimiento) };
-            return Convert.ToDecimal(db.ExecuteScalar(query, p));
+            string tipoNorm = (tipoMovimiento ?? string.Empty).Trim().ToUpperInvariant();
+
+            string query = tipoNorm == "INGRESO"
+                ? @"
+            SELECT ISNULL(SUM(dc.Monto), 0)
+            FROM DetalleCaja dc
+            WHERE dc.TipoMovimiento = 'INGRESO'
+              AND CAST(dc.Fecha AS DATE) = CAST(GETDATE() AS DATE)
+              AND dc.Concepto NOT LIKE 'REVERSO (Ref #%'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM DetalleCaja rev
+                  WHERE rev.CajaId = dc.CajaId
+                    AND rev.TipoMovimiento = 'EGRESO'
+                    AND rev.Concepto LIKE CONCAT('REVERSO (Ref #', dc.Id, '):%')
+              )"
+                : @"
+            SELECT ISNULL(SUM(dc.Monto), 0)
+            FROM DetalleCaja dc
+            WHERE dc.TipoMovimiento = 'EGRESO'
+              AND CAST(dc.Fecha AS DATE) = CAST(GETDATE() AS DATE)
+              AND ISNULL(dc.MetodoPago, '') <> 'REVERSO'
+              AND dc.Concepto NOT LIKE 'REVERSO%'
+              AND dc.Concepto NOT LIKE 'Reverso%'";
+
+            return Convert.ToDecimal(db.ExecuteScalar(query));
         }
     }
 }

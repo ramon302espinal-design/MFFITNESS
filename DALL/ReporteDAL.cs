@@ -76,7 +76,12 @@ namespace DL
                 string query = @"
 SELECT
     dc.Fecha,
-    dc.TipoMovimiento AS [Tipo],
+    CASE
+        WHEN UPPER(LTRIM(RTRIM(ISNULL(dc.MetodoPago, '')))) = 'REVERSO'
+          OR UPPER(LTRIM(RTRIM(ISNULL(dc.Concepto, '')))) LIKE 'REVERSO%'
+            THEN 'REVERSO'
+        ELSE dc.TipoMovimiento
+    END AS [Tipo],
     CASE
         WHEN productos.DetalleProductos IS NOT NULL
             THEN productos.DetalleProductos

@@ -28,6 +28,7 @@ namespace UI
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             btnPagar = new Button();
             dgvDeudas = new DataGridView();
@@ -39,7 +40,10 @@ namespace UI
             lblBuscar = new Label();
             txtBuscar = new TextBox();
             lblDebe = new Label();
+            cmsDeudas = new ContextMenuStrip(components);
+            miEditarDeuda = new ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)dgvDeudas).BeginInit();
+            cmsDeudas.SuspendLayout();
             SuspendLayout();
             // 
             // btnPagar
@@ -79,6 +83,7 @@ namespace UI
             dgvDeudas.TabIndex = 1;
             dgvDeudas.CellDoubleClick += dgvDeudas_CellDoubleClick;
             dgvDeudas.CellFormatting += dgvDeudas_CellFormatting;
+            dgvDeudas.CellMouseDown += dgvDeudas_CellMouseDown;
             // 
             // btnNuevaDeuda
             // 
@@ -176,6 +181,20 @@ namespace UI
             lblDebe.TabIndex = 11;
             lblDebe.Visible = false;
             // 
+            // cmsDeudas
+            // 
+            cmsDeudas.ImageScalingSize = new Size(20, 20);
+            cmsDeudas.Items.AddRange(new ToolStripItem[] { miEditarDeuda });
+            cmsDeudas.Name = "cmsDeudas";
+            cmsDeudas.Size = new Size(181, 28);
+            // 
+            // miEditarDeuda
+            // 
+            miEditarDeuda.Name = "miEditarDeuda";
+            miEditarDeuda.Size = new Size(180, 24);
+            miEditarDeuda.Text = "Editar deuda";
+            miEditarDeuda.Click += miEditarDeuda_Click;
+            // 
             // FrmDeudas
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -196,6 +215,7 @@ namespace UI
             WindowState = FormWindowState.Maximized;
             Load += FrmDeudas_Load;
             ((System.ComponentModel.ISupportInitialize)dgvDeudas).EndInit();
+            cmsDeudas.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -212,5 +232,7 @@ namespace UI
         private Label lblBuscar;
         private TextBox txtBuscar;
         private Label lblDebe;
+        private ContextMenuStrip cmsDeudas;
+        private ToolStripMenuItem miEditarDeuda;
     }
 }

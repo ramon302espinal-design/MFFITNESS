@@ -24,9 +24,9 @@ namespace DL
                             -- Desactivado: no reflejar plan aunque quede membresía histórica en BD.
                             WHEN m.Id IS NULL THEN NULL
                             WHEN {MembresiaEstadoSql.ExpresionUltimaSalida} THEN NULL
-                            WHEN UPPER(LTRIM(RTRIM(ISNULL(p.Nombre, '')))) IN ('PREMIUM', 'PRO', 'MENSUALIDAD', '3X')
-                                THEN p.Nombre
-                            ELSE NULL
+                            -- Cualquier plan registrado en Planes (no se listan nombres a mano:
+                            -- un plan nuevo como M-A debe reflejarse sin tocar código).
+                            ELSE NULLIF(LTRIM(RTRIM(ISNULL(p.Nombre, ''))), '')
                         END,
                         'SIN MEMBRESIA') AS Membresia,
                     m.FechaInicio,

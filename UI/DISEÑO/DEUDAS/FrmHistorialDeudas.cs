@@ -69,7 +69,8 @@ namespace UI
             cmbTipo.Items.Clear();
             cmbTipo.Items.AddRange(new string[]
             {
-                "Todos", "DEUDA", "PAGO_INICIAL", "PAGO", "REVERSO_PAGO", "ANULACION"
+                "Todos", "DEUDA", "PAGO_INICIAL", "REVERSO_PAGO_INICIAL", "PAGO",
+                "REVERSO_PAGO", "EDICION", "ANULACION"
             });
             cmbTipo.SelectedIndex = 0;
 
@@ -142,16 +143,24 @@ namespace UI
             if (!dt.Columns.Contains("AporteInicial"))
                 dt.Columns.Add("AporteInicial", typeof(string));
 
+            // Pago inicial vigente por deuda: lo aportado menos lo reversado en ediciones.
             var pagosInicialesPorDeuda = new Dictionary<int, decimal>();
             if (dt.Columns.Contains("DeudaId"))
             {
                 foreach (DataRow row in dt.Rows)
                 {
-                    if (row["Tipo"]?.ToString() != "PAGO_INICIAL" || row["DeudaId"] == DBNull.Value)
+                    string tipoFila = row["Tipo"]?.ToString() ?? string.Empty;
+                    bool esInicial = tipoFila == "PAGO_INICIAL";
+                    bool esReverso = tipoFila == "REVERSO_PAGO_INICIAL";
+
+                    if ((!esInicial && !esReverso) || row["DeudaId"] == DBNull.Value)
                         continue;
 
                     int deudaId = Convert.ToInt32(row["DeudaId"]);
-                    pagosInicialesPorDeuda[deudaId] = Convert.ToDecimal(row["Monto"]);
+                    decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
+
+                    pagosInicialesPorDeuda.TryGetValue(deudaId, out decimal acumulado);
+                    pagosInicialesPorDeuda[deudaId] = esInicial ? acumulado + monto : acumulado - monto;
                 }
             }
 
@@ -162,6 +171,12 @@ namespace UI
                 if (tipo == "PAGO_INICIAL")
                 {
                     row["AporteInicial"] = $"Sí ({Convert.ToDecimal(row["Monto"]):N2})";
+                    continue;
+                }
+
+                if (tipo == "REVERSO_PAGO_INICIAL")
+                {
+                    row["AporteInicial"] = $"Reverso (-{Convert.ToDecimal(row["Monto"]):N2})";
                     continue;
                 }
 
@@ -185,7 +200,8 @@ namespace UI
 
                 if (dt.Columns.Contains("DeudaId") &&
                     row["DeudaId"] != DBNull.Value &&
-                    pagosInicialesPorDeuda.TryGetValue(Convert.ToInt32(row["DeudaId"]), out decimal montoInicial))
+                    pagosInicialesPorDeuda.TryGetValue(Convert.ToInt32(row["DeudaId"]), out decimal montoInicial) &&
+                    montoInicial > 0m)
                 {
                     row["AporteInicial"] = $"Sí ({montoInicial:N2})";
                     continue;
@@ -330,7 +346,7 @@ namespace UI
                     totalDeudas += monto;
                 else if (tipo == "PAGO" || tipo == "PAGO_INICIAL")
                     totalPagos += monto;
-                else if (tipo == "REVERSO_PAGO")
+                else if (tipo == "REVERSO_PAGO" || tipo == "REVERSO_PAGO_INICIAL")
                     totalPagos -= monto; // pago devuelto: deja de contar como cobrado
             }
 
@@ -414,7 +430,11 @@ namespace UI
                     color = Color.ForestGreen;
                     return true;
                 case "REVERSO_PAGO":
+                case "REVERSO_PAGO_INICIAL":
                     color = Color.DarkOrange;
+                    return true;
+                case "EDICION":
+                    color = Color.DarkSlateBlue;
                     return true;
                 case "ANULACION":
                     color = Color.DimGray;

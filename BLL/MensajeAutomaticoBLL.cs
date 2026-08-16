@@ -15,6 +15,12 @@ namespace BLL
         private readonly DeudaDAL deudaDAL = new DeudaDAL();
         private readonly WhatsAppTwilioClient twilioClient = new WhatsAppTwilioClient();
 
+        /// <summary>Margen para que Meta reporte el rechazo tras el "sent" inicial.</summary>
+        private const int SegundosVerificacionEntrega = 25;
+
+        /// <summary>Financiamientos que se listan uno a uno en el estado de cuenta.</summary>
+        private const int MaxFinanciamientosDetallados = 6;
+
         /// <summary>Detalle del ultimo intento Twilio (para mostrar en UI tras cobrar).</summary>
         public string? UltimoDetalleEnvio { get; private set; }
 
@@ -44,11 +50,13 @@ namespace BLL
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"WhatsApp: cliente {clienteId} sin telefono valido para {tipoPlantilla}.");
-                    UltimoDetalleEnvio = "Cliente sin telefono valido.";
+                    UltimoDetalleEnvio =
+                        "Cliente sin telefono valido (revise el numero en la ficha del miembro).";
                     return false;
                 }
 
                 variables["CLIENTE"] = nombreCliente;
+                variables["ASUNTO"] = AsuntoPorTipo(tipoPlantilla);
 
                 string plantilla = dal.ObtenerPlantilla(tipoPlantilla);
                 // cuerpoTwilioOverride == "" es valido (factura solo PDF, sin texto).
@@ -101,9 +109,7 @@ namespace BLL
                     return false;
                 }
 
-                // Aceptado por Twilio (SID) cuenta como enviado: no disparar segundo aviso de respaldo.
-                bool ok = resultado.Entregado
-                          || !string.IsNullOrWhiteSpace(resultado.MessageSid);
+                bool ok = resultado.Entregado;
 
                 dal.ActualizarEstadoMensaje(
                     mensajeId,
@@ -112,6 +118,9 @@ namespace BLL
 
                 if (!ok)
                     dal.IncrementarIntentos(mensajeId);
+
+                // Meta puede rechazar despues de "sent": confirmar el estado real mas tarde.
+                ProgramarVerificacionEntrega(mensajeId, resultado.MessageSid);
 
                 return ok;
             }
@@ -178,10 +187,23 @@ namespace BLL
                 }
             }
 
-            // Reconstruir mediaUrl despues de generar PDF (PublicBaseUrl ya validado).
-            mediaUrl = pagoId.HasValue
-                ? FacturaStorage.ConstruirMediaUrlPublica(pagoId.Value)
-                : null;
+            // El PDF puede existir en disco sin estar publicado (subida previa fallida):
+            // se verifica/republica antes de enviar para que Twilio pueda descargarlo.
+            if (pagoId.HasValue && pagoId.Value > 0 && SupabaseSettings.Configurado)
+                mediaUrl = Facturas.FacturaSupabaseUploader.AsegurarPublicada(pagoId.Value);
+            else
+                mediaUrl = pagoId.HasValue
+                    ? FacturaStorage.ConstruirMediaUrlPublica(pagoId.Value)
+                    : null;
+
+            // Solo archivo PDF: sin URL pública no se envía nada (ni texto de respaldo).
+            if (string.IsNullOrWhiteSpace(mediaUrl))
+            {
+                UltimoDetalleEnvio =
+                    "No se pudo publicar la factura PDF (Supabase/PublicBaseUrl). WhatsApp no enviado.";
+                System.Diagnostics.Debug.WriteLine($"FACTURA_MEMBRESIA: {UltimoDetalleEnvio}");
+                return UltimoDetalleEnvio;
+            }
 
             // Solo arrancar media local si NO usamos Supabase Storage.
             if (!SupabaseSettings.Configurado)
@@ -225,13 +247,22 @@ namespace BLL
                    ?? (enviado ? "WhatsApp: PDF enviado." : "WhatsApp: PDF no entregado.");
         }
 
-        public void EnviarMensajeVencimientoProximo(int clienteId, DateTime fechaVencimiento, int? membresiaId = null)
+        public bool EnviarMensajeVencimientoProximo(
+            int clienteId,
+            DateTime fechaVencimiento,
+            int diasRestantes,
+            string nombrePlan,
+            int? membresiaId = null)
         {
+            // Un envio por dia y por membresia: a los 10 dias y a los 3 dias
+            // (misma plantilla, distinto DIAS_RESTANTES) salen en dias distintos.
             if (dal.NotificacionYaEnviada(clienteId, "VENCIMIENTO_PROXIMO", membresiaId))
-                return;
+                return false;
 
-            EnviarMensajeTemplado(clienteId, "VENCIMIENTO_PROXIMO", new Dictionary<string, string>
+            return EnviarMensajeTemplado(clienteId, "VENCIMIENTO_PROXIMO", new Dictionary<string, string>
             {
+                ["PLAN"] = string.IsNullOrWhiteSpace(nombrePlan) ? "Membresia" : nombrePlan,
+                ["DIAS_RESTANTES"] = diasRestantes.ToString(),
                 ["FECHA_VENCE"] = fechaVencimiento.ToString("dd/MM/yyyy"),
                 ["FECHA_VENCE_COMPLETA"] = fechaVencimiento.ToString(
                     "dddd, dd MMMM yyyy",
@@ -242,7 +273,7 @@ namespace BLL
         public bool EnviarMensajeVencimientoHoy(int clienteId, DateTime fechaVencimiento, string nombrePlan, int? membresiaId = null)
         {
             if (dal.NotificacionYaEnviada(clienteId, "VENCIMIENTO_HOY", membresiaId))
-                return true;
+                return false;
 
             return EnviarMensajeTemplado(clienteId, "VENCIMIENTO_HOY", new Dictionary<string, string>
             {
@@ -254,17 +285,61 @@ namespace BLL
             }, membresiaId);
         }
 
+        /// <summary>
+        /// Aviso diario mientras la membresia siga vencida y activa:
+        /// pide saldar la deuda pendiente (o renovar si no hay financiamiento).
+        /// </summary>
         public bool EnviarMensajeMembresiaVencida(int clienteId, DateTime fechaVencimiento, string nombrePlan, int? membresiaId = null)
         {
             if (dal.NotificacionYaEnviada(clienteId, "MEMBRESIA_VENCIDA", membresiaId))
-                return true;
+                return false;
+
+            var (motivo, saldo, detalleDeuda) = ConstruirMotivoDeudaPendiente(clienteId);
 
             return EnviarMensajeTemplado(clienteId, "MEMBRESIA_VENCIDA", new Dictionary<string, string>
             {
                 ["PLAN"] = nombrePlan,
                 ["FECHA_VENCE"] = fechaVencimiento.ToString("dd/MM/yyyy"),
-                ["MOTIVO"] = "Membresia vencida por fecha"
+                ["MOTIVO"] = motivo,
+                ["SALDO"] = FormatearMonto(saldo),
+                ["DETALLE_DEUDA"] = detalleDeuda
             }, membresiaId);
+        }
+
+        /// <summary>
+        /// Motivo del aviso diario: si hay financiamientos pendientes, pedirle
+        /// que los salde; si no, que renueve la membresia vencida.
+        /// </summary>
+        private (string Motivo, decimal Saldo, string Detalle) ConstruirMotivoDeudaPendiente(int clienteId)
+        {
+            DataTable deudas = deudaDAL.ObtenerResumenDeudasCliente(clienteId);
+            if (deudas == null || deudas.Rows.Count == 0)
+            {
+                return (
+                    "Tu membresia esta vencida. Renueva o salda el pago pendiente en recepcion para recuperar el acceso.",
+                    0m,
+                    "Sin financiamientos registrados.");
+            }
+
+            decimal total = 0m;
+            var detalle = new System.Text.StringBuilder();
+            int n = 0;
+
+            foreach (DataRow row in deudas.Rows)
+            {
+                n++;
+                decimal saldo = LeerDecimal(row, "Saldo");
+                total += saldo;
+                string concepto = (row["Concepto"]?.ToString() ?? "Financiamiento").Trim();
+                DateTime vence = LeerFecha(row, "FechaVencimiento");
+                detalle.AppendLine($"{n}) {concepto} - saldo {FormatearMonto(saldo)} - vence {vence:dd/MM/yyyy}.");
+            }
+
+            string motivo = n == 1
+                ? $"Tu membresia esta vencida. Debes saldar tu deuda pendiente de {FormatearMonto(total)} para reactivar el acceso."
+                : $"Tu membresia esta vencida. Debes saldar tus {n} deudas pendientes (total {FormatearMonto(total)}) para reactivar el acceso.";
+
+            return (motivo, total, detalle.ToString().TrimEnd());
         }
 
         public bool EnviarMensajeDesactivacion(int clienteId, string motivo)
@@ -376,6 +451,99 @@ namespace BLL
             }, deudaId);
         }
 
+        /// <summary>
+        /// Estado de cuenta completo: un solo mensaje con todos los financiamientos
+        /// pendientes del miembro (membresia y producto a credito), cada uno con la
+        /// fecha en que se pactó y su fecha límite.
+        /// </summary>
+        public bool EnviarResumenDeudasCliente(int clienteId)
+        {
+            UltimoDetalleEnvio = null;
+
+            DataTable deudas = deudaDAL.ObtenerResumenDeudasCliente(clienteId);
+            if (deudas == null || deudas.Rows.Count == 0)
+            {
+                UltimoDetalleEnvio = "El miembro no tiene financiamientos pendientes.";
+                return false;
+            }
+
+            var detalle = new System.Text.StringBuilder();
+            decimal total = 0m;
+            DateTime? proximoVencimiento = null;
+            int numero = 0;
+
+            foreach (DataRow row in deudas.Rows)
+            {
+                numero++;
+                decimal saldo = LeerDecimal(row, "Saldo");
+                total += saldo;
+
+                DateTime vence = LeerFecha(row, "FechaVencimiento");
+                if (proximoVencimiento == null || vence < proximoVencimiento.Value)
+                    proximoVencimiento = vence;
+
+                // El cuerpo de la plantilla Twilio se recorta a 900 caracteres:
+                // se listan los primeros y el resto se resume para no cortar a medias.
+                if (numero <= MaxFinanciamientosDetallados)
+                    detalle.AppendLine(DescribirFinanciamiento(numero, row, saldo, vence));
+            }
+
+            int restantes = numero - MaxFinanciamientosDetallados;
+            if (restantes > 0)
+            {
+                detalle.AppendLine(restantes == 1
+                    ? "Y 1 financiamiento mas pendiente."
+                    : $"Y {restantes} financiamientos mas pendientes.");
+            }
+
+            return EnviarMensajeTemplado(clienteId, "RESUMEN_DEUDAS", new Dictionary<string, string>
+            {
+                ["DETALLE"] = detalle.ToString().TrimEnd(),
+                ["TOTAL"] = FormatearMonto(total),
+                ["CANTIDAD"] = numero == 1 ? "1 financiamiento" : $"{numero} financiamientos",
+                ["PROXIMO_VENCIMIENTO"] = proximoVencimiento?.ToString("dd/MM/yyyy") ?? "Sin fecha"
+            });
+        }
+
+        /// <summary>
+        /// Una linea por financiamiento: que se financio, cuando y cuanto queda.
+        /// </summary>
+        private static string DescribirFinanciamiento(
+            int numero,
+            DataRow row,
+            decimal saldo,
+            DateTime vence)
+        {
+            string concepto = (row["Concepto"]?.ToString() ?? string.Empty).Trim();
+            string plan = row.Table.Columns.Contains("Plan")
+                ? (row["Plan"]?.ToString() ?? string.Empty).Trim()
+                : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(concepto))
+                concepto = string.IsNullOrWhiteSpace(plan) ? "Financiamiento" : $"Plan {plan}";
+            else if (!string.IsNullOrWhiteSpace(plan)
+                     && concepto.IndexOf(plan, StringComparison.OrdinalIgnoreCase) < 0)
+                concepto = $"{concepto} (Plan {plan})";
+
+            DateTime financiado = LeerFecha(row, "FechaCreacion");
+            decimal montoTotal = LeerDecimal(row, "MontoTotal");
+            decimal pagado = LeerDecimal(row, "MontoPagado");
+
+            return $"{numero}) {concepto} - financiado el {financiado:dd/MM/yyyy} - "
+                 + $"vence el {vence:dd/MM/yyyy} - total {FormatearMonto(montoTotal)}, "
+                 + $"pagado {FormatearMonto(pagado)}, saldo {FormatearMonto(saldo)}.";
+        }
+
+        private static decimal LeerDecimal(DataRow row, string columna) =>
+            row.Table.Columns.Contains(columna) && row[columna] != DBNull.Value
+                ? Convert.ToDecimal(row[columna])
+                : 0m;
+
+        private static DateTime LeerFecha(DataRow row, string columna) =>
+            row.Table.Columns.Contains(columna) && row[columna] != DBNull.Value
+                ? Convert.ToDateTime(row[columna])
+                : DateTime.Today;
+
         public bool EnviarNotificacionPagoDeudaRecibido(int clienteId, decimal montoPago, decimal saldoRestante, int? deudaId = null)
         {
             return EnviarMensajeTemplado(clienteId, "PAGO_DEUDA_RECIBIDO", new Dictionary<string, string>
@@ -433,6 +601,11 @@ namespace BLL
                     continue;
 
                 if (EsErrorPermanente(respuestaAnterior))
+                    continue;
+
+                // La factura necesita el PDF adjunto: reenviarla como texto plano
+                // dejaria al miembro un mensaje sin comprobante.
+                if (string.Equals(tipo, "FACTURA_MEMBRESIA", StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 string mensajeTwilio = WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(mensaje, null);
@@ -536,41 +709,40 @@ namespace BLL
         public int VerificarMembresiasPorVencer()
         {
             int enviados = 0;
-            int diasAntes = TwilioSettings.DiasRecordatorioMembresia;
-            var membresias = dal.ObtenerMembresiasPorVencer(diasAntes);
 
-            foreach (DataRow row in membresias.Rows)
+            // Ambos ciclos (pago el 15 y pago a fin de mes) se cubren con FechaFin:
+            // el aviso sale exactamente N dias antes de la fecha real de vencimiento.
+            foreach (int diasAntes in DiasRecordatorioMembresiaActivos())
             {
-                int clienteId = Convert.ToInt32(row["ClienteId"]);
-                int membresiaId = Convert.ToInt32(row["MembresiaId"]);
-                DateTime fechaFin = Convert.ToDateTime(row["FechaFin"]);
-
-                if (dal.NotificacionYaEnviada(clienteId, "VENCIMIENTO_PROXIMO", membresiaId))
-                    continue;
-
-                EnviarMensajeVencimientoProximo(clienteId, fechaFin, membresiaId);
-                enviados++;
-            }
-
-            int diasUrgente = TwilioSettings.DiasRecordatorioMembresiaUrgente;
-            if (diasUrgente > 0 && diasUrgente != diasAntes)
-            {
-                var urgentes = dal.ObtenerMembresiasPorVencer(diasUrgente);
-                foreach (DataRow row in urgentes.Rows)
+                var membresias = dal.ObtenerMembresiasPorVencer(diasAntes);
+                foreach (DataRow row in membresias.Rows)
                 {
                     int clienteId = Convert.ToInt32(row["ClienteId"]);
                     int membresiaId = Convert.ToInt32(row["MembresiaId"]);
                     DateTime fechaFin = Convert.ToDateTime(row["FechaFin"]);
+                    string plan = row["Plan"]?.ToString() ?? "Membresia";
 
-                    if (dal.NotificacionYaEnviada(clienteId, "VENCIMIENTO_PROXIMO", membresiaId))
-                        continue;
-
-                    EnviarMensajeVencimientoProximo(clienteId, fechaFin, membresiaId);
-                    enviados++;
+                    if (EnviarMensajeVencimientoProximo(clienteId, fechaFin, diasAntes, plan, membresiaId))
+                        enviados++;
                 }
             }
 
             return enviados;
+        }
+
+        /// <summary>Dias configurados para el aviso previo (p. ej. 10 y 3), sin duplicados.</summary>
+        private static IEnumerable<int> DiasRecordatorioMembresiaActivos()
+        {
+            var vistos = new HashSet<int>();
+            foreach (int dias in new[]
+            {
+                TwilioSettings.DiasRecordatorioMembresia,
+                TwilioSettings.DiasRecordatorioMembresiaUrgente
+            })
+            {
+                if (dias > 0 && vistos.Add(dias))
+                    yield return dias;
+            }
         }
 
         public int VerificarMembresiasVencenHoy()
@@ -592,6 +764,10 @@ namespace BLL
             return enviados;
         }
 
+        /// <summary>
+        /// Cada dia, mientras la membresia siga vencida y sin salida registrada,
+        /// se reenvia el aviso pidiendo saldar la deuda / renovar.
+        /// </summary>
         public int VerificarMembresiasRecienVencidas()
         {
             int enviados = 0;
@@ -648,7 +824,26 @@ namespace BLL
 
             nombreCliente = cliente["Nombre"]?.ToString() ?? "Cliente";
             numeroTelefono = NormalizarTelefono(cliente["Telefono"]?.ToString());
-            return !string.IsNullOrWhiteSpace(numeroTelefono);
+            return EsTelefonoValido(numeroTelefono);
+        }
+
+        /// <summary>
+        /// Un numero incompleto llega a Twilio y vuelve como error 63024 tras gastar el envio.
+        /// E.164 admite de 8 a 15 digitos; un movil real nunca baja de 10.
+        /// </summary>
+        public static bool EsTelefonoValido(string? numeroE164)
+        {
+            if (string.IsNullOrWhiteSpace(numeroE164) || !numeroE164.StartsWith('+'))
+                return false;
+
+            string digitos = numeroE164[1..];
+            foreach (char c in digitos)
+            {
+                if (!char.IsDigit(c))
+                    return false;
+            }
+
+            return digitos.Length is >= 10 and <= 15;
         }
 
         public static string NormalizarTelefono(string? telefono)
@@ -672,6 +867,74 @@ namespace BLL
 
             return "+" + telefono;
         }
+
+        /// <summary>
+        /// Reconsulta el estado real en Twilio y corrige el registro.
+        /// Sin esto, un rechazo posterior de Meta (63016 / 63049 / 63019)
+        /// quedaba guardado como ENVIADO aunque el cliente nunca recibio nada.
+        /// </summary>
+        private void ProgramarVerificacionEntrega(int mensajeId, string? messageSid)
+        {
+            if (mensajeId <= 0 || string.IsNullOrWhiteSpace(messageSid))
+                return;
+
+            System.Threading.Tasks.Task.Run(async () =>
+            {
+                try
+                {
+                    await System.Threading.Tasks.Task
+                        .Delay(TimeSpan.FromSeconds(SegundosVerificacionEntrega))
+                        .ConfigureAwait(false);
+
+                    var estado = twilioClient.ConsultarEstado(messageSid!);
+                    if (!estado.Consultado)
+                        return;
+
+                    if (!estado.Fallido && !estado.Entregado)
+                        return;
+
+                    dal.ActualizarEstadoMensaje(
+                        mensajeId,
+                        estado.Fallido ? "ERROR" : "ENVIADO",
+                        $"{estado.Detalle} [SID:{messageSid}]");
+
+                    if (estado.Fallido)
+                    {
+                        dal.IncrementarIntentos(mensajeId);
+                        System.Diagnostics.Debug.WriteLine(
+                            $"WhatsApp NO entregado (mensaje {mensajeId}): {estado.Detalle}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Verificacion de entrega WhatsApp fallo: {ex.Message}");
+                }
+            });
+        }
+
+        /// <summary>
+        /// Asunto fijo para la plantilla UTILITY de avisos ({{2}}).
+        /// </summary>
+        private static string AsuntoPorTipo(string tipoPlantilla) => tipoPlantilla switch
+        {
+            "PAGO_MEMBRESIA" => "Pago de membresia registrado",
+            "FACTURA_MEMBRESIA" => "Comprobante de pago",
+            "VENCIMIENTO_PROXIMO" => "Membresia proxima a vencer",
+            "VENCIMIENTO_HOY" => "Membresia vence hoy",
+            "MEMBRESIA_VENCIDA" => "Membresia vencida",
+            "DESACTIVACION_MEMBRESIA" => "Membresia desactivada",
+            "FINANCIAMIENTO" => "Financiamiento registrado",
+            "DEUDA_CREADA" => "Deuda registrada",
+            "DEUDA_VENCE_HOY" => "Deuda vence hoy",
+            "RECORDATORIO_VENCIMIENTO_DEUDA" => "Recordatorio de pago",
+            "DEUDA_VENCIDA" => "Deuda vencida",
+            "PAGO_DEUDA_RECIBIDO" => "Pago recibido",
+            "DEUDA_PAGADA_COMPLETA" => "Deuda saldada",
+            "RESUMEN_DEUDAS" => "Estado de cuenta de financiamientos",
+            "PRUEBA_SISTEMA" => "Mensaje de prueba",
+            _ => "Actualizacion de cuenta"
+        };
 
         private static string AplicarVariables(string plantilla, Dictionary<string, string> variables)
         {
@@ -699,7 +962,11 @@ namespace BLL
             if (string.IsNullOrWhiteSpace(respuesta))
                 return false;
 
+            // 63024: numero de destino invalido. 63049: Meta bloquea la plantilla marketing.
+            // Reintentarlos igual solo repite el mismo rechazo y gasta mensajes.
             return respuesta.Contains("63007", StringComparison.OrdinalIgnoreCase)
+                || respuesta.Contains("63024", StringComparison.OrdinalIgnoreCase)
+                || respuesta.Contains("63049", StringComparison.OrdinalIgnoreCase)
                 || respuesta.Contains("Telefono destino invalido", StringComparison.OrdinalIgnoreCase);
         }
     }

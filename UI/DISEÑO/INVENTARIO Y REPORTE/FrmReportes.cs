@@ -26,6 +26,7 @@ namespace UI
             ThemeHost.Attach(this);
             if (ThemeHost.IsDesignTime())
                 return;
+            dgvMostrarDatos.CellFormatting += DgvMostrarDatos_CellFormatting;
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloReportes);
             AjustarContenidoTrasNavBar();
         }
@@ -52,7 +53,16 @@ namespace UI
                 return;
             }
 
-            decimal total = 0;
+            decimal total = ObtenerMontoTotal();
+            lblTotal.Text = "TOTAL: " + total.ToString("C");
+        }
+
+        private decimal ObtenerMontoTotal()
+        {
+            if (datosActuales == null)
+                return 0m;
+
+            decimal total = 0m;
             foreach (DataRow row in datosActuales.Rows)
             {
                 if (datosActuales.Columns.Contains("Monto") && row["Monto"] != DBNull.Value)
@@ -60,7 +70,8 @@ namespace UI
                 else if (datosActuales.Columns.Contains("Total") && row["Total"] != DBNull.Value)
                     total += Convert.ToDecimal(row["Total"]);
             }
-            lblTotal.Text = "TOTAL: " + total.ToString("C");
+
+            return total;
         }
 
         /// <summary>
@@ -125,6 +136,40 @@ namespace UI
                 if (dgvMostrarDatos.Columns.Contains("USUARIO"))
                     dgvMostrarDatos.Columns["USUARIO"].HeaderText = "USUARIO";
             }
+        }
+
+        /// <summary>
+        /// Identifica visualmente las correcciones de caja: la celda Tipo muestra
+        /// REVERSO y queda roja, sin confundirla con un gasto/EGRESO operativo.
+        /// </summary>
+        private void DgvMostrarDatos_CellFormatting(
+            object? sender,
+            DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0
+                || !dgvMostrarDatos.Columns.Contains("Tipo"))
+                return;
+
+            DataGridViewRow row = dgvMostrarDatos.Rows[e.RowIndex];
+            string tipo = row.Cells["Tipo"].Value?.ToString()?.Trim() ?? string.Empty;
+            if (!tipo.Equals("REVERSO", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            string columna = dgvMostrarDatos.Columns[e.ColumnIndex].Name;
+            if (!columna.Equals("Tipo", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            e.Value = "REVERSO";
+            e.FormattingApplied = true;
+
+            DataGridViewCellStyle estilo = e.CellStyle ?? new DataGridViewCellStyle();
+            estilo.BackColor = Color.Firebrick;
+            estilo.ForeColor = Color.White;
+            estilo.SelectionBackColor = Color.DarkRed;
+            estilo.SelectionForeColor = Color.White;
+            estilo.Font = new Font(dgvMostrarDatos.Font, FontStyle.Bold);
+            estilo.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            e.CellStyle = estilo;
         }
 
         private void cmbReporte_SelectedIndexChanged(object? sender, EventArgs e)
@@ -270,14 +315,22 @@ namespace UI
                     sfd.DefaultExt = "pdf";
                     sfd.AddExtension = true;
                     string tipo = cmbReporte.SelectedItem?.ToString() ?? "Reporte";
-                    sfd.FileName = $"{tipo}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                    DateTime fechaDescarga = DateTime.Now;
+                    sfd.FileName = $"{tipo}_{fechaDescarga:yyyyMMdd_hhmmss_tt}.pdf";
 
                     if (sfd.ShowDialog() == DialogResult.OK)
                     {
                         estaExportando = true;
                         this.Cursor = Cursors.WaitCursor;
 
-                        reporteBLL.GenerarReporteDesdeDataTable(datosActuales, sfd.FileName, ".pdf");
+                        reporteBLL.GenerarReportePdfDetallado(
+                            datosActuales,
+                            sfd.FileName,
+                            tipo,
+                            dtDesde.Value.Date,
+                            dtHasta.Value.Date,
+                            fechaDescarga,
+                            ObtenerMontoTotal());
 
                         MessageBox.Show("PDF generado con éxito", "MFFITNESS", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
@@ -362,7 +415,8 @@ namespace UI
                 return;
             }
 
-            int dias = (hasta - desde).Days + 1;
+            // Días transcurridos: del 10/08 al 20/08 son 10 días.
+            int dias = (hasta - desde).Days;
             lbltiempo.ForeColor = Color.FromArgb(27, 146, 255);
             lbltiempo.Text = dias == 1 ? "1 día" : $"{dias} días";
         }

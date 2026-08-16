@@ -223,7 +223,8 @@ namespace UI
             cmbFiltro.Items.Add("Todas");
             cmbFiltro.Items.Add("Activas");
             cmbFiltro.Items.Add("Vencidas");
-            cmbFiltro.SelectedIndex = 0; // "Todas" por defecto
+            // "Todas" = activas + vencidas pendientes. Nunca se listan PAGADAS.
+            cmbFiltro.SelectedIndex = 0;
         }
 
         // ===============================
@@ -283,21 +284,20 @@ namespace UI
 
             try
             {
-                DataTable? dt = deudaBLL.ObtenerDeudas(
-                    incluirHistorial: RequiereHistorialCompleto());
+                // Gestión de deudas: solo pendientes (ACTIVA / vencidas).
+                // Las PAGADAS viven en Historial; aquí no deben aparecer.
+                DataTable? dt = deudaBLL.ObtenerDeudas(incluirHistorial: false);
                 if (dt == null)
                 {
                     MessageBox.Show("No se pudieron obtener las deudas.", "Error");
                     return;
                 }
 
-                // 🔥 AGREGAR COLUMNA DE DÍAS RESTANTES
-                if (!dt.Columns.Contains("DiasRestantes"))
-                {
-                    dt.Columns.Add("DiasRestantes", typeof(int));
-                }
+                ExcluirDeudasPagadas(dt);
 
-                // 🔥 CALCULAR DÍAS RESTANTES
+                if (!dt.Columns.Contains("DiasRestantes"))
+                    dt.Columns.Add("DiasRestantes", typeof(int));
+
                 foreach (DataRow row in dt.Rows)
                 {
                     if (row["FechaVencimiento"] == DBNull.Value || row["FechaVencimiento"] == null)
@@ -307,11 +307,9 @@ namespace UI
                     }
 
                     DateTime fechaVencimiento = Convert.ToDateTime(row["FechaVencimiento"]);
-                    int dias = (fechaVencimiento.Date - DateTime.Now.Date).Days;
-                    row["DiasRestantes"] = dias;
+                    row["DiasRestantes"] = (fechaVencimiento.Date - DateTime.Now.Date).Days;
                 }
 
-                // 🔥 APLICAR FILTRO
                 _bsDeudas.DataSource = dt;
                 AplicarFiltros();
 
@@ -344,16 +342,26 @@ namespace UI
         }
 
         /// <summary>
-        /// "Todas" incluye las deudas ya liquidadas; "Activas" y "Vencidas"
-        /// siguen consultando solo lo pendiente, como siempre.
+        /// Red de seguridad: aunque la consulta ya sea solo activas, elimina
+        /// cualquier fila PAGADA / saldo 0 que pudiera colarse.
         /// </summary>
-        private bool RequiereHistorialCompleto()
+        private static void ExcluirDeudasPagadas(DataTable dt)
         {
-            if (_clienteHistorialId.HasValue)
-                return true;
+            for (int i = dt.Rows.Count - 1; i >= 0; i--)
+            {
+                DataRow row = dt.Rows[i];
+                string estado = row.Table.Columns.Contains("Estado")
+                    ? (row["Estado"]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
+                    : string.Empty;
+                decimal saldo = row.Table.Columns.Contains("Saldo") && row["Saldo"] != DBNull.Value
+                    ? Convert.ToDecimal(row["Saldo"])
+                    : 0m;
 
-            string filtroCombo = cmbFiltro?.SelectedItem?.ToString() ?? "Todas";
-            return filtroCombo == "Todas";
+                if (estado == "PAGADA" || estado == "ANULADA" || saldo <= 0m)
+                    row.Delete();
+            }
+
+            dt.AcceptChanges();
         }
 
         // ===============================
@@ -364,10 +372,13 @@ namespace UI
             if (IsDisposed || Disposing || _bsDeudas == null)
                 return;
 
-            var filtros = new System.Collections.Generic.List<string>();
+            var filtros = new System.Collections.Generic.List<string>
+            {
+                // Base dura: gestión = solo pendientes.
+                "Estado = 'ACTIVA' AND Saldo > 0"
+            };
 
-            // Doble clic en Nombre: el cliente queda enfocado y se muestran todas
-            // sus deudas, sin mezclar el filtro de estado ni el buscador general.
+            // Doble clic en Nombre: pendientes del cliente (sin pagadas).
             if (_clienteHistorialId.HasValue)
             {
                 filtros.Add($"ClienteId = {_clienteHistorialId.Value}");
@@ -385,10 +396,10 @@ namespace UI
             switch (filtroCombo)
             {
                 case "Activas":
-                    filtros.Add("Estado = 'ACTIVA'");
+                    filtros.Add("DiasRestantes >= 0");
                     break;
                 case "Vencidas":
-                    filtros.Add("Estado = 'ACTIVA' AND DiasRestantes < 0");
+                    filtros.Add("DiasRestantes < 0");
                     break;
             }
 
@@ -398,7 +409,7 @@ namespace UI
 
             try
             {
-                _bsDeudas.Filter = filtros.Count > 0 ? string.Join(" AND ", filtros) : null;
+                _bsDeudas.Filter = string.Join(" AND ", filtros);
             }
             catch (ObjectDisposedException)
             {
@@ -450,13 +461,140 @@ namespace UI
             _clienteHistorialId = Convert.ToInt32(clienteIdValue);
             _clienteHistorialNombre = row.Cells["Nombre"].Value?.ToString()?.Trim() ?? "Cliente";
 
-            // Recarga especial: incluye activas, pagadas y anuladas del cliente.
+            // Solo pendientes del cliente (activas / vencidas). Sin PAGADAS.
             CargarDeudas();
         }
 
+        // ===============================
+        // MENÚ CONTEXTUAL (CLIC DERECHO)
+        // ===============================
         /// <summary>
-        /// Lo que el cliente debe es la suma de saldos pendientes; el financiado y
-        /// lo pagado se muestran como contexto histórico de todas sus operaciones.
+        /// El clic derecho enfoca la fila del miembro antes de abrir el menú, para que
+        /// la acción siempre opere sobre la deuda que el usuario está señalando.
+        /// </summary>
+        private void dgvDeudas_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || e.RowIndex < 0)
+                return;
+
+            EnfocarFila(e.RowIndex, e.ColumnIndex);
+            cmsDeudas.Show(dgvDeudas, dgvDeudas.PointToClient(Cursor.Position));
+        }
+
+        private void EnfocarFila(int rowIndex, int columnIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dgvDeudas.Rows.Count)
+                return;
+
+            DataGridViewRow row = dgvDeudas.Rows[rowIndex];
+            if (row.IsNewRow)
+                return;
+
+            dgvDeudas.ClearSelection();
+            row.Selected = true;
+
+            DataGridViewCell? celda =
+                columnIndex >= 0 && dgvDeudas.Columns[columnIndex].Visible
+                    ? row.Cells[columnIndex]
+                    : PrimeraCeldaVisible(row);
+
+            if (celda != null)
+                dgvDeudas.CurrentCell = celda;
+        }
+
+        private static DataGridViewCell? PrimeraCeldaVisible(DataGridViewRow row)
+        {
+            foreach (DataGridViewCell celda in row.Cells)
+            {
+                if (celda.OwningColumn != null && celda.OwningColumn.Visible)
+                    return celda;
+            }
+
+            return null;
+        }
+
+        // ===============================
+        // EDITAR DEUDA
+        // ===============================
+        private void miEditarDeuda_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (dgvDeudas.CurrentRow == null)
+                {
+                    MessageBox.Show("Seleccione una deuda para editar.", "Aviso");
+                    return;
+                }
+
+                if (!dgvDeudas.Columns.Contains("Id") || !dgvDeudas.Columns.Contains("Estado"))
+                {
+                    MessageBox.Show("Error de configuración del grid. Recargue el formulario.", "Error");
+                    return;
+                }
+
+                string estado = dgvDeudas.CurrentRow.Cells["Estado"].Value?.ToString()?.Trim() ?? "ACTIVA";
+                if (!estado.Equals("ACTIVA", StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(
+                        $"Solo se pueden editar deudas activas. Esta deuda está {estado.ToUpperInvariant()}.",
+                        "Editar deuda",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                int deudaId = ObtenerDeudaId();
+
+                using FrmEditarDeuda frm = new FrmEditarDeuda(deudaId);
+                if (frm.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                // El ajuste del pago inicial mueve caja: ambos eventos refrescan
+                // deudas, dashboard, POS/caja e historiales.
+                AppEventos.PagoRegistrado();
+                AppEventos.DeudaModificada();
+                CargarDeudas();
+                SeleccionarDeuda(deudaId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al editar la deuda: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Devuelve el foco a la deuda editada; si quedó saldada ya no está en el grid.
+        /// </summary>
+        private void SeleccionarDeuda(int deudaId)
+        {
+            if (!dgvDeudas.Columns.Contains("Id"))
+                return;
+
+            foreach (DataGridViewRow row in dgvDeudas.Rows)
+            {
+                if (row.IsNewRow)
+                    continue;
+
+                var valor = row.Cells["Id"].Value;
+                if (valor == null || valor == DBNull.Value)
+                    continue;
+
+                if (Convert.ToInt32(valor) != deudaId)
+                    continue;
+
+                row.Selected = true;
+
+                DataGridViewCell? celda = PrimeraCeldaVisible(row);
+                if (celda != null)
+                    dgvDeudas.CurrentCell = celda;
+
+                dgvDeudas.FirstDisplayedScrollingRowIndex = row.Index;
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Resumen del cliente enfocado: solo saldos aún pendientes.
         /// </summary>
         private void ActualizarResumenCliente(DataTable? datos)
         {
@@ -468,24 +606,27 @@ namespace UI
             }
 
             decimal saldoPendiente = 0m;
-            decimal totalFinanciado = 0m;
-            decimal totalPagado = 0m;
 
             foreach (DataRow row in datos.Rows)
             {
+                if (row.RowState == DataRowState.Deleted)
+                    continue;
+
                 if (row["ClienteId"] == DBNull.Value ||
                     Convert.ToInt32(row["ClienteId"]) != _clienteHistorialId.Value)
                     continue;
 
-                saldoPendiente += LeerMonto(row, "Saldo");
-                totalFinanciado += LeerMonto(row, "MontoTotal");
-                totalPagado += LeerMonto(row, "MontoPagado");
+                string estado = row.Table.Columns.Contains("Estado")
+                    ? (row["Estado"]?.ToString() ?? string.Empty).Trim().ToUpperInvariant()
+                    : "ACTIVA";
+                decimal saldo = LeerMonto(row, "Saldo");
+                if (estado != "ACTIVA" || saldo <= 0m)
+                    continue;
+
+                saldoPendiente += saldo;
             }
 
-            lblDebe.Text =
-                $"{_clienteHistorialNombre} debe RD$ {saldoPendiente:N2}" +
-                $"   |   Financiado histórico RD$ {totalFinanciado:N2}" +
-                $"  ·  Pagado RD$ {totalPagado:N2}";
+            lblDebe.Text = $"{_clienteHistorialNombre} debe RD$ {saldoPendiente:N2}";
             lblDebe.Visible = true;
             lblDebe.BringToFront();
         }
@@ -735,7 +876,10 @@ namespace UI
                     MessageBox.Show(result.Message, "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                    // Refresco inmediato: si quedó PAGADA / saldo 0, desaparece del grid.
                     AppEventos.PagoRegistrado();
+                    AppEventos.DeudaModificada();
+                    CargarDeudas();
                 }
             }
             catch (Exception ex)
@@ -770,50 +914,52 @@ namespace UI
                 }
 
                 // 🔥 VALIDAR COLUMNAS NECESARIAS
-                if (!dgvDeudas.Columns.Contains("ClienteId") || 
-                    !dgvDeudas.Columns.Contains("Estado") ||
-                    !dgvDeudas.Columns.Contains("Nombre") ||
-                    !dgvDeudas.Columns.Contains("Saldo") ||
-                    !dgvDeudas.Columns.Contains("FechaVencimiento") ||
-                    !dgvDeudas.Columns.Contains("DiasRestantes"))
+                if (!dgvDeudas.Columns.Contains("ClienteId") ||
+                    !dgvDeudas.Columns.Contains("Nombre"))
                 {
                     MessageBox.Show("Error de configuración del grid. Recargue el formulario.", "Error");
                     return;
                 }
 
-                int deudaId = ObtenerDeudaId();
                 var row = dgvDeudas.CurrentRow;
 
-                string estado = row.Cells["Estado"].Value?.ToString() ?? "";
-
-                if (estado == "PAGADA")
+                if (row.Cells["ClienteId"].Value == null || row.Cells["ClienteId"].Value == DBNull.Value)
                 {
-                    MessageBox.Show("Esta deuda ya está pagada. No se requiere recordatorio.", "Aviso");
+                    MessageBox.Show("Seleccione una deuda válida.", "Aviso");
                     return;
                 }
 
                 int clienteId = Convert.ToInt32(row.Cells["ClienteId"].Value);
                 string nombre = row.Cells["Nombre"].Value?.ToString() ?? "Cliente";
-                decimal saldo = Convert.ToDecimal(row.Cells["Saldo"].Value);
-                DateTime vencimiento = Convert.ToDateTime(row.Cells["FechaVencimiento"].Value);
-                int diasRestantes = Convert.ToInt32(row.Cells["DiasRestantes"].Value);
 
+                // Un solo mensaje con TODO lo que debe el miembro (membresía y
+                // producto a crédito), con la fecha de cada financiamiento.
                 bool enviado;
-                if (diasRestantes < 0)
-                    enviado = deudaBLL.EnviarNotificacionDeudaVencida(deudaId);
-                else if (diasRestantes == 0)
-                    enviado = deudaBLL.EnviarRecordatorioVenceHoy(deudaId);
-                else
-                    enviado = deudaBLL.EnviarRecordatorioVencimiento(deudaId);
+                Cursor = Cursors.WaitCursor;
+                try
+                {
+                    enviado = deudaBLL.EnviarResumenDeudasCliente(clienteId);
+                }
+                finally
+                {
+                    Cursor = Cursors.Default;
+                }
 
                 if (enviado)
-                    MessageBox.Show($"Recordatorio enviado a {nombre} por WhatsApp.", "Exito");
+                {
+                    MessageBox.Show(
+                        $"Estado de cuenta enviado a {nombre} por WhatsApp.",
+                        "Exito",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
                 else
                 {
-                    string? error = deudaBLL.ObtenerUltimoErrorWhatsApp(clienteId);
+                    string? error = deudaBLL.UltimoDetalleWhatsApp
+                                    ?? deudaBLL.ObtenerUltimoErrorWhatsApp(clienteId);
                     MessageBox.Show(
                         $"No se pudo enviar WhatsApp a {nombre}.\n\n" +
-                        (error ?? "Configure TwilioContentSidGenerico con plantilla aprobada en Twilio Console."),
+                        (error ?? "Revise la plantilla de Twilio y el teléfono del miembro."),
                         "Aviso",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);

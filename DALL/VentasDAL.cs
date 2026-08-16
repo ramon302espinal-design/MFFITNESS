@@ -36,13 +36,24 @@ namespace DL
         {
             string query = @"SELECT 
                         v.Id,
+                        v.ClienteId,
                         ISNULL(c.Nombre, 'General') AS Cliente,
+                        ISNULL(c.Telefono, '') AS Telefono,
                         v.Fecha,
                         v.Total,
+                        v.MontoPagado,
+                        v.Saldo,
                         v.MetodoPago,
-                        v.Usuario
+                        v.Usuario,
+                        ISNULL(prod.Productos, '') AS Productos
                      FROM Ventas v
                      LEFT JOIN Clientes c ON c.Id = v.ClienteId
+                     OUTER APPLY (
+                         SELECT STRING_AGG(p.Nombre, ', ') WITHIN GROUP (ORDER BY p.Nombre) AS Productos
+                         FROM DetalleVentas d
+                         INNER JOIN Productos p ON p.Id = d.ProductoId
+                         WHERE d.VentaId = v.Id
+                     ) prod
                      ORDER BY v.Fecha DESC";
 
             return db.ExecuteQuery(query);

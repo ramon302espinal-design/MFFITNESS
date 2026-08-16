@@ -3,6 +3,7 @@ using BLL.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Twilio;
 using Twilio.Exceptions;
 using Twilio.Rest.Api.V2010.Account;
@@ -12,6 +13,11 @@ namespace BLL
 {
     public sealed class WhatsAppTwilioClient
     {
+        private static readonly object SyncAprobacion = new();
+        private static readonly TimeSpan CacheAprobacion = TimeSpan.FromMinutes(15);
+        private static string? _avisoUtilitySid;
+        private static DateTime _avisoUtilityVerificado;
+
         public WhatsAppEnvioResult Enviar(
             string numeroDestino,
             string mensaje,
@@ -30,7 +36,6 @@ namespace BLL
             }
 
             string? contentSid = ResolverContentSid(contentSidEspecifico);
-            bool usarPlantilla = !string.IsNullOrWhiteSpace(contentSid);
             string? mediaUrlNormalizada = NormalizarMediaUrl(mediaUrl);
             bool tieneMedia = !string.IsNullOrWhiteSpace(mediaUrlNormalizada);
 
@@ -40,8 +45,8 @@ namespace BLL
             }
 
             // Factura PDF limpio:
-            // 1) Adjunto libre SIN caption (ideal)
-            // 2) Plantilla media (PDF adjunto; body de plantilla Meta si aplica)
+            // 1) Plantilla media aprobada (unica via que Meta entrega fuera de la ventana 24h).
+            // 2) Adjunto libre SIN caption (solo llega dentro de la ventana 24h; error 63016 fuera).
             // NUNCA plantilla de texto con link.
             bool adjuntarLibre = tieneMedia
                 && (TwilioSettings.AdjuntarPdfLibre
@@ -49,6 +54,24 @@ namespace BLL
                     || TwilioSettings.PermitirBodyEnProduccion);
 
             WhatsAppEnvioResult? ultimoIntento = null;
+
+            if (tieneMedia && TwilioSettings.UsaPlantillaFacturaMedia)
+            {
+                var facturaMedia = EnviarFacturaMediaTemplate(
+                    numeroDestino,
+                    mensaje,
+                    mediaUrlNormalizada!,
+                    variablesFactura);
+
+                // Solo se reintenta si Twilio/Meta lo rechazaron de forma definitiva:
+                // en estado ambiguo un segundo envio duplicaria el PDF en el chat.
+                if (!FalloDefinitivo(facturaMedia))
+                    return facturaMedia;
+
+                ultimoIntento = facturaMedia;
+                Trace.WriteLine("[WhatsApp] Plantilla factura media rechazada; se intenta adjunto libre. "
+                    + facturaMedia.Detalle);
+            }
 
             if (tieneMedia && adjuntarLibre && MediaListoParaTwilio(mediaUrlNormalizada))
             {
@@ -60,14 +83,13 @@ namespace BLL
                     forzarBodyConMedia: true,
                     soloMediaSinCaption: true);
 
-                if (FueAceptadoPorTwilio(media))
+                if (!FalloDefinitivo(media))
                 {
                     return new WhatsAppEnvioResult
                     {
                         Exito = true,
                         Entregado = media.Entregado
-                                     || EsEstadoEntregaMediaOk(media.StatusFinal)
-                                     || EsEstadoEnviado(media.StatusFinal ?? string.Empty),
+                                     || EsEstadoEntregaMediaOk(media.StatusFinal),
                         Detalle = "PDF adjunto enviado (sin texto)." + DetalleMediaUrl(mediaUrlNormalizada),
                         MessageSid = media.MessageSid,
                         StatusFinal = media.StatusFinal
@@ -75,21 +97,7 @@ namespace BLL
                 }
 
                 ultimoIntento = media;
-                Trace.WriteLine("[WhatsApp] Adjunto libre no aceptado; se intenta plantilla media. " + media.Detalle);
-            }
-
-            if (tieneMedia && TwilioSettings.UsaPlantillaFacturaMedia)
-            {
-                var facturaMedia = EnviarFacturaMediaTemplate(
-                    numeroDestino,
-                    mensaje,
-                    mediaUrlNormalizada!,
-                    variablesFactura);
-                if (FueAceptadoPorTwilio(facturaMedia))
-                    return facturaMedia;
-
-                ultimoIntento = facturaMedia;
-                Trace.WriteLine("[WhatsApp] Plantilla factura media no aceptada. " + facturaMedia.Detalle);
+                Trace.WriteLine("[WhatsApp] Adjunto libre no aceptado. " + media.Detalle);
             }
 
             if (tieneMedia)
@@ -100,11 +108,156 @@ namespace BLL
                     + DetalleMediaUrl(mediaUrlNormalizada));
             }
 
-            // Sin media: plantilla generica o body libre (recordatorios, etc.).
-            if (usarPlantilla)
-                return EnviarInterno(numeroDestino, mensaje, contentSid, mediaUrl: null);
+            // Sin media: plantilla UTILITY de avisos (Meta entrega), luego generica o body libre.
+            string? avisoUtilitySid = ResolverAvisoUtilitySid();
+            if (avisoUtilitySid != null)
+            {
+                var aviso = EnviarAvisoUtilityTemplate(
+                    numeroDestino, mensaje, variablesFactura, avisoUtilitySid);
+                if (!FalloDefinitivo(aviso))
+                    return aviso;
+
+                Trace.WriteLine("[WhatsApp] Plantilla UTILITY de aviso rechazada; se usa la generica. "
+                    + aviso.Detalle);
+            }
 
             return EnviarInterno(numeroDestino, mensaje, contentSid, mediaUrl: null);
+        }
+
+        /// <summary>
+        /// La plantilla UTILITY solo sirve cuando Meta ya la aprobo; enviarla antes
+        /// devuelve un rechazo. Se consulta una vez y se recuerda para no pagar
+        /// una llamada extra en cada mensaje: al aprobarse, el sistema la toma solo.
+        /// Con varios candidatos configurados gana la primera aprobada.
+        /// </summary>
+        private static string? ResolverAvisoUtilitySid()
+        {
+            if (!TwilioSettings.UsaPlantillaAvisoUtility)
+                return null;
+
+            lock (SyncAprobacion)
+            {
+                if (_avisoUtilityVerificado != default
+                    && DateTime.UtcNow - _avisoUtilityVerificado < CacheAprobacion)
+                    return _avisoUtilitySid;
+
+                _avisoUtilitySid = TwilioSettings.ContentSidsAvisoUtility
+                    .FirstOrDefault(ContentAprobadoEnWhatsApp);
+                _avisoUtilityVerificado = DateTime.UtcNow;
+
+                Trace.WriteLine(
+                    $"[WhatsApp] Plantilla UTILITY de avisos aprobada={_avisoUtilitySid ?? "(ninguna)"}");
+                return _avisoUtilitySid;
+            }
+        }
+
+        private static bool ContentAprobadoEnWhatsApp(string contentSid)
+        {
+            try
+            {
+                var (user, password) = TwilioSettings.CredencialesHttpBasicas;
+                string basic = Convert.ToBase64String(
+                    System.Text.Encoding.ASCII.GetBytes($"{user}:{password}"));
+
+                using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                http.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", basic);
+
+                var resp = http
+                    .GetAsync($"https://content.twilio.com/v1/Content/{contentSid}/ApprovalRequests")
+                    .GetAwaiter()
+                    .GetResult();
+
+                if (!resp.IsSuccessStatusCode)
+                    return false;
+
+                string json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+                if (!doc.RootElement.TryGetProperty("whatsapp", out var whatsapp))
+                    return false;
+
+                string? status = whatsapp.TryGetProperty("status", out var s) ? s.GetString() : null;
+                return string.Equals(status, "approved", StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[WhatsApp] No se pudo verificar la plantilla UTILITY: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Aviso de cuenta por plantilla UTILITY (no la bloquea Meta con 63049).
+        /// </summary>
+        private WhatsAppEnvioResult EnviarAvisoUtilityTemplate(
+            string numeroDestino,
+            string mensaje,
+            IReadOnlyDictionary<string, string>? variables,
+            string contentSidAviso)
+        {
+            try
+            {
+                string miembro = LeerVar(variables, "CLIENTE", "Miembro");
+                string asunto = LeerVar(variables, "ASUNTO", "Actualizacion de cuenta");
+                string detalle = WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(mensaje, miembro);
+                if (string.IsNullOrWhiteSpace(detalle))
+                    detalle = asunto;
+
+                string fecha = DateTime.Now.ToString(CORE.FechaHoraFormats.FechaHora);
+
+                string contentVariables = WhatsAppContentVariableHelper.SerializarAvisoCuenta(
+                    miembro, asunto, detalle, fecha);
+
+                string numeroOrigen = NormalizarE164(TwilioSettings.PhoneNumber);
+                string numeroTo = NormalizarE164(numeroDestino);
+
+                InicializarTwilioClient();
+
+                Trace.WriteLine(
+                    $"[WhatsApp] Aviso UTILITY ContentSid={contentSidAviso} vars={contentVariables}");
+
+                var message = MessageResource.Create(
+                    to: new PhoneNumber($"whatsapp:{numeroTo}"),
+                    from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
+                    contentSid: contentSidAviso,
+                    contentVariables: contentVariables);
+
+                string? messageSid = message.Sid;
+                if (string.IsNullOrWhiteSpace(messageSid))
+                {
+                    return new WhatsAppEnvioResult
+                    {
+                        Exito = true,
+                        Entregado = true,
+                        Detalle = "Aviso (plantilla UTILITY) aceptado por Twilio.",
+                        StatusFinal = "accepted"
+                    };
+                }
+
+                var estado = EsperarEstadoFinal(messageSid);
+                bool ok = !EsEstadoFallido(estado.Status)
+                          && (EsEstadoEntregado(estado.Status) || EsEstadoEnviado(estado.Status));
+
+                return new WhatsAppEnvioResult
+                {
+                    Exito = true,
+                    Entregado = ok,
+                    Detalle = ok
+                        ? $"Aviso enviado (plantilla UTILITY, status={estado.Status})."
+                        : FormatearErrorEstado(estado),
+                    MessageSid = messageSid,
+                    StatusFinal = estado.Status
+                };
+            }
+            catch (ApiException apiEx)
+            {
+                return Fallo(FormatearApiException(apiEx));
+            }
+            catch (Exception ex)
+            {
+                return Fallo(ex.Message);
+            }
         }
 
         private WhatsAppEnvioResult EnviarFacturaMediaTemplate(
@@ -511,6 +664,39 @@ namespace BLL
                 : TwilioSettings.ContentSidGenerico.Trim();
         }
 
+        /// <summary>
+        /// Estado real del mensaje en Twilio. Meta puede rechazar despues de "sent"
+        /// (63016 fuera de ventana, 63049 plantilla marketing, 63019 media),
+        /// asi que el registro solo es fiable si se reconsulta pasado un tiempo.
+        /// </summary>
+        public WhatsAppEstadoConsulta ConsultarEstado(string messageSid)
+        {
+            if (string.IsNullOrWhiteSpace(messageSid))
+                return new WhatsAppEstadoConsulta { Consultado = false };
+
+            try
+            {
+                InicializarTwilioClient();
+                var fetched = MessageResource.Fetch(pathSid: messageSid);
+                string status = fetched.Status?.ToString() ?? string.Empty;
+
+                return new WhatsAppEstadoConsulta
+                {
+                    Consultado = true,
+                    Status = status,
+                    Fallido = EsEstadoFallido(status),
+                    Entregado = EsEstadoEntregado(status),
+                    Detalle = EsEstadoFallido(status)
+                        ? FormatearErrorTwilio(fetched.ErrorCode?.ToString(), fetched.ErrorMessage)
+                        : $"status={status}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new WhatsAppEstadoConsulta { Consultado = false, Detalle = ex.Message };
+            }
+        }
+
         private static (string Status, string? ErrorCode, string? ErrorMessage) EsperarEstadoFinal(
             string messageSid,
             bool esMedia = false)
@@ -520,11 +706,14 @@ namespace BLL
             string? errorMessage = null;
 
             // No congelar la UI: pocas consultas cortas. Twilio sigue procesando en segundo plano.
+            // Con media se espera mas: "sent" no es terminal y Meta puede rechazar despues (63016).
             int intentosConfig = TwilioSettings.IntentosConsultaEstado;
             int intentos = esMedia
-                ? Math.Clamp(Math.Min(intentosConfig, 4), 1, 4)
+                ? Math.Clamp(Math.Max(intentosConfig, 8), 1, 10)
                 : Math.Clamp(Math.Min(intentosConfig, 3), 1, 3);
-            int esperaBase = Math.Clamp(TwilioSettings.MilisegundosEntreConsultasEstado, 200, 800);
+            int esperaBase = esMedia
+                ? Math.Clamp(TwilioSettings.MilisegundosEntreConsultasEstado, 800, 1500)
+                : Math.Clamp(TwilioSettings.MilisegundosEntreConsultasEstado, 200, 800);
 
             for (int intento = 0; intento < intentos; intento++)
             {
@@ -541,11 +730,7 @@ namespace BLL
 
                 if (esMedia)
                 {
-                    if (EsEstadoEntregaMediaOk(ultimoStatus)
-                        || EsEstadoEnviadoReal(ultimoStatus)
-                        || ultimoStatus.Equals("accepted", StringComparison.OrdinalIgnoreCase)
-                        || ultimoStatus.Equals("queued", StringComparison.OrdinalIgnoreCase))
-                        break;
+                    // "sent" aun puede terminar en undelivered (63016/63019): seguir consultando.
                     continue;
                 }
 
@@ -583,22 +768,15 @@ namespace BLL
             || status.Equals("undelivered", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Twilio ya acepto el mensaje (hay SID y no esta en failed/undelivered).
-        /// Evita reenviar respaldos que duplican avisos en el chat del cliente.
+        /// Rechazo confirmado por Twilio/Meta: la API fallo o el estado final es failed/undelivered.
+        /// Un estado ambiguo (queued/sending) NO se considera fallo: reintentar duplicaria el mensaje.
         /// </summary>
-        private static bool FueAceptadoPorTwilio(WhatsAppEnvioResult r)
+        private static bool FalloDefinitivo(WhatsAppEnvioResult r)
         {
             if (r == null || !r.Exito)
-                return false;
+                return true;
 
-            if (!string.IsNullOrWhiteSpace(r.StatusFinal) && EsEstadoFallido(r.StatusFinal))
-                return false;
-
-            return !string.IsNullOrWhiteSpace(r.MessageSid)
-                   || r.Entregado
-                   || EsEstadoEntregaMediaOk(r.StatusFinal)
-                   || (!string.IsNullOrWhiteSpace(r.StatusFinal)
-                       && EsEstadoEnviado(r.StatusFinal));
+            return !string.IsNullOrWhiteSpace(r.StatusFinal) && EsEstadoFallido(r.StatusFinal);
         }
 
         private static void InicializarTwilioClient()

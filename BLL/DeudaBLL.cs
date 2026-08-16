@@ -1,5 +1,6 @@
 using DL;
 using CORE;
+using DTO;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -673,6 +674,114 @@ namespace BLL
 
         public string? ObtenerUltimoErrorWhatsApp(int clienteId) =>
             mensajeBLL.ObtenerUltimoErrorCliente(clienteId);
+
+        /// <summary>Detalle exacto del ultimo intento (motivo real del rechazo de Twilio/Meta).</summary>
+        public string? UltimoDetalleWhatsApp => mensajeBLL.UltimoDetalleEnvio;
+
+        /// <summary>
+        /// Estado de cuenta por WhatsApp: todos los financiamientos pendientes del
+        /// miembro (membresia y producto a credito) con la fecha de cada uno.
+        /// </summary>
+        public bool EnviarResumenDeudasCliente(int clienteId)
+        {
+            try
+            {
+                return mensajeBLL.EnviarResumenDeudasCliente(clienteId);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error resumen de deudas WhatsApp: {ex.Message}");
+                return false;
+            }
+        }
+
+        // ===============================
+        // EDITAR DEUDA
+        // ===============================
+        /// <summary>
+        /// Detalle de una deuda para la pantalla de edición.
+        /// </summary>
+        /// <param name="deudaId">ID de la deuda</param>
+        /// <returns>Fila con los datos de la deuda o null si no existe</returns>
+        public DataRow? ObtenerDeudaDetalle(int deudaId)
+        {
+            if (deudaId <= 0)
+                return null;
+
+            return dal.ObtenerDeudaDetalle(deudaId);
+        }
+
+        /// <summary>
+        /// Edita el financiamiento de una deuda activa: concepto, plan/producto, fecha límite
+        /// y pago inicial. El monto financiado se deriva del total menos el pago inicial; si el
+        /// pago inicial cambia, el anterior se reversa en caja e historial para que ningún panel
+        /// lo siga sumando.
+        /// </summary>
+        /// <param name="deudaId">ID de la deuda a editar</param>
+        /// <param name="concepto">Concepto o descripción del financiamiento</param>
+        /// <param name="totalFinanciado">Total del plan o producto financiado</param>
+        /// <param name="pagoInicial">Pago inicial corregido (0 = sin inicial)</param>
+        /// <param name="vencimiento">Fecha límite de pago</param>
+        /// <param name="planId">Plan financiado, o null si es producto a crédito / otro concepto</param>
+        /// <param name="metodoPago">Método del nuevo ingreso en caja</param>
+        /// <param name="usuario">Usuario que realiza la edición</param>
+        /// <returns>Resultado con saldo, estado y detalle del reverso aplicado</returns>
+        /// <exception cref="Exception">Si algún dato es inválido o la deuda no admite edición</exception>
+        public EdicionDeudaDTO ActualizarDeudaFinanciamiento(
+            int deudaId,
+            string concepto,
+            decimal totalFinanciado,
+            decimal pagoInicial,
+            DateTime vencimiento,
+            int? planId,
+            string metodoPago,
+            string usuario)
+        {
+            if (deudaId <= 0)
+                throw new Exception("Deuda inválida.");
+
+            concepto = (concepto ?? string.Empty).Trim();
+            if (concepto.Length == 0)
+                throw new Exception("El concepto de la deuda es obligatorio.");
+            if (concepto.Length > 200)
+                concepto = concepto.Substring(0, 200);
+
+            if (totalFinanciado <= 0)
+                throw new Exception("El total financiado debe ser mayor a cero.");
+
+            if (pagoInicial < 0)
+                throw new Exception("El pago inicial no puede ser negativo.");
+
+            totalFinanciado = decimal.Round(totalFinanciado, 2);
+            pagoInicial = decimal.Round(pagoInicial, 2);
+
+            if (pagoInicial > totalFinanciado)
+                throw new Exception("El pago inicial no puede superar el total financiado.");
+
+            if (vencimiento == default)
+                throw new Exception("Indique la fecha límite de pago.");
+
+            if (planId.HasValue && planId.Value <= 0)
+                planId = null;
+
+            // Reverso e ingreso del pago inicial se asientan en la caja abierta: si el
+            // importe no cambia no se exige caja (solo se corrigen datos de la deuda).
+            int cajaId = 0;
+            var caja = cajaDAL.ObtenerCajaAbierta();
+            if (caja != null)
+                cajaId = Convert.ToInt32(caja["Id"]);
+
+            return dal.ActualizarDeudaFinanciamiento(
+                deudaId,
+                concepto,
+                totalFinanciado,
+                pagoInicial,
+                vencimiento.Date,
+                planId,
+                string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago,
+                cajaId,
+                string.IsNullOrWhiteSpace(usuario) ? "ADMIN" : usuario);
+        }
 
         // ===============================
         // 🔧 MÉTODOS AUXILIARES PRIVADOS

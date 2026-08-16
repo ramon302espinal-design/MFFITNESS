@@ -34,10 +34,12 @@ namespace UI.DISEÑO
             dgvHistorial = new DataGridView();
             label1 = new Label();
             tabProductos = new TabPage();
+            txtBuscarProductos = new TextBox();
             dgvDetalleProductos = new DataGridView();
             label3 = new Label();
             dgvVentasProductos = new DataGridView();
             label2 = new Label();
+            label5 = new Label();
             panelNav.SuspendLayout();
             tabControl1.SuspendLayout();
             tabMembresia.SuspendLayout();
@@ -253,6 +255,8 @@ namespace UI.DISEÑO
             // tabProductos
             // 
             tabProductos.BackColor = Color.White;
+            tabProductos.Controls.Add(txtBuscarProductos);
+            tabProductos.Controls.Add(label5);
             tabProductos.Controls.Add(dgvDetalleProductos);
             tabProductos.Controls.Add(label3);
             tabProductos.Controls.Add(dgvVentasProductos);
@@ -260,19 +264,30 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(4, 34);
             tabProductos.Name = "tabProductos";
             tabProductos.Padding = new Padding(12);
-            tabProductos.Size = new Size(1054, 583);
+            tabProductos.Size = new Size(1439, 583);
             tabProductos.TabIndex = 1;
             tabProductos.Text = "PRODUCTOS";
+            // 
+            // txtBuscarProductos
+            // 
+            txtBuscarProductos.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtBuscarProductos.Font = new Font("Segoe UI", 11F);
+            txtBuscarProductos.Location = new Point(100, 52);
+            txtBuscarProductos.Name = "txtBuscarProductos";
+            txtBuscarProductos.PlaceholderText = "Producto, cliente, teléfono, fecha, total, método...";
+            txtBuscarProductos.Size = new Size(780, 32);
+            txtBuscarProductos.TabIndex = 5;
+            txtBuscarProductos.TextChanged += txtBuscarProductos_TextChanged;
             // 
             // dgvDetalleProductos
             // 
             dgvDetalleProductos.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvDetalleProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvDetalleProductos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvDetalleProductos.Location = new Point(900, 56);
+            dgvDetalleProductos.Location = new Point(900, 96);
             dgvDetalleProductos.Name = "dgvDetalleProductos";
             dgvDetalleProductos.RowHeadersWidth = 51;
-            dgvDetalleProductos.Size = new Size(131, 494);
+            dgvDetalleProductos.Size = new Size(516, 454);
             dgvDetalleProductos.TabIndex = 3;
             // 
             // label3
@@ -289,10 +304,10 @@ namespace UI.DISEÑO
             // 
             dgvVentasProductos.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             dgvVentasProductos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvVentasProductos.Location = new Point(20, 56);
+            dgvVentasProductos.Location = new Point(20, 96);
             dgvVentasProductos.Name = "dgvVentasProductos";
             dgvVentasProductos.RowHeadersWidth = 51;
-            dgvVentasProductos.Size = new Size(860, 494);
+            dgvVentasProductos.Size = new Size(860, 454);
             dgvVentasProductos.TabIndex = 1;
             dgvVentasProductos.SelectionChanged += dgvVentasProductos_SelectionChanged;
             // 
@@ -305,6 +320,16 @@ namespace UI.DISEÑO
             label2.Size = new Size(157, 32);
             label2.TabIndex = 0;
             label2.Text = "PRODUCTOS";
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            label5.Location = new Point(20, 56);
+            label5.Name = "label5";
+            label5.Size = new Size(77, 25);
+            label5.TabIndex = 4;
+            label5.Text = "Buscar:";
             // 
             // FrmHistorialVentas
             // 
@@ -356,5 +381,7 @@ namespace UI.DISEÑO
         private Label label4;
         private Label lblBuscarHistMembresia;
         private TextBox txtBuscarHistMembresia;
+        private Label label5;
+        private TextBox txtBuscarProductos;
     }
 }
