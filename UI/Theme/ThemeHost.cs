@@ -46,6 +46,9 @@ namespace UI.Theme
                         customTheme();
                     else
                         ThemeApplier.ApplyToForm(form);
+
+                    // La hora en 12 horas no depende del tema: aplica también a pantallas clásicas.
+                    Formato12Horas.AplicarAFormulario(form);
                 }
                 catch (Exception ex)
                 {

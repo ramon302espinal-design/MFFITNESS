@@ -76,7 +76,7 @@ namespace UI.DISEÑO
                     colMonto.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
                 }
                 if (dgvMovimientos.Columns["Fecha"] is DataGridViewColumn colFecha)
-                    colFecha.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
+                    colFecha.DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
                 dgvMovimientos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             }
             catch (Exception ex)

@@ -50,10 +50,10 @@
 
 	<!-- Formularios: editables en el diseñador WinForms -->
 	<ItemGroup>
-		<Compile Update="DISEÑO\FrmPresentacion.CS">
+		<Compile Update="DISEÑO\PRESENTACION\FrmPresentacion.CS">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmLogin.cs">
+		<Compile Update="DISEÑO\PRESENTACION\FrmLogin.cs">
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\FrmActualizacion.cs">
@@ -83,52 +83,61 @@
 		<Compile Update="DISEÑO\Controles\UcFichaResumenMiembro.Designer.cs">
 			<DependentUpon>UcFichaResumenMiembro.cs</DependentUpon>
 		</Compile>
-		<Compile Update="DISEÑO\FrmEstadoClientes.cs">
+		<Compile Update="ESTADO\FrmEstadoClientes.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmDesactivacionMiembro.cs">
+		<Compile Update="ESTADO\FrmDesactivacionMiembro.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmDesactivacionMiembro.Designer.cs">
+		<Compile Update="ESTADO\FrmDesactivacionMiembro.Designer.cs">
 			<DependentUpon>FrmDesactivacionMiembro.cs</DependentUpon>
 		</Compile>
-		<Compile Update="DISEÑO\FrmCongelarMiembro.cs">
+		<Compile Update="ESTADO\FrmCongelarMiembro.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmCongelarMiembro.Designer.cs">
+		<Compile Update="ESTADO\FrmCongelarMiembro.Designer.cs">
 			<DependentUpon>FrmCongelarMiembro.cs</DependentUpon>
 		</Compile>
-		<Compile Update="DISEÑO\FrmPagos.cs">
+		<Compile Update="DISEÑO\PAGO\FrmPagos.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmPago.cs">
+		<Compile Update="DISEÑO\PAGO\FrmPago.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmProductos.cs">
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\FrmProductos.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmHistorialVentas.cs">
+		<Compile Update="DISEÑO\HISTORIAL\FrmHistorialVentas.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmReportes.cs">
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\FrmReportes.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmCajaDashboard.cs">
+		<Compile Update="DISEÑO\CAJA\FrmCajaDashboard.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmMovimientosCaja.cs">
+		<Compile Update="DISEÑO\CAJA\FrmCajaDashboard.Designer.cs">
+			<DependentUpon>FrmCajaDashboard.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\CAJA\FrmMovimientosCaja.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmCierresCaja.cs">
+		<Compile Update="DISEÑO\CAJA\FrmMovimientosCaja.Designer.cs">
+			<DependentUpon>FrmMovimientosCaja.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\CAJA\FrmCierresCaja.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmRegistrarGasto.cs">
+		<Compile Update="DISEÑO\CAJA\FrmCierresCaja.Designer.cs">
+			<DependentUpon>FrmCierresCaja.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\CAJA\FrmRegistrarGasto.cs">
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\FrmVistaPrevia.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="DISEÑO\FrmHistorialMembresia.cs">
+		<Compile Update="DISEÑO\HISTORIAL\FrmHistorialMembresia.cs">
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\DEUDAS\FrmModuloDeudas.cs">
@@ -165,6 +174,15 @@
 	  <EmbeddedResource Update="Properties\Resources.resx">
 	    <Generator>ResXFileCodeGenerator</Generator>
 	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\CAJA\FrmCajaDashboard.resx">
+	    <DependentUpon>FrmCajaDashboard.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\CAJA\FrmMovimientosCaja.resx">
+	    <DependentUpon>FrmMovimientosCaja.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\CAJA\FrmCierresCaja.resx">
+	    <DependentUpon>FrmCierresCaja.cs</DependentUpon>
 	  </EmbeddedResource>
 	</ItemGroup>
 

@@ -287,6 +287,7 @@ namespace UI.Theme
             dgv.ColumnHeadersHeight = 44;
             dgv.RowTemplate.Height = 38;
             dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            Formato12Horas.Aplicar(dgv);
             ApplyReadOnlyGridBehavior(dgv);
             if (attachEmptyState)
                 EmptyStateHelper.Attach(dgv);
