@@ -2,8 +2,10 @@ using BLL;
 using CORE;
 using Microsoft.VisualBasic;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using UI.Helpers;
 using UI.Theme;
@@ -14,9 +16,11 @@ namespace UI.DISEÑO
     public partial class FrmCierresCaja : Form
     {
         private readonly CierreCajaBLL cierreBLL = new CierreCajaBLL();
+        private readonly ReporteBLL reporteBLL = new ReporteBLL();
         private readonly BindingSource _bsCierres = new BindingSource();
         private DataTable? _tablaCierresCompleta;
         private readonly Form? _formularioAnterior;
+        private bool _esAdmin;
 
         public FrmCierresCaja(Form? formularioAnterior = null)
         {
@@ -27,6 +31,15 @@ namespace UI.DISEÑO
 
         private void FrmCierresCaja_Load(object sender, EventArgs e)
         {
+            _esAdmin = string.Equals(
+                Sesion.Rol?.Trim(),
+                "ADMIN",
+                StringComparison.OrdinalIgnoreCase);
+            btnEliminarCierre.Visible = _esAdmin;
+            lblTituloCierre.Text = _esAdmin
+                ? "CUADRES DE CAJA — TODOS LOS USUARIOS"
+                : $"MIS CUADRES DE CAJA — {Sesion.Usuario.Trim().ToUpperInvariant()}";
+
             InicializarFiltrosCierre();
             CargarCierresCaja();
             dgvCierres.ClearSelection();
@@ -236,6 +249,16 @@ namespace UI.DISEÑO
 
         private void btnEliminarCierre_Click(object sender, EventArgs e)
         {
+            if (!_esAdmin)
+            {
+                MessageBox.Show(
+                    "Solo ADMIN puede eliminar cuadres de caja.",
+                    "Acceso restringido",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
             if (dgvCierres.CurrentRow?.Cells["Id"]?.Value == null) return;
 
             string password = Interaction.InputBox("Ingrese contraseña:", "Seguridad", "");
@@ -253,6 +276,100 @@ namespace UI.DISEÑO
                 cierreBLL.EliminarCierre(idCierre);
                 CargarCierresCaja();
             }
+        }
+
+        private void btnDescargar_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                DataTable datos = CrearTablaVisibleParaExportar();
+                if (datos.Rows.Count == 0)
+                {
+                    MessageBox.Show(
+                        "No hay cuadres visibles para descargar.",
+                        "Descargar cuadres",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                using var sfd = new SaveFileDialog
+                {
+                    Title = "Descargar cuadres visibles",
+                    Filter = "Libro de Excel (*.xlsx)|*.xlsx|Documento PDF (*.pdf)|*.pdf",
+                    FilterIndex = 1,
+                    AddExtension = true,
+                    FileName = $"Cuadres_Caja_{DateTime.Now:yyyyMMdd_HHmmss}"
+                };
+
+                if (sfd.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                string extension = Path.GetExtension(sfd.FileName).ToLowerInvariant();
+                if (extension is not (".xlsx" or ".pdf"))
+                    extension = sfd.FilterIndex == 2 ? ".pdf" : ".xlsx";
+
+                string ruta = Path.ChangeExtension(sfd.FileName, extension);
+                reporteBLL.GenerarReporteDesdeDataTable(datos, ruta, extension);
+
+                MessageBox.Show(
+                    $"Cuadres descargados correctamente en:\n{ruta}",
+                    "Descarga completada",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "No fue posible descargar los cuadres: " + ex.Message,
+                    "Error de descarga",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private DataTable CrearTablaVisibleParaExportar()
+        {
+            var resultado = new DataTable("Cuadres de Caja");
+            var columnas = new List<(DataGridViewColumn Grid, DataColumn Tabla)>();
+
+            foreach (DataGridViewColumn columnaGrid in dgvCierres.Columns)
+            {
+                if (!columnaGrid.Visible)
+                    continue;
+
+                string origen = string.IsNullOrWhiteSpace(columnaGrid.DataPropertyName)
+                    ? columnaGrid.Name
+                    : columnaGrid.DataPropertyName;
+                Type tipo = _tablaCierresCompleta?.Columns[origen]?.DataType ?? typeof(string);
+                string titulo = string.IsNullOrWhiteSpace(columnaGrid.HeaderText)
+                    ? columnaGrid.Name
+                    : columnaGrid.HeaderText.Trim();
+                string nombreUnico = titulo;
+                int sufijo = 2;
+                while (resultado.Columns.Contains(nombreUnico))
+                    nombreUnico = $"{titulo} ({sufijo++})";
+
+                DataColumn columnaTabla = resultado.Columns.Add(nombreUnico, tipo);
+                columnas.Add((columnaGrid, columnaTabla));
+            }
+
+            foreach (DataRowView filaVisible in _bsCierres.List)
+            {
+                DataRow nueva = resultado.NewRow();
+                foreach ((DataGridViewColumn grid, DataColumn tabla) in columnas)
+                {
+                    string origen = string.IsNullOrWhiteSpace(grid.DataPropertyName)
+                        ? grid.Name
+                        : grid.DataPropertyName;
+                    nueva[tabla] = filaVisible.Row.Table.Columns.Contains(origen)
+                        ? filaVisible[origen]
+                        : DBNull.Value;
+                }
+                resultado.Rows.Add(nueva);
+            }
+
+            return resultado;
         }
 
         private void btnVolver_Click(object sender, EventArgs e)

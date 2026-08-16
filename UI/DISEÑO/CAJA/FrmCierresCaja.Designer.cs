@@ -33,6 +33,7 @@ namespace UI.DISEÑO
             dgvCierres = new DataGridView();
             panelAcciones = new Panel();
             btnEliminarCierre = new Button();
+            btnDescargar = new Button();
             btnVolver = new Button();
             panelFiltrosCierre.SuspendLayout();
             tlpCierreRoot.SuspendLayout();
@@ -274,6 +275,7 @@ namespace UI.DISEÑO
             // 
             panelAcciones.BackColor = Color.White;
             panelAcciones.Controls.Add(btnEliminarCierre);
+            panelAcciones.Controls.Add(btnDescargar);
             panelAcciones.Controls.Add(btnVolver);
             panelAcciones.Dock = DockStyle.Bottom;
             panelAcciones.Location = new Point(0, 680);
@@ -292,13 +294,23 @@ namespace UI.DISEÑO
             btnEliminarCierre.UseVisualStyleBackColor = true;
             btnEliminarCierre.Click += btnEliminarCierre_Click;
             // 
+            // btnDescargar
+            // 
+            btnDescargar.Location = new Point(170, 12);
+            btnDescargar.Name = "btnDescargar";
+            btnDescargar.Size = new Size(143, 38);
+            btnDescargar.TabIndex = 1;
+            btnDescargar.Text = "DESCARGAR";
+            btnDescargar.UseVisualStyleBackColor = true;
+            btnDescargar.Click += btnDescargar_Click;
+            // 
             // btnVolver
             // 
             btnVolver.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnVolver.Location = new Point(1395, 12);
             btnVolver.Name = "btnVolver";
             btnVolver.Size = new Size(143, 38);
-            btnVolver.TabIndex = 1;
+            btnVolver.TabIndex = 2;
             btnVolver.Text = "VOLVER";
             btnVolver.UseVisualStyleBackColor = true;
             btnVolver.Click += btnVolver_Click;
@@ -346,6 +358,7 @@ namespace UI.DISEÑO
         private DataGridView dgvCierres;
         private Panel panelAcciones;
         private Button btnEliminarCierre;
+        private Button btnDescargar;
         private Button btnVolver;
     }
 }

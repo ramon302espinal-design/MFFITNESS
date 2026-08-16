@@ -57,7 +57,7 @@ namespace DL
             db.ExecuteNonQuery(query, p);
         }
 
-        public DataTable ObtenerHistorialCierres()
+        public DataTable ObtenerHistorialCierres(bool verTodos, string usuario)
         {
             string query = @"
                 SELECT
@@ -75,8 +75,20 @@ namespace DL
                     cc.Usuario
                 FROM CierreCaja cc
                 LEFT JOIN Caja c ON c.Id = cc.CajaId
+                WHERE @VerTodos = 1
+                   OR UPPER(LTRIM(RTRIM(cc.Usuario))) = UPPER(LTRIM(RTRIM(@Usuario)))
                 ORDER BY cc.FechaCierre DESC, cc.Id DESC";
-            return db.ExecuteQuery(query);
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@VerTodos", SqlDbType.Bit) { Value = verTodos },
+                new SqlParameter("@Usuario", SqlDbType.NVarChar, 100)
+                {
+                    Value = usuario?.Trim() ?? string.Empty
+                }
+            };
+
+            return db.ExecuteQuery(query, parametros);
         }
 
         public bool YaExisteCierreHoy(string turno)

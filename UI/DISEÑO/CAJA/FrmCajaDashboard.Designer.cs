@@ -369,7 +369,7 @@ namespace UI.DISEÑO
             btnCierresCaja.Name = "btnCierresCaja";
             btnCierresCaja.Size = new Size(200, 60);
             btnCierresCaja.TabIndex = 4;
-            btnCierresCaja.Text = "CIERRES DE CAJA";
+            btnCierresCaja.Text = "CUADRES DE CAJA";
             btnCierresCaja.UseVisualStyleBackColor = true;
             btnCierresCaja.Click += btnCierresCaja_Click;
             // 

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Windows.Forms;
 using UI.DISEÑO;
 using UI.Facturas;
+using UI.Helpers;
 
 namespace UI
 {
@@ -16,6 +17,7 @@ namespace UI
         {
             ConfigurarFormatoHora12();
             ApplicationConfiguration.Initialize();
+            Application.AddMessageFilter(new EscapeInicioMessageFilter());
             FacturaMembresiaPdfService.ConfigurarLicencia();
 
             var startup = UpdateSessionGuard.Evaluate();

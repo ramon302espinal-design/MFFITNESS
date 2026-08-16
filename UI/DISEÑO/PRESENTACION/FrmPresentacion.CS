@@ -344,6 +344,27 @@ namespace UI.DISEÑO
         // ===============================
         private void btnCerrarSesion_Click(object sender, EventArgs e)
         {
+            IntentarCerrarSesion();
+        }
+
+        /// <summary>
+        /// Misma ruta que el botón SALIR: valida caja abierta y regresa al login.
+        /// Usado por tecla END y por el botón de la barra.
+        /// </summary>
+        public void IntentarCerrarSesion()
+        {
+            if (!Sesion.Activa || IsDisposed)
+                return;
+
+            if (!Visible)
+                Show();
+
+            if (WindowState == FormWindowState.Minimized)
+                WindowState = FormWindowState.Maximized;
+
+            BringToFront();
+            Activate();
+
             if (!PuedeSalirTrasValidarCaja())
                 return;
 
