@@ -69,7 +69,7 @@ namespace UI
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1513, 52);
+            panelNav.Size = new Size(1569, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -290,7 +290,7 @@ namespace UI
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1513, 853);
+            ClientSize = new Size(1569, 1055);
             Controls.Add(txtBusca);
             Controls.Add(label4);
             Controls.Add(lblTotal);
@@ -339,5 +339,6 @@ namespace UI
         private Label lblTotal;
         private Label label4;
         private TextBox txtBusca;
+        private Label label10;
     }
 }

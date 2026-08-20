@@ -83,19 +83,19 @@
 		<Compile Update="DISEÑO\Controles\UcFichaResumenMiembro.Designer.cs">
 			<DependentUpon>UcFichaResumenMiembro.cs</DependentUpon>
 		</Compile>
-		<Compile Update="ESTADO\FrmEstadoClientes.cs">
+		<Compile Update="DISEÑO\ESTADO\FrmEstadoClientes.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="ESTADO\FrmDesactivacionMiembro.cs">
+		<Compile Update="DISEÑO\ESTADO\FrmDesactivacionMiembro.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="ESTADO\FrmDesactivacionMiembro.Designer.cs">
+		<Compile Update="DISEÑO\ESTADO\FrmDesactivacionMiembro.Designer.cs">
 			<DependentUpon>FrmDesactivacionMiembro.cs</DependentUpon>
 		</Compile>
-		<Compile Update="ESTADO\FrmCongelarMiembro.cs">
+		<Compile Update="DISEÑO\ESTADO\FrmCongelarMiembro.cs">
 			<SubType>Form</SubType>
 		</Compile>
-		<Compile Update="ESTADO\FrmCongelarMiembro.Designer.cs">
+		<Compile Update="DISEÑO\ESTADO\FrmCongelarMiembro.Designer.cs">
 			<DependentUpon>FrmCongelarMiembro.cs</DependentUpon>
 		</Compile>
 		<Compile Update="DISEÑO\PAGO\FrmPagos.cs">
@@ -170,6 +170,97 @@
 		<Compile Update="DISEÑO\DEUDAS\FrmReporteDeudas.cs">
 			<SubType>Form</SubType>
 		</Compile>
+		<!-- Analítica de Inventario / CRM Financiero (FASE 1 UI) -->
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\Controles\UcCrmSectionPanel.cs">
+			<SubType>UserControl</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\Controles\UcCrmSectionPanel.Designer.cs">
+			<DependentUpon>UcCrmSectionPanel.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmCRMFinanciero.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmCRMFinanciero.Designer.cs">
+			<DependentUpon>FrmCRMFinanciero.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaliticaInventario.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaliticaInventario.Designer.cs">
+			<DependentUpon>FrmAnaliticaInventario.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDashboard.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDashboard.Designer.cs">
+			<DependentUpon>FrmAnaDashboard.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaInversiones.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaInversiones.Designer.cs">
+			<DependentUpon>FrmAnaInversiones.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRentabilidad.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRentabilidad.Designer.cs">
+			<DependentUpon>FrmAnaRentabilidad.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRanking.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRanking.Designer.cs">
+			<DependentUpon>FrmAnaRanking.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaVentas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaVentas.Designer.cs">
+			<DependentUpon>FrmAnaVentas.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaGanancias.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaGanancias.Designer.cs">
+			<DependentUpon>FrmAnaGanancias.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRoi.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRoi.Designer.cs">
+			<DependentUpon>FrmAnaRoi.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaCapitalCongelado.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaCapitalCongelado.Designer.cs">
+			<DependentUpon>FrmAnaCapitalCongelado.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaProductosEstrella.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaProductosEstrella.Designer.cs">
+			<DependentUpon>FrmAnaProductosEstrella.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaAlertas.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaAlertas.Designer.cs">
+			<DependentUpon>FrmAnaAlertas.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaTendencias.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaTendencias.Designer.cs">
+			<DependentUpon>FrmAnaTendencias.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDecisiones.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDecisiones.Designer.cs">
+			<DependentUpon>FrmAnaDecisiones.cs</DependentUpon>
+		</Compile>
 		<Compile Update="Properties\Resources.Designer.cs">
 		  <DesignTime>True</DesignTime>
 		  <AutoGen>True</AutoGen>
@@ -189,6 +280,51 @@
 	  </EmbeddedResource>
 	  <EmbeddedResource Update="DISEÑO\CAJA\FrmCierresCaja.resx">
 	    <DependentUpon>FrmCierresCaja.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\Controles\UcCrmSectionPanel.resx">
+	    <DependentUpon>UcCrmSectionPanel.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmCRMFinanciero.resx">
+	    <DependentUpon>FrmCRMFinanciero.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaliticaInventario.resx">
+	    <DependentUpon>FrmAnaliticaInventario.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDashboard.resx">
+	    <DependentUpon>FrmAnaDashboard.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaInversiones.resx">
+	    <DependentUpon>FrmAnaInversiones.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRentabilidad.resx">
+	    <DependentUpon>FrmAnaRentabilidad.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRanking.resx">
+	    <DependentUpon>FrmAnaRanking.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaVentas.resx">
+	    <DependentUpon>FrmAnaVentas.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaGanancias.resx">
+	    <DependentUpon>FrmAnaGanancias.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaRoi.resx">
+	    <DependentUpon>FrmAnaRoi.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaCapitalCongelado.resx">
+	    <DependentUpon>FrmAnaCapitalCongelado.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaProductosEstrella.resx">
+	    <DependentUpon>FrmAnaProductosEstrella.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaAlertas.resx">
+	    <DependentUpon>FrmAnaAlertas.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaTendencias.resx">
+	    <DependentUpon>FrmAnaTendencias.cs</DependentUpon>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDecisiones.resx">
+	    <DependentUpon>FrmAnaDecisiones.cs</DependentUpon>
 	  </EmbeddedResource>
 	</ItemGroup>
 
