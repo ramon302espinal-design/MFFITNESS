@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace DL
 {
@@ -218,6 +219,87 @@ WHERE (@FromUtc IS NULL OR DetectedAt >= @FromUtc)
                 new SqlParameter("@ToUtc", (object?)toUtc ?? DBNull.Value)
             });
             return t.Rows.Count == 0 ? null : t.Rows[0];
+        }
+
+        private const string SelectHistoryCols = @"
+    Id, EventId, Fingerprint, EventType, Area, EntityType, EntityId, EntityName, PeriodKey,
+    Severity, Priority, Status, Title, Description, Reason, Impact, Recommendation,
+    Source, GroupKey, DetectedAt, CreatedAt, ResolvedAt, ResolvedBy, ResolutionNote";
+
+        /// <summary>Batch por Id (FASE 11.21). Vacío si ids vacío.</summary>
+        public DataTable GetByIds(IReadOnlyList<long> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return EmptyHistoryTable();
+
+            var distinct = ids.Where(id => id > 0).Distinct().Take(500).ToList();
+            if (distinct.Count == 0)
+                return EmptyHistoryTable();
+
+            var parameters = new List<SqlParameter>(distinct.Count);
+            var names = new List<string>(distinct.Count);
+            for (int i = 0; i < distinct.Count; i++)
+            {
+                string p = "@Id" + i;
+                names.Add(p);
+                parameters.Add(new SqlParameter(p, distinct[i]));
+            }
+
+            string sql = $@"
+SELECT {SelectHistoryCols}
+FROM CrmDecisionEvents
+WHERE Id IN ({string.Join(", ", names)})";
+
+            return db.ExecuteQuery(sql, parameters.ToArray());
+        }
+
+        /// <summary>
+        /// Batch por EventId — última fila por EventId (FASE 11.21).
+        /// </summary>
+        public DataTable GetByEventIds(IReadOnlyList<Guid> eventIds)
+        {
+            if (eventIds == null || eventIds.Count == 0)
+                return EmptyHistoryTable();
+
+            var distinct = eventIds.Distinct().Take(500).ToList();
+            if (distinct.Count == 0)
+                return EmptyHistoryTable();
+
+            var parameters = new List<SqlParameter>(distinct.Count);
+            var names = new List<string>(distinct.Count);
+            for (int i = 0; i < distinct.Count; i++)
+            {
+                string p = "@E" + i;
+                names.Add(p);
+                parameters.Add(new SqlParameter(p, distinct[i]));
+            }
+
+            string sql = $@"
+;WITH ranked AS (
+    SELECT {SelectHistoryCols},
+           ROW_NUMBER() OVER (PARTITION BY EventId ORDER BY Id DESC) AS rn
+    FROM CrmDecisionEvents
+    WHERE EventId IN ({string.Join(", ", names)})
+)
+SELECT {SelectHistoryCols}
+FROM ranked
+WHERE rn = 1";
+
+            return db.ExecuteQuery(sql, parameters.ToArray());
+        }
+
+        private static DataTable EmptyHistoryTable()
+        {
+            var t = new DataTable();
+            foreach (string col in new[]
+            {
+                "Id", "EventId", "Fingerprint", "EventType", "Area", "EntityType",
+                "EntityId", "EntityName", "PeriodKey", "Severity", "Priority", "Status",
+                "Title", "Description", "Reason", "Impact", "Recommendation", "Source",
+                "GroupKey", "DetectedAt", "CreatedAt", "ResolvedAt", "ResolvedBy", "ResolutionNote"
+            })
+                t.Columns.Add(col);
+            return t;
         }
     }
 

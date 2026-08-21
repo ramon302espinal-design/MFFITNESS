@@ -52,6 +52,14 @@
             lblHistorialTitle = new Label();
             lblHistorialValue = new Label();
             lblHistorialDesc = new Label();
+            pnlEnlace = new Panel();
+            lblEnlaceTitle = new Label();
+            lstAlertasPrioridad = new ListBox();
+            btnVerDecision = new Button();
+            btnVerAccion = new Button();
+            btnVerResultadoAlerta = new Button();
+            btnIrDecisiones = new Button();
+            txtEnlaceDetalle = new TextBox();
             panelHeaderLocal.SuspendLayout();
             panelScroll.SuspendLayout();
             pnlCriticas.SuspendLayout();
@@ -62,6 +70,7 @@
             pnlAlertasfinancieras.SuspendLayout();
             pnlAlertasderentabilidad.SuspendLayout();
             pnlHistorial.SuspendLayout();
+            pnlEnlace.SuspendLayout();
             SuspendLayout();
             // 
             // panelHeaderLocal
@@ -90,6 +99,7 @@
             // 
             panelScroll.AutoScroll = true;
             panelScroll.BackColor = Color.FromArgb(247, 249, 252);
+            panelScroll.Controls.Add(pnlEnlace);
             panelScroll.Controls.Add(pnlCriticas);
             panelScroll.Controls.Add(pnlImportantes);
             panelScroll.Controls.Add(pnlAdvertencias);
@@ -473,6 +483,98 @@
             lblHistorialDesc.TabIndex = 2;
             lblHistorialDesc.Text = "Dato visual mock — sin logica";
             // 
+            // pnlEnlace
+            // 
+            pnlEnlace.BackColor = Color.White;
+            pnlEnlace.BorderStyle = BorderStyle.FixedSingle;
+            pnlEnlace.Controls.Add(txtEnlaceDetalle);
+            pnlEnlace.Controls.Add(btnIrDecisiones);
+            pnlEnlace.Controls.Add(btnVerResultadoAlerta);
+            pnlEnlace.Controls.Add(btnVerAccion);
+            pnlEnlace.Controls.Add(btnVerDecision);
+            pnlEnlace.Controls.Add(lstAlertasPrioridad);
+            pnlEnlace.Controls.Add(lblEnlaceTitle);
+            pnlEnlace.Location = new Point(16, 1024);
+            pnlEnlace.Name = "pnlEnlace";
+            pnlEnlace.Size = new Size(900, 280);
+            pnlEnlace.TabIndex = 8;
+            pnlEnlace.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            // 
+            // lblEnlaceTitle
+            // 
+            lblEnlaceTitle.AutoSize = true;
+            lblEnlaceTitle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblEnlaceTitle.ForeColor = Color.FromArgb(45, 55, 72);
+            lblEnlaceTitle.Location = new Point(14, 12);
+            lblEnlaceTitle.Name = "lblEnlaceTitle";
+            lblEnlaceTitle.Size = new Size(280, 23);
+            lblEnlaceTitle.TabIndex = 0;
+            lblEnlaceTitle.Text = "Enlace alerta → decisión → acción";
+            // 
+            // lstAlertasPrioridad
+            // 
+            lstAlertasPrioridad.FormattingEnabled = true;
+            lstAlertasPrioridad.ItemHeight = 20;
+            lstAlertasPrioridad.Location = new Point(14, 42);
+            lstAlertasPrioridad.Name = "lstAlertasPrioridad";
+            lstAlertasPrioridad.Size = new Size(866, 84);
+            lstAlertasPrioridad.TabIndex = 1;
+            // 
+            // btnVerDecision
+            // 
+            btnVerDecision.FlatStyle = FlatStyle.System;
+            btnVerDecision.Location = new Point(14, 136);
+            btnVerDecision.Name = "btnVerDecision";
+            btnVerDecision.Size = new Size(140, 32);
+            btnVerDecision.TabIndex = 2;
+            btnVerDecision.Text = "VER DECISIÓN";
+            btnVerDecision.UseVisualStyleBackColor = true;
+            btnVerDecision.Click += btnVerDecision_Click;
+            // 
+            // btnVerAccion
+            // 
+            btnVerAccion.FlatStyle = FlatStyle.System;
+            btnVerAccion.Location = new Point(166, 136);
+            btnVerAccion.Name = "btnVerAccion";
+            btnVerAccion.Size = new Size(140, 32);
+            btnVerAccion.TabIndex = 3;
+            btnVerAccion.Text = "VER ACCIÓN";
+            btnVerAccion.UseVisualStyleBackColor = true;
+            btnVerAccion.Click += btnVerAccion_Click;
+            // 
+            // btnVerResultadoAlerta
+            // 
+            btnVerResultadoAlerta.FlatStyle = FlatStyle.System;
+            btnVerResultadoAlerta.Location = new Point(318, 136);
+            btnVerResultadoAlerta.Name = "btnVerResultadoAlerta";
+            btnVerResultadoAlerta.Size = new Size(140, 32);
+            btnVerResultadoAlerta.TabIndex = 4;
+            btnVerResultadoAlerta.Text = "VER RESULTADO";
+            btnVerResultadoAlerta.UseVisualStyleBackColor = true;
+            btnVerResultadoAlerta.Click += btnVerResultadoAlerta_Click;
+            // 
+            // btnIrDecisiones
+            // 
+            btnIrDecisiones.FlatStyle = FlatStyle.System;
+            btnIrDecisiones.Location = new Point(700, 136);
+            btnIrDecisiones.Name = "btnIrDecisiones";
+            btnIrDecisiones.Size = new Size(180, 32);
+            btnIrDecisiones.TabIndex = 5;
+            btnIrDecisiones.Text = "Ir a Decisiones / Acción";
+            btnIrDecisiones.UseVisualStyleBackColor = true;
+            btnIrDecisiones.Click += btnIrDecisiones_Click;
+            // 
+            // txtEnlaceDetalle
+            // 
+            txtEnlaceDetalle.Location = new Point(14, 176);
+            txtEnlaceDetalle.Multiline = true;
+            txtEnlaceDetalle.Name = "txtEnlaceDetalle";
+            txtEnlaceDetalle.ReadOnly = true;
+            txtEnlaceDetalle.ScrollBars = ScrollBars.Vertical;
+            txtEnlaceDetalle.Size = new Size(866, 90);
+            txtEnlaceDetalle.TabIndex = 6;
+            txtEnlaceDetalle.Text = "Seleccione una prioridad y use VER DECISIÓN / ACCIÓN / RESULTADO.";
+            // 
             // FrmAnaAlertas
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -503,6 +605,8 @@
             pnlAlertasderentabilidad.PerformLayout();
             pnlHistorial.ResumeLayout(false);
             pnlHistorial.PerformLayout();
+            pnlEnlace.ResumeLayout(false);
+            pnlEnlace.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -543,5 +647,13 @@
         private Label lblHistorialTitle;
         private Label lblHistorialValue;
         private Label lblHistorialDesc;
+        private Panel pnlEnlace;
+        private Label lblEnlaceTitle;
+        private ListBox lstAlertasPrioridad;
+        private Button btnVerDecision;
+        private Button btnVerAccion;
+        private Button btnVerResultadoAlerta;
+        private Button btnIrDecisiones;
+        private TextBox txtEnlaceDetalle;
     }
 }

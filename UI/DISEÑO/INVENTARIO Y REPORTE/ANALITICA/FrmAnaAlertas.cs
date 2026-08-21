@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using BLL.Models.Crm;
@@ -8,7 +10,7 @@ using UI.Theme;
 namespace UI
 {
     /// <summary>
-    /// Alertas CRM — FASE 10.25: buckets del Centro + detalle inventario/ventas legacy.
+    /// Alertas CRM — FASE 10.25 Centro + FASE 11.18 enlace decisión/acción/resultado.
     /// Sin auto-acciones.
     /// </summary>
     [System.ComponentModel.DesignerCategory("Form")]
@@ -160,6 +162,58 @@ namespace UI
                     (report?.TotalAlerts ?? 0) + salesAlerts);
                 lblHistorialDesc.Text = sb.ToString().TrimEnd();
             }
+
+            CargarPanelEnlace(center);
+        }
+
+        /// <summary>FASE 11.18 — lista prioritaria + VER DECISIÓN / ACCIÓN / RESULTADO.</summary>
+        private void CargarPanelEnlace(DecisionCenterReport? center)
+        {
+            lstAlertasPrioridad.Items.Clear();
+            IReadOnlyList<AlertDecisionLinkItem> links = CrmAlertLinkUiBinder.ToLinkItems(center);
+
+            if (links.Count == 0)
+            {
+                lstAlertasPrioridad.Items.Add("Sin prioridades del Centro para enlazar.");
+                txtEnlaceDetalle.Text =
+                    "Cuando el Centro tenga prioridades, podrá ver decisión, acción y resultado asociados.";
+                return;
+            }
+
+            foreach (AlertDecisionLinkItem item in links)
+                lstAlertasPrioridad.Items.Add(item);
+
+            lstAlertasPrioridad.SelectedIndex = 0;
+            txtEnlaceDetalle.Text = CrmAlertLinkUiBinder.FormatDecisionView(
+                lstAlertasPrioridad.SelectedItem as AlertDecisionLinkItem);
+        }
+
+        private AlertDecisionLinkItem? SeleccionEnlace()
+            => lstAlertasPrioridad.SelectedItem as AlertDecisionLinkItem;
+
+        private void btnVerDecision_Click(object? sender, EventArgs e)
+            => txtEnlaceDetalle.Text = CrmAlertLinkUiBinder.FormatDecisionView(SeleccionEnlace());
+
+        private void btnVerAccion_Click(object? sender, EventArgs e)
+            => txtEnlaceDetalle.Text = CrmAlertLinkUiBinder.FormatActionsView(SeleccionEnlace());
+
+        private void btnVerResultadoAlerta_Click(object? sender, EventArgs e)
+            => txtEnlaceDetalle.Text = CrmAlertLinkUiBinder.FormatResultView(SeleccionEnlace());
+
+        private void btnIrDecisiones_Click(object? sender, EventArgs e)
+        {
+            Control? c = Parent;
+            while (c != null && c is not FrmCRMFinanciero)
+                c = c.Parent;
+
+            if (c is FrmCRMFinanciero crm)
+                crm.MostrarDecisiones();
+            else
+                MessageBox.Show(
+                    "Abra el módulo CRM Financiero para registrar/ver acciones.",
+                    "Alertas",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
         }
     }
 }

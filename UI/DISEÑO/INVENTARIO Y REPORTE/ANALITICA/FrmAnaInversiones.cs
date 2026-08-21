@@ -104,6 +104,13 @@ namespace UI
                 lblDetalleValue.Text = "—";
                 lblDetalleDesc.Text = "Cree una inversión y asigne ENTRADAS de stock";
             }
+
+            CrmDomainHintUiBinder.Apply(
+                lblCrmHint,
+                null,
+                DecisionEventArea.Investment,
+                DecisionEventArea.Roi,
+                DecisionEventArea.Capital);
         }
     }
 }

@@ -111,6 +111,13 @@ namespace UI
 
             lblTablaValue.Text = "Buckets + top";
             lblTablaDesc.Text = sb.ToString().TrimEnd();
+
+            CrmDomainHintUiBinder.Apply(
+                lblCrmHint,
+                CrmDecisionUiBinder.BuildSnapshot(null, null, immobilized),
+                DecisionEventArea.Capital,
+                DecisionEventArea.Inventory,
+                DecisionEventArea.Liquidity);
         }
     }
 }

@@ -48,6 +48,26 @@
             lblDecisionesTitle = new Label();
             lblDecisionesValue = new Label();
             lblDecisionesDesc = new Label();
+            pnlAcciones = new Panel();
+            lblAccionesTitle = new Label();
+            lblAccionesValue = new Label();
+            lblAccionesDesc = new Label();
+            lblTipoAccion = new Label();
+            cmbTipoAccion = new ComboBox();
+            lblDescAccion = new Label();
+            txtDescAccion = new TextBox();
+            lblDecisionVinculo = new Label();
+            cmbDecisionVinculo = new ComboBox();
+            chkIniciarAccion = new CheckBox();
+            btnRegistrarAccion = new Button();
+            lstAccionesRecientes = new ListBox();
+            lblAccionesHint = new Label();
+            btnMarcarCompletada = new Button();
+            btnVerResultado = new Button();
+            btnIniciarAccion = new Button();
+            btnCancelarAccion = new Button();
+            btnVerTimeline = new Button();
+            txtResultadoDetalle = new TextBox();
             panelHeaderLocal.SuspendLayout();
             panelScroll.SuspendLayout();
             pnlOportunidades.SuspendLayout();
@@ -57,6 +77,7 @@
             pnlCapitalcongelado.SuspendLayout();
             pnlRiesgos.SuspendLayout();
             pnlDecisiones.SuspendLayout();
+            pnlAcciones.SuspendLayout();
             SuspendLayout();
             // 
             // panelHeaderLocal
@@ -85,6 +106,7 @@
             // 
             panelScroll.AutoScroll = true;
             panelScroll.BackColor = Color.FromArgb(247, 249, 252);
+            panelScroll.Controls.Add(pnlAcciones);
             panelScroll.Controls.Add(pnlOportunidades);
             panelScroll.Controls.Add(pnlReposicion);
             panelScroll.Controls.Add(pnlInversiones);
@@ -421,6 +443,233 @@
             lblDecisionesDesc.TabIndex = 2;
             lblDecisionesDesc.Text = "Dato visual mock — sin logica";
             // 
+            // pnlAcciones
+            // 
+            pnlAcciones.BackColor = Color.White;
+            pnlAcciones.BorderStyle = BorderStyle.FixedSingle;
+            pnlAcciones.Controls.Add(txtResultadoDetalle);
+            pnlAcciones.Controls.Add(btnVerTimeline);
+            pnlAcciones.Controls.Add(btnCancelarAccion);
+            pnlAcciones.Controls.Add(btnIniciarAccion);
+            pnlAcciones.Controls.Add(btnVerResultado);
+            pnlAcciones.Controls.Add(btnMarcarCompletada);
+            pnlAcciones.Controls.Add(lblAccionesHint);
+            pnlAcciones.Controls.Add(lstAccionesRecientes);
+            pnlAcciones.Controls.Add(btnRegistrarAccion);
+            pnlAcciones.Controls.Add(chkIniciarAccion);
+            pnlAcciones.Controls.Add(cmbDecisionVinculo);
+            pnlAcciones.Controls.Add(lblDecisionVinculo);
+            pnlAcciones.Controls.Add(txtDescAccion);
+            pnlAcciones.Controls.Add(lblDescAccion);
+            pnlAcciones.Controls.Add(cmbTipoAccion);
+            pnlAcciones.Controls.Add(lblTipoAccion);
+            pnlAcciones.Controls.Add(lblAccionesDesc);
+            pnlAcciones.Controls.Add(lblAccionesValue);
+            pnlAcciones.Controls.Add(lblAccionesTitle);
+            pnlAcciones.Location = new Point(16, 898);
+            pnlAcciones.Name = "pnlAcciones";
+            pnlAcciones.Size = new Size(900, 400);
+            pnlAcciones.TabIndex = 7;
+            pnlAcciones.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            // 
+            // lblAccionesTitle
+            // 
+            lblAccionesTitle.AutoSize = true;
+            lblAccionesTitle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblAccionesTitle.ForeColor = Color.FromArgb(45, 55, 72);
+            lblAccionesTitle.Location = new Point(14, 12);
+            lblAccionesTitle.Name = "lblAccionesTitle";
+            lblAccionesTitle.Size = new Size(80, 23);
+            lblAccionesTitle.TabIndex = 0;
+            lblAccionesTitle.Text = "Acciones";
+            // 
+            // lblAccionesValue
+            // 
+            lblAccionesValue.AutoSize = true;
+            lblAccionesValue.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            lblAccionesValue.ForeColor = Color.FromArgb(26, 32, 44);
+            lblAccionesValue.Location = new Point(14, 38);
+            lblAccionesValue.Name = "lblAccionesValue";
+            lblAccionesValue.Size = new Size(40, 41);
+            lblAccionesValue.TabIndex = 1;
+            lblAccionesValue.Text = "—";
+            // 
+            // lblAccionesDesc
+            // 
+            lblAccionesDesc.AutoSize = true;
+            lblAccionesDesc.Font = new Font("Segoe UI", 8.5F);
+            lblAccionesDesc.ForeColor = Color.FromArgb(113, 128, 150);
+            lblAccionesDesc.Location = new Point(16, 82);
+            lblAccionesDesc.Name = "lblAccionesDesc";
+            lblAccionesDesc.Size = new Size(280, 19);
+            lblAccionesDesc.TabIndex = 2;
+            lblAccionesDesc.Text = "Registro manual · el sistema no ejecuta POS";
+            // 
+            // lblTipoAccion
+            // 
+            lblTipoAccion.AutoSize = true;
+            lblTipoAccion.Font = new Font("Segoe UI", 8.5F);
+            lblTipoAccion.Location = new Point(14, 112);
+            lblTipoAccion.Name = "lblTipoAccion";
+            lblTipoAccion.Size = new Size(36, 19);
+            lblTipoAccion.TabIndex = 3;
+            lblTipoAccion.Text = "Tipo";
+            // 
+            // cmbTipoAccion
+            // 
+            cmbTipoAccion.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbTipoAccion.FlatStyle = FlatStyle.System;
+            cmbTipoAccion.FormattingEnabled = true;
+            cmbTipoAccion.Location = new Point(60, 108);
+            cmbTipoAccion.Name = "cmbTipoAccion";
+            cmbTipoAccion.Size = new Size(220, 28);
+            cmbTipoAccion.TabIndex = 4;
+            // 
+            // lblDescAccion
+            // 
+            lblDescAccion.AutoSize = true;
+            lblDescAccion.Font = new Font("Segoe UI", 8.5F);
+            lblDescAccion.Location = new Point(300, 112);
+            lblDescAccion.Name = "lblDescAccion";
+            lblDescAccion.Size = new Size(85, 19);
+            lblDescAccion.TabIndex = 5;
+            lblDescAccion.Text = "Descripción";
+            // 
+            // txtDescAccion
+            // 
+            txtDescAccion.Location = new Point(390, 108);
+            txtDescAccion.Name = "txtDescAccion";
+            txtDescAccion.Size = new Size(320, 27);
+            txtDescAccion.TabIndex = 6;
+            // 
+            // lblDecisionVinculo
+            // 
+            lblDecisionVinculo.AutoSize = true;
+            lblDecisionVinculo.Font = new Font("Segoe UI", 8.5F);
+            lblDecisionVinculo.Location = new Point(14, 150);
+            lblDecisionVinculo.Name = "lblDecisionVinculo";
+            lblDecisionVinculo.Size = new Size(64, 19);
+            lblDecisionVinculo.TabIndex = 7;
+            lblDecisionVinculo.Text = "Decisión";
+            // 
+            // cmbDecisionVinculo
+            // 
+            cmbDecisionVinculo.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbDecisionVinculo.FlatStyle = FlatStyle.System;
+            cmbDecisionVinculo.FormattingEnabled = true;
+            cmbDecisionVinculo.Location = new Point(90, 146);
+            cmbDecisionVinculo.Name = "cmbDecisionVinculo";
+            cmbDecisionVinculo.Size = new Size(490, 28);
+            cmbDecisionVinculo.TabIndex = 8;
+            // 
+            // chkIniciarAccion
+            // 
+            chkIniciarAccion.AutoSize = true;
+            chkIniciarAccion.FlatStyle = FlatStyle.System;
+            chkIniciarAccion.Location = new Point(600, 148);
+            chkIniciarAccion.Name = "chkIniciarAccion";
+            chkIniciarAccion.Size = new Size(140, 25);
+            chkIniciarAccion.TabIndex = 9;
+            chkIniciarAccion.Text = "Iniciar ya";
+            chkIniciarAccion.UseVisualStyleBackColor = true;
+            // 
+            // btnRegistrarAccion
+            // 
+            btnRegistrarAccion.FlatStyle = FlatStyle.System;
+            btnRegistrarAccion.Location = new Point(740, 144);
+            btnRegistrarAccion.Name = "btnRegistrarAccion";
+            btnRegistrarAccion.Size = new Size(140, 32);
+            btnRegistrarAccion.TabIndex = 10;
+            btnRegistrarAccion.Text = "REGISTRAR ACCIÓN";
+            btnRegistrarAccion.UseVisualStyleBackColor = true;
+            btnRegistrarAccion.Click += btnRegistrarAccion_Click;
+            // 
+            // lstAccionesRecientes
+            // 
+            lstAccionesRecientes.FormattingEnabled = true;
+            lstAccionesRecientes.ItemHeight = 20;
+            lstAccionesRecientes.Location = new Point(14, 186);
+            lstAccionesRecientes.Name = "lstAccionesRecientes";
+            lstAccionesRecientes.Size = new Size(866, 64);
+            lstAccionesRecientes.TabIndex = 11;
+            // 
+            // lblAccionesHint
+            // 
+            lblAccionesHint.AutoSize = true;
+            lblAccionesHint.Font = new Font("Segoe UI", 8F);
+            lblAccionesHint.ForeColor = Color.FromArgb(113, 128, 150);
+            lblAccionesHint.Location = new Point(480, 16);
+            lblAccionesHint.Name = "lblAccionesHint";
+            lblAccionesHint.Size = new Size(400, 19);
+            lblAccionesHint.TabIndex = 12;
+            lblAccionesHint.Text = "El usuario ejecuta en POS · aquí solo se registra";
+            // 
+            // btnMarcarCompletada
+            // 
+            btnMarcarCompletada.FlatStyle = FlatStyle.System;
+            btnMarcarCompletada.Location = new Point(14, 258);
+            btnMarcarCompletada.Name = "btnMarcarCompletada";
+            btnMarcarCompletada.Size = new Size(150, 32);
+            btnMarcarCompletada.TabIndex = 13;
+            btnMarcarCompletada.Text = "COMPLETAR";
+            btnMarcarCompletada.UseVisualStyleBackColor = true;
+            btnMarcarCompletada.Click += btnMarcarCompletada_Click;
+            // 
+            // btnVerResultado
+            // 
+            btnVerResultado.FlatStyle = FlatStyle.System;
+            btnVerResultado.Location = new Point(170, 258);
+            btnVerResultado.Name = "btnVerResultado";
+            btnVerResultado.Size = new Size(150, 32);
+            btnVerResultado.TabIndex = 14;
+            btnVerResultado.Text = "VER RESULTADO";
+            btnVerResultado.UseVisualStyleBackColor = true;
+            btnVerResultado.Click += btnVerResultado_Click;
+            // 
+            // btnIniciarAccion
+            // 
+            btnIniciarAccion.FlatStyle = FlatStyle.System;
+            btnIniciarAccion.Location = new Point(326, 258);
+            btnIniciarAccion.Name = "btnIniciarAccion";
+            btnIniciarAccion.Size = new Size(120, 32);
+            btnIniciarAccion.TabIndex = 15;
+            btnIniciarAccion.Text = "INICIAR";
+            btnIniciarAccion.UseVisualStyleBackColor = true;
+            btnIniciarAccion.Click += btnIniciarAccion_Click;
+            // 
+            // btnCancelarAccion
+            // 
+            btnCancelarAccion.FlatStyle = FlatStyle.System;
+            btnCancelarAccion.Location = new Point(452, 258);
+            btnCancelarAccion.Name = "btnCancelarAccion";
+            btnCancelarAccion.Size = new Size(120, 32);
+            btnCancelarAccion.TabIndex = 16;
+            btnCancelarAccion.Text = "CANCELAR";
+            btnCancelarAccion.UseVisualStyleBackColor = true;
+            btnCancelarAccion.Click += btnCancelarAccion_Click;
+            // 
+            // btnVerTimeline
+            // 
+            btnVerTimeline.FlatStyle = FlatStyle.System;
+            btnVerTimeline.Location = new Point(578, 258);
+            btnVerTimeline.Name = "btnVerTimeline";
+            btnVerTimeline.Size = new Size(120, 32);
+            btnVerTimeline.TabIndex = 17;
+            btnVerTimeline.Text = "TIMELINE";
+            btnVerTimeline.UseVisualStyleBackColor = true;
+            btnVerTimeline.Click += btnVerTimeline_Click;
+            // 
+            // txtResultadoDetalle
+            // 
+            txtResultadoDetalle.Location = new Point(14, 300);
+            txtResultadoDetalle.Multiline = true;
+            txtResultadoDetalle.Name = "txtResultadoDetalle";
+            txtResultadoDetalle.ReadOnly = true;
+            txtResultadoDetalle.ScrollBars = ScrollBars.Vertical;
+            txtResultadoDetalle.Size = new Size(866, 88);
+            txtResultadoDetalle.TabIndex = 18;
+            txtResultadoDetalle.Text = "Seleccione una acción y use VER RESULTADO / TIMELINE.";
+            // 
             // FrmAnaDecisiones
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -449,6 +698,8 @@
             pnlRiesgos.PerformLayout();
             pnlDecisiones.ResumeLayout(false);
             pnlDecisiones.PerformLayout();
+            pnlAcciones.ResumeLayout(false);
+            pnlAcciones.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -485,5 +736,25 @@
         private Label lblDecisionesTitle;
         private Label lblDecisionesValue;
         private Label lblDecisionesDesc;
+        private Panel pnlAcciones;
+        private Label lblAccionesTitle;
+        private Label lblAccionesValue;
+        private Label lblAccionesDesc;
+        private Label lblTipoAccion;
+        private ComboBox cmbTipoAccion;
+        private Label lblDescAccion;
+        private TextBox txtDescAccion;
+        private Label lblDecisionVinculo;
+        private ComboBox cmbDecisionVinculo;
+        private CheckBox chkIniciarAccion;
+        private Button btnRegistrarAccion;
+        private ListBox lstAccionesRecientes;
+        private Label lblAccionesHint;
+        private Button btnMarcarCompletada;
+        private Button btnVerResultado;
+        private Button btnIniciarAccion;
+        private Button btnCancelarAccion;
+        private Button btnVerTimeline;
+        private TextBox txtResultadoDetalle;
     }
 }

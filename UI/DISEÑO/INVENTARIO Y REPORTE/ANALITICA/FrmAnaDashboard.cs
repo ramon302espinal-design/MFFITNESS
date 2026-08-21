@@ -8,7 +8,7 @@ using UI.Theme;
 namespace UI
 {
     /// <summary>
-    /// Dashboard CRM — FASE 7–9 + FASE 10 Centro de decisiones (10.24/10.28).
+    /// Dashboard CRM — FASE 7–10 + FASE 11.17 contadores de acciones.
     /// Sin lógica financiera: solo binders BLL.
     /// </summary>
     [System.ComponentModel.DesignerCategory("Form")]
@@ -21,6 +21,7 @@ namespace UI
             Load += (_, _) => CargarDatos();
             btnDecisionVer.Enabled = true;
             btnDecisionVer.Click += (_, _) => NavegarADecisiones();
+            btnAccionesVer.Click += (_, _) => NavegarADecisiones();
         }
 
         private void NavegarADecisiones()
@@ -311,6 +312,36 @@ namespace UI
             else
             {
                 pnlDecisions.Text = "Centro de decisiones";
+            }
+
+            // FASE 11.17 — Contadores de acciones (binder; sin lógica en el Form)
+            BusinessActionDashboardCounters? actions =
+                CrmBusinessActionUiBinder.TryLoadDashboardCounters(out string? actionsErr);
+
+            if (actions == null)
+            {
+                pnlActions.Text = "Acciones de negocio";
+                lblAccPendientes.Text = "Pendientes: —";
+                lblAccEnProceso.Text = "En proceso: —";
+                lblAccCompletadas.Text = "Completadas: —";
+                lblAccExitosas.Text = "Exitosas (histórico): —";
+                lblAccImpacto.Text = string.IsNullOrWhiteSpace(actionsErr)
+                    ? "Impacto observado: no disponible (migración 0012+)"
+                    : $"Impacto observado: {actionsErr}";
+            }
+            else
+            {
+                pnlActions.Text = CrmBusinessActionUiBinder.FormatDashboardTitle(actions);
+                lblAccPendientes.Text =
+                    $"Pendientes: {CrmBusinessActionUiBinder.Count(actions.Pending)}";
+                lblAccEnProceso.Text =
+                    $"En proceso: {CrmBusinessActionUiBinder.Count(actions.InProgress)}";
+                lblAccCompletadas.Text =
+                    $"Completadas: {CrmBusinessActionUiBinder.Count(actions.Completed)}";
+                lblAccExitosas.Text =
+                    $"Exitosas (histórico): {CrmBusinessActionUiBinder.Count(actions.Successful)}";
+                lblAccImpacto.Text = "Impacto observado: " + actions.ImpactHint
+                    + " · " + CrmBusinessActionUiBinder.ClosedLoopStatusLine();
             }
         }
     }

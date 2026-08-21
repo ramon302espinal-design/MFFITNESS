@@ -55,6 +55,12 @@ namespace BLL.Services.Crm
         DecisionHistoryRecord? FindById(long id);
         DecisionHistoryRecord? FindOpenByFingerprint(string fingerprint);
 
+        /// <summary>Batch por Id (FASE 11.21 — timeline sin N+1).</summary>
+        IReadOnlyList<DecisionHistoryRecord> FindManyByIds(IReadOnlyCollection<long> ids);
+
+        /// <summary>Batch por EventId — última fila por EventId (FASE 11.21).</summary>
+        IReadOnlyList<DecisionHistoryRecord> FindManyByEventIds(IReadOnlyCollection<Guid> eventIds);
+
         /// <summary>Aplica Status (+ campos de resolución). null si Id no existe.</summary>
         DecisionHistoryRecord? ApplyStatus(
             long id,
@@ -91,6 +97,35 @@ namespace BLL.Services.Crm
         {
             lock (_gate)
                 return _rows.FirstOrDefault(r => r.Id == id);
+        }
+
+        public IReadOnlyList<DecisionHistoryRecord> FindManyByIds(IReadOnlyCollection<long> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return Array.Empty<DecisionHistoryRecord>();
+
+            var set = ids.Where(id => id > 0).ToHashSet();
+            if (set.Count == 0)
+                return Array.Empty<DecisionHistoryRecord>();
+
+            lock (_gate)
+                return _rows.Where(r => set.Contains(r.Id)).ToList();
+        }
+
+        public IReadOnlyList<DecisionHistoryRecord> FindManyByEventIds(IReadOnlyCollection<Guid> eventIds)
+        {
+            if (eventIds == null || eventIds.Count == 0)
+                return Array.Empty<DecisionHistoryRecord>();
+
+            var set = eventIds.ToHashSet();
+            lock (_gate)
+            {
+                return _rows
+                    .Where(r => set.Contains(r.EventId))
+                    .GroupBy(r => r.EventId)
+                    .Select(g => g.OrderByDescending(x => x.Id).First())
+                    .ToList();
+            }
         }
 
         public DecisionHistoryRecord? FindOpenByFingerprint(string fingerprint)
@@ -297,6 +332,31 @@ namespace BLL.Services.Crm
         {
             System.Data.DataRow? row = _dal.GetById(id);
             return row == null ? null : FromDataRow(row);
+        }
+
+        public IReadOnlyList<DecisionHistoryRecord> FindManyByIds(IReadOnlyCollection<long> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return Array.Empty<DecisionHistoryRecord>();
+
+            var table = _dal.GetByIds(ids is IReadOnlyList<long> list ? list : ids.ToList());
+            var result = new List<DecisionHistoryRecord>(table.Rows.Count);
+            foreach (System.Data.DataRow row in table.Rows)
+                result.Add(FromDataRow(row));
+            return result;
+        }
+
+        public IReadOnlyList<DecisionHistoryRecord> FindManyByEventIds(IReadOnlyCollection<Guid> eventIds)
+        {
+            if (eventIds == null || eventIds.Count == 0)
+                return Array.Empty<DecisionHistoryRecord>();
+
+            var table = _dal.GetByEventIds(
+                eventIds is IReadOnlyList<Guid> list ? list : eventIds.ToList());
+            var result = new List<DecisionHistoryRecord>(table.Rows.Count);
+            foreach (System.Data.DataRow row in table.Rows)
+                result.Add(FromDataRow(row));
+            return result;
         }
 
         public DecisionHistoryRecord? FindOpenByFingerprint(string fingerprint)

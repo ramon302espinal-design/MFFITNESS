@@ -75,6 +75,13 @@ namespace UI
                 $"Realizada {CrmProfitUiBinder.Money(month.RealizedProfit)} · " +
                 $"Potencial {CrmProfitUiBinder.Money(month.PotentialProfit)} · " +
                 $"Margen {CrmProfitUiBinder.Pct(month.MarginPct)}";
+
+            CrmDomainHintUiBinder.Apply(
+                lblCrmHint,
+                null,
+                DecisionEventArea.Profit,
+                DecisionEventArea.Margin,
+                DecisionEventArea.Roi);
         }
     }
 }

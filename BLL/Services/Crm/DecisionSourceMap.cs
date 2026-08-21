@@ -315,11 +315,137 @@ namespace BLL.Services.Crm
                 "CrmDecisionUiBinder · Forms CRM",
                 "FASE 10.28");
 
+            Composer("BusinessActionCatalog",
+                "Contratos ActionType/Status/Outcome/Confidence (FASE 11.2)",
+                "Mutar POS; ML; confundir con DecisionResolutionAction",
+                "ActionService (11.5+) · FrmAnaDecisiones",
+                "FASE 11.2");
+
+            Composer("BusinessActionRecordFactory",
+                "ActionRecord + ExpectedImpact (FASE 11.3)",
+                "Persistir; mutar POS; inventar ganancia esperada",
+                "ActionService (11.5) · Evaluation (11.9)",
+                "FASE 11.3");
+
+            Composer("CrmBusinessActionDAL",
+                "Persistencia CrmBusinessActions / Schema 12 (FASE 11.4)",
+                "Mutar ventas/costos/stock; recalcular métricas",
+                "BusinessActionPersistenceMapper · ActionService (11.5)",
+                "FASE 11.4");
+
+            Composer("BusinessActionService",
+                "Registro + estados de acción (FASE 11.5)",
+                "Mutar POS; auto-completar; Outcome Exitosa en Cancelada",
+                "FrmAnaDecisiones · Evaluation (11.9)",
+                "FASE 11.5");
+
+            Composer("BusinessActionBaselineComposer",
+                "Snapshot mínimo SSOT pre-acción (FASE 11.6)",
+                "Inventar métricas; mutar POS; copiar Analytics completo",
+                "ActionService · Evaluation (11.8–11.9)",
+                "FASE 11.6");
+
+            Composer("BusinessActionEvaluationWindowMath",
+                "Ventana post-Complete InWindow/Ready (FASE 11.7)",
+                "Clasificar Outcome; calcular deltas; mutar POS",
+                "ActionService · Evaluation (11.9)",
+                "FASE 11.7");
+
+            Composer("BusinessActionMetricDeltaMath",
+                "Post-métricas vs baseline; % y pp margen (FASE 11.8)",
+                "Asignar Exitosa/Parcial; causalidad; mutar POS",
+                "ActionService · Evaluation (11.9)",
+                "FASE 11.8");
+
+            Composer("BusinessActionEvaluationService",
+                "Clasifica Outcome Exitosa/Parcial/No efectiva/Sin datos (FASE 11.9)",
+                "ML; causalidad; Exitosa en Cancelada; inventar umbrales de negocio",
+                "FrmAnaDecisiones · Learning (11.13)",
+                "FASE 11.9");
+
+            Composer("BusinessActionCapitalImpactComposer",
+                "Capital liberado / incrementos observados (FASE 11.10)",
+                "Afirmar causalidad; mutar POS; inventar montos sin deltas",
+                "EvaluationService · UI Decisiones",
+                "FASE 11.10");
+
+            Composer("BusinessActionTimelineComposer",
+                "Timeline decisión→acción→resultado (FASE 11.11)",
+                "Mutar POS; inventar hitos; causalidad",
+                "FrmAnaDecisiones · TimelineService",
+                "FASE 11.11");
+
+            Composer("BusinessActionTimelineService",
+                "Timeline con prefetch batch decisiones (FASE 11.21 — sin N+1)",
+                "1 FindById por acción en listados; mutar POS",
+                "ListRecentBatch · GetByDecisionEventIdBatch · FrmAnaDecisiones",
+                "FASE 11.21");
+
+            Composer("BusinessActionSoftLanguageGuard",
+                "Guard soft language / anti-causalidad acciones (FASE 11.23 / brief §86)",
+                "Afirmar 'causó'; garantías; ML; mutar POS",
+                "Evaluation · CapitalImpact · PostMetrics · Learning · BriefTests",
+                "FASE 11.23");
+
+            Composer("BusinessActionIntegrationService",
+                "Closed-loop Alerta→Decisión→Acción→Resultado→Aprendizaje (FASE 11.24 / §88)",
+                "Auto-ejecutar POS; ML; inventar impacto; tocar FrmReportes",
+                "FrmAnaDecisiones · Dashboard · FinalIntegrationTests",
+                "FASE 11.24");
+
+            Composer("BusinessActionPhasePolicy",
+                "Cierre formal FASE 11 (11.25) — IsComplete · closed-loop §88",
+                "Reabrir fase; mutar POS; tocar FrmReportes; ML",
+                "BusinessActionIntegrationService · UI banners · FinalIntegrationTests",
+                "FASE 11.25");
+
+            Composer("BusinessActionBriefPolicy",
+                "Batería brief §80 TEST 1–12 (FASE 11.22)",
+                "Mutar POS; inventar impacto; tratar histórico como garantía",
+                "BusinessActionBriefTests · Evaluation · Learning",
+                "FASE 11.22");
+
+            Composer("BusinessActionAuditService",
+                "Auditoría append-only acciones + actor Sesion (FASE 11.12)",
+                "Borrar audit; mutar POS; inventar actor",
+                "ActionService · EvaluationService · UI",
+                "FASE 11.12");
+
+            Composer("BusinessActionLearningComposer",
+                "Tasas éxito/parcial/fracaso por tipo (FASE 11.13)",
+                "ML; garantía futura; causalidad; mutar POS",
+                "FrmAnaDecisiones · Learning UI",
+                "FASE 11.13");
+
+            Composer("BusinessActionContextualLearningComposer",
+                "Learning producto/problema + señales recurrencia (FASE 11.14)",
+                "ML; 'funcionará'; mutar POS; inventar causalidad",
+                "LearningService · FrmAnaDecisiones",
+                "FASE 11.14");
+
+            Ui("CrmDomainHintUiBinder",
+                "Hints suaves Forms dominio (FASE 11.20)",
+                "Lógica financiera en Forms; mutar POS; saturar UI; auto-acción",
+                "FrmAnaVentas · Ganancias · Roi · Inversiones · Inventario · Capital",
+                "FASE 11.20");
+
+            Ui("CrmBusinessActionUiBinder",
+                "Binder SSOT acciones CRM completo (FASE 11.19)",
+                "Lógica financiera en Forms; mutar POS; auto-ejecutar; new Service en Forms",
+                "FrmAnaDecisiones · FrmAnaDashboard · FrmAnaAlertas",
+                "FASE 11.19");
+
+            Ui("CrmAlertLinkUiBinder",
+                "Enlace alerta→decisión→acción→resultado (FASE 11.18)",
+                "Mutar POS; inventar vínculos; auto-ejecutar",
+                "FrmAnaAlertas",
+                "FASE 11.18");
+
             Ui("FrmAnaDecisiones",
-                "Centro de decisiones UI (FASE 10.25)",
+                "Centro de decisiones UI (FASE 10.25) + Acciones (11.15–11.16)",
                 "Calcular métricas; acciones irreversibles",
                 "Usuario",
-                "FASE 10.25");
+                "FASE 10.25 / 11.15+");
 
             Ui("FrmAnaAlertas",
                 "Buckets Centro + legacy inventario/ventas (FASE 10.25)",

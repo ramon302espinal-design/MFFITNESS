@@ -95,6 +95,14 @@ namespace UI
             lblGraficoDesc.Text =
                 $"Acel. {CrmSalesUiBinder.AccelerationLabel(dash.RevenueAcceleration)} · " +
                 $"Quiebre {CrmSalesUiBinder.Count(dash.StockoutRiskCount)} · {alertPreview}";
+
+            // FASE 11.20 — hint Centro / acciones (sin lógica en Form)
+            CrmDomainHintUiBinder.Apply(
+                lblCrmHint,
+                CrmDomainHintUiBinder.TryBuildSnapshotFromSales(dash),
+                DecisionEventArea.Sales,
+                DecisionEventArea.Profit,
+                DecisionEventArea.Trend);
         }
     }
 }

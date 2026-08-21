@@ -68,6 +68,13 @@ namespace UI
             lblTabladeproductosDesc.Text = top.Any()
                 ? string.Join(" · ", top)
                 : "Sin productos con capital calculable";
+
+            CrmDomainHintUiBinder.Apply(
+                lblCrmHint,
+                CrmDecisionUiBinder.BuildSnapshot(null, null, summary.FrozenCapitalTotal),
+                DecisionEventArea.Inventory,
+                DecisionEventArea.Capital,
+                DecisionEventArea.Product);
         }
     }
 }

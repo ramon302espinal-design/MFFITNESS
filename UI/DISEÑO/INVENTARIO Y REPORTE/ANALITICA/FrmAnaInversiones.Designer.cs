@@ -1,4 +1,4 @@
-﻿namespace UI
+namespace UI
 {
     partial class FrmAnaInversiones
     {
@@ -19,6 +19,7 @@
         {
             panelHeaderLocal = new Panel();
             lblHeaderLocal = new Label();
+            lblCrmHint = new Label();
             panelScroll = new Panel();
             pnlResumen = new Panel();
             lblResumenTitle = new Label();
@@ -53,11 +54,12 @@
             // 
             panelHeaderLocal.BackColor = Color.White;
             panelHeaderLocal.BorderStyle = BorderStyle.FixedSingle;
+            panelHeaderLocal.Controls.Add(lblCrmHint);
             panelHeaderLocal.Controls.Add(lblHeaderLocal);
             panelHeaderLocal.Dock = DockStyle.Top;
             panelHeaderLocal.Location = new Point(0, 0);
             panelHeaderLocal.Name = "panelHeaderLocal";
-            panelHeaderLocal.Size = new Size(940, 48);
+            panelHeaderLocal.Size = new Size(940, 64);
             panelHeaderLocal.TabIndex = 0;
             // 
             // lblHeaderLocal
@@ -69,6 +71,18 @@
             lblHeaderLocal.Name = "lblHeaderLocal";
             lblHeaderLocal.Size = new Size(100, 28);
             lblHeaderLocal.TabIndex = 0;
+
+            // 
+            // lblCrmHint
+            // 
+            lblCrmHint.AutoSize = true;
+            lblCrmHint.Font = new Font("Segoe UI", 8F);
+            lblCrmHint.ForeColor = Color.FromArgb(113, 128, 150);
+            lblCrmHint.Location = new Point(14, 40);
+            lblCrmHint.Name = "lblCrmHint";
+            lblCrmHint.Size = new Size(800, 19);
+            lblCrmHint.TabIndex = 1;
+            lblCrmHint.Text = "";
             lblHeaderLocal.Text = "Inversiones";
             // 
             // panelScroll
@@ -81,7 +95,7 @@
             panelScroll.Controls.Add(pnlHistorial);
             panelScroll.Controls.Add(pnlDetalle);
             panelScroll.Dock = DockStyle.Fill;
-            panelScroll.Location = new Point(0, 48);
+            panelScroll.Location = new Point(0, 64);
             panelScroll.Name = "panelScroll";
             panelScroll.Padding = new Padding(8);
             panelScroll.Size = new Size(940, 552);
@@ -348,6 +362,7 @@
 
         private Panel panelHeaderLocal;
         private Label lblHeaderLocal;
+        private Label lblCrmHint;
         private Panel panelScroll;
         private Panel pnlResumen;
         private Label lblResumenTitle;

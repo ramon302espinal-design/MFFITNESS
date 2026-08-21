@@ -74,6 +74,13 @@ namespace UI
             lblGraficoDesc.Text =
                 $"Ventas {CrmProfitUiBinder.Pct(month.RoiPct)} · " +
                 $"Inv. {CrmInvestmentUiBinder.Pct(topInv?.Summary.RoiRealizedPct)}";
+
+            CrmDomainHintUiBinder.Apply(
+                lblCrmHint,
+                null,
+                DecisionEventArea.Roi,
+                DecisionEventArea.Investment,
+                DecisionEventArea.Profit);
         }
     }
 }

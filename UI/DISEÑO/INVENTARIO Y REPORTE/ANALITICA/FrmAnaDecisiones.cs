@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using BLL.Models.Crm;
@@ -8,8 +9,8 @@ using UI.Theme;
 namespace UI
 {
     /// <summary>
-    /// Decisiones CRM — FASE 10.25/10.28: Centro + captura opcional de historial.
-    /// KPIs de contexto vía binders. Sin auto-acciones.
+    /// Decisiones CRM — FASE 10.25 Centro + FASE 11.15 REGISTRAR + 11.16 VER RESULTADO.
+    /// KPIs y registro vía binders. Sin auto-acciones / sin mutar POS.
     /// </summary>
     [System.ComponentModel.DesignerCategory("Form")]
     public partial class FrmAnaDecisiones : Form
@@ -155,6 +156,244 @@ namespace UI
                     ? salesDecisions.Primary.Message + " · sin auto-acción"
                     : "Sin decisión prioritaria";
             }
+
+            CargarPanelAcciones();
+        }
+
+        /// <summary>FASE 11.15 — panel REGISTRAR ACCIÓN (vía binder).</summary>
+        private void CargarPanelAcciones()
+        {
+            (int pending, int inProgress, int completed) =
+                CrmBusinessActionUiBinder.TryCountOpen(out string? countErr);
+
+            int open = pending + inProgress;
+            lblAccionesValue.Text = countErr != null
+                ? "—"
+                : CrmBusinessActionUiBinder.Count(open);
+            lblAccionesDesc.Text = countErr != null
+                ? "Acciones no disponibles (migración 0012+)"
+                : CrmBusinessActionUiBinder.OpenSummaryLine(pending, inProgress, completed)
+                  + " · " + CrmBusinessActionUiBinder.ClosedLoopStatusLine();
+
+            if (cmbTipoAccion.DataSource == null)
+            {
+                cmbTipoAccion.DataSource = CrmBusinessActionUiBinder.TypeChoices().ToList();
+                cmbTipoAccion.DisplayMember = nameof(BusinessActionTypeChoice.Display);
+            }
+
+            cmbDecisionVinculo.DataSource = null;
+            cmbDecisionVinculo.DataSource = CrmBusinessActionUiBinder.TryLoadDecisionLinks(out _).ToList();
+            cmbDecisionVinculo.DisplayMember = nameof(DecisionLinkChoice.Display);
+            if (cmbDecisionVinculo.Items.Count > 0)
+                cmbDecisionVinculo.SelectedIndex = 0;
+
+            RefrescarListaAcciones();
+        }
+
+        private void RefrescarListaAcciones()
+        {
+            lstAccionesRecientes.Items.Clear();
+            IReadOnlyList<BusinessActionRecord>? recent =
+                CrmBusinessActionUiBinder.TryListRecent(out string? err, top: 12);
+
+            if (recent == null)
+            {
+                lstAccionesRecientes.Items.Add(
+                    string.IsNullOrWhiteSpace(err)
+                        ? "Sin historial de acciones."
+                        : $"No se pudo cargar: {err}");
+                txtResultadoDetalle.Text = "Acciones no disponibles.";
+                return;
+            }
+
+            if (recent.Count == 0)
+            {
+                lstAccionesRecientes.Items.Add("Sin acciones registradas aún.");
+                txtResultadoDetalle.Text = "Sin acciones. Registre una para ver resultado/impacto.";
+                return;
+            }
+
+            foreach (BusinessActionListItem item in CrmBusinessActionUiBinder.ToListItems(recent))
+                lstAccionesRecientes.Items.Add(item);
+        }
+
+        private BusinessActionRecord? AccionSeleccionada()
+            => lstAccionesRecientes.SelectedItem as BusinessActionListItem is { } item
+                ? item.Record
+                : null;
+
+        private void btnRegistrarAccion_Click(object? sender, EventArgs e)
+        {
+            if (cmbTipoAccion.SelectedItem is not BusinessActionTypeChoice typeChoice)
+            {
+                MessageBox.Show(
+                    "Seleccione un tipo de acción.",
+                    "Registrar acción",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            string desc = txtDescAccion.Text?.Trim() ?? string.Empty;
+            DecisionLinkChoice? link = cmbDecisionVinculo.SelectedItem as DecisionLinkChoice;
+
+            BusinessActionServiceResult? result = CrmBusinessActionUiBinder.TryRegister(
+                out string? error,
+                typeChoice.Type,
+                desc,
+                decisionEventId: link?.EventId,
+                decisionHistoryId: link?.HistoryId,
+                startImmediately: chkIniciarAccion.Checked);
+
+            if (result == null || !result.Success)
+            {
+                MessageBox.Show(
+                    error ?? result?.Message ?? "No se pudo registrar la acción.",
+                    "Registrar acción",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            txtDescAccion.Clear();
+            chkIniciarAccion.Checked = false;
+            CargarPanelAcciones();
+
+            MessageBox.Show(
+                result.Message + "\n\nRecordatorio: el CRM solo registra; usted ejecuta en el POS.",
+                "Acción registrada",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        private void btnMarcarCompletada_Click(object? sender, EventArgs e)
+        {
+            BusinessActionRecord? selected = AccionSeleccionada();
+            if (selected == null)
+            {
+                MessageBox.Show(
+                    "Seleccione una acción de la lista.",
+                    "Completar acción",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            BusinessActionServiceResult? result = CrmBusinessActionUiBinder.TryComplete(
+                out string? error,
+                selected.ActionId);
+
+            if (result == null || !result.Success)
+            {
+                MessageBox.Show(
+                    error ?? result?.Message ?? "No se pudo completar.",
+                    "Completar acción",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            CargarPanelAcciones();
+            txtResultadoDetalle.Text = CrmBusinessActionUiBinder.FormatImpactReport(result.Record);
+            MessageBox.Show(
+                result.Message + "\n\nLuego puede VER RESULTADO cuando haya deltas/evaluación.",
+                "Acción completada",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        private void btnVerResultado_Click(object? sender, EventArgs e)
+        {
+            BusinessActionRecord? selected = AccionSeleccionada();
+            if (selected == null)
+            {
+                MessageBox.Show(
+                    "Seleccione una acción de la lista.",
+                    "Ver resultado",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            BusinessActionRecord? fresh =
+                CrmBusinessActionUiBinder.TryGet(selected.ActionId, out _) ?? selected;
+
+            // Si ya está Completada con deltas y sin Outcome, intentar evaluar (best-effort).
+            if (fresh.Status == BusinessActionStatus.Completed
+                && fresh.ActualImpact?.Deltas is { Count: > 0 }
+                && (fresh.ActualImpact.Outcome is BusinessActionOutcome.Unspecified
+                    or BusinessActionOutcome.InsufficientData))
+            {
+                BusinessActionEvaluationResult? eval =
+                    CrmBusinessActionUiBinder.TryEvaluate(out _, fresh.ActionId);
+                if (eval is { Success: true, Record: not null })
+                    fresh = eval.Record;
+            }
+
+            txtResultadoDetalle.Text = CrmBusinessActionUiBinder.FormatImpactReport(fresh);
+        }
+
+        private void btnIniciarAccion_Click(object? sender, EventArgs e)
+        {
+            BusinessActionRecord? selected = AccionSeleccionada();
+            if (selected == null)
+            {
+                MessageBox.Show("Seleccione una acción.", "Iniciar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            BusinessActionServiceResult? result =
+                CrmBusinessActionUiBinder.TryStart(out string? error, selected.ActionId);
+            if (result == null || !result.Success)
+            {
+                MessageBox.Show(error ?? result?.Message ?? "No se pudo iniciar.", "Iniciar",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            CargarPanelAcciones();
+            txtResultadoDetalle.Text = result.Message + "\n" + CrmBusinessActionUiBinder.NoPosMutation;
+        }
+
+        private void btnCancelarAccion_Click(object? sender, EventArgs e)
+        {
+            BusinessActionRecord? selected = AccionSeleccionada();
+            if (selected == null)
+            {
+                MessageBox.Show("Seleccione una acción.", "Cancelar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show(
+                    "¿Cancelar esta acción? (no se evaluará como Exitosa)",
+                    "Cancelar acción",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            BusinessActionServiceResult? result =
+                CrmBusinessActionUiBinder.TryCancel(out string? error, selected.ActionId);
+            if (result == null || !result.Success)
+            {
+                MessageBox.Show(error ?? result?.Message ?? "No se pudo cancelar.", "Cancelar",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            CargarPanelAcciones();
+            txtResultadoDetalle.Text = result.Message;
+        }
+
+        private void btnVerTimeline_Click(object? sender, EventArgs e)
+        {
+            BusinessActionRecord? selected = AccionSeleccionada();
+            if (selected == null)
+            {
+                MessageBox.Show("Seleccione una acción.", "Timeline", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            txtResultadoDetalle.Text = CrmBusinessActionUiBinder.FormatTimeline(selected.ActionId);
         }
     }
 }

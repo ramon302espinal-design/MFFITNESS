@@ -18,6 +18,13 @@
         private void InitializeComponent()
         {
             panelScroll = new Panel();
+            pnlActions = new GroupBox();
+            lblAccPendientes = new Label();
+            lblAccEnProceso = new Label();
+            lblAccCompletadas = new Label();
+            lblAccExitosas = new Label();
+            lblAccImpacto = new Label();
+            btnAccionesVer = new Button();
             pnlDecisions = new GroupBox();
             btnDecisionVer = new Button();
             lblDecision3 = new Label();
@@ -91,6 +98,7 @@
             lblKpiCapVal = new Label();
             lblKpiCapTitle = new Label();
             panelScroll.SuspendLayout();
+            pnlActions.SuspendLayout();
             pnlDecisions.SuspendLayout();
             pnlTrends.SuspendLayout();
             pnlChartTrends.SuspendLayout();
@@ -114,6 +122,7 @@
             // panelScroll
             panelScroll.AutoScroll = true;
             panelScroll.BackColor = Color.FromArgb(247, 249, 252);
+            panelScroll.Controls.Add(pnlActions);
             panelScroll.Controls.Add(pnlDecisions);
             panelScroll.Controls.Add(pnlTrends);
             panelScroll.Controls.Add(pnlProducts);
@@ -478,6 +487,58 @@
             btnDecisionVer.TabIndex = 3;
             btnDecisionVer.Text = "Ver / Analizar";
             btnDecisionVer.UseVisualStyleBackColor = true;
+            // Actions (FASE 11.17)
+            pnlActions.Controls.Add(btnAccionesVer);
+            pnlActions.Controls.Add(lblAccImpacto);
+            pnlActions.Controls.Add(lblAccExitosas);
+            pnlActions.Controls.Add(lblAccCompletadas);
+            pnlActions.Controls.Add(lblAccEnProceso);
+            pnlActions.Controls.Add(lblAccPendientes);
+            pnlActions.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            pnlActions.Location = new Point(16, 1060);
+            pnlActions.Name = "pnlActions";
+            pnlActions.Size = new Size(940, 130);
+            pnlActions.TabIndex = 8;
+            pnlActions.TabStop = false;
+            pnlActions.Text = "Acciones de negocio";
+            pnlActions.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblAccPendientes.Font = new Font("Segoe UI", 9F);
+            lblAccPendientes.Location = new Point(20, 32);
+            lblAccPendientes.Name = "lblAccPendientes";
+            lblAccPendientes.Size = new Size(280, 24);
+            lblAccPendientes.TabIndex = 0;
+            lblAccPendientes.Text = "Pendientes: —";
+            lblAccEnProceso.Font = new Font("Segoe UI", 9F);
+            lblAccEnProceso.Location = new Point(320, 32);
+            lblAccEnProceso.Name = "lblAccEnProceso";
+            lblAccEnProceso.Size = new Size(280, 24);
+            lblAccEnProceso.TabIndex = 1;
+            lblAccEnProceso.Text = "En proceso: —";
+            lblAccCompletadas.Font = new Font("Segoe UI", 9F);
+            lblAccCompletadas.Location = new Point(20, 60);
+            lblAccCompletadas.Name = "lblAccCompletadas";
+            lblAccCompletadas.Size = new Size(280, 24);
+            lblAccCompletadas.TabIndex = 2;
+            lblAccCompletadas.Text = "Completadas: —";
+            lblAccExitosas.Font = new Font("Segoe UI", 9F);
+            lblAccExitosas.Location = new Point(320, 60);
+            lblAccExitosas.Name = "lblAccExitosas";
+            lblAccExitosas.Size = new Size(280, 24);
+            lblAccExitosas.TabIndex = 3;
+            lblAccExitosas.Text = "Exitosas (histórico): —";
+            lblAccImpacto.Font = new Font("Segoe UI", 8.5F);
+            lblAccImpacto.ForeColor = Color.FromArgb(113, 128, 150);
+            lblAccImpacto.Location = new Point(20, 92);
+            lblAccImpacto.Name = "lblAccImpacto";
+            lblAccImpacto.Size = new Size(700, 24);
+            lblAccImpacto.TabIndex = 4;
+            lblAccImpacto.Text = "Impacto observado: —";
+            btnAccionesVer.Location = new Point(760, 48);
+            btnAccionesVer.Name = "btnAccionesVer";
+            btnAccionesVer.Size = new Size(150, 32);
+            btnAccionesVer.TabIndex = 5;
+            btnAccionesVer.Text = "Ver acciones";
+            btnAccionesVer.UseVisualStyleBackColor = true;
             // Form
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -488,6 +549,7 @@
             Name = "FrmAnaDashboard";
             Text = "Dashboard";
             panelScroll.ResumeLayout(false);
+            pnlActions.ResumeLayout(false);
             pnlDecisions.ResumeLayout(false);
             pnlTrends.ResumeLayout(false);
             pnlChartTrends.ResumeLayout(false);
@@ -644,5 +706,12 @@
         private Label lblDecision2;
         private Label lblDecision3;
         private Button btnDecisionVer;
+        private GroupBox pnlActions;
+        private Label lblAccPendientes;
+        private Label lblAccEnProceso;
+        private Label lblAccCompletadas;
+        private Label lblAccExitosas;
+        private Label lblAccImpacto;
+        private Button btnAccionesVer;
     }
 }
