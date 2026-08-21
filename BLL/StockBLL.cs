@@ -13,10 +13,18 @@ namespace BLL
             return dal.ObtenerMovimientos();
         }
 
-        public int RegistrarEntradaConId(int productoId, int cantidad, string usuario, string descripcion)
+        public int RegistrarEntradaConId(
+            int productoId,
+            int cantidad,
+            string usuario,
+            string descripcion,
+            decimal? costoUnitario = null)
         {
             ValidarParametros(productoId, cantidad, usuario, descripcion);
-            return dal.RegistrarEntrada(productoId, cantidad, usuario, descripcion);
+            if (costoUnitario.HasValue && costoUnitario.Value <= 0)
+                throw new Exception("El costo de entrada debe ser mayor a cero.");
+
+            return dal.RegistrarEntrada(productoId, cantidad, usuario, descripcion, costoUnitario);
         }
 
         public int RegistrarSalidaConId(int productoId, int cantidad, string usuario, string descripcion)

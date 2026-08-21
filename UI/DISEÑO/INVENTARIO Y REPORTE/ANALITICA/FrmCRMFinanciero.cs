@@ -43,7 +43,7 @@ namespace UI
 
         private void btnRanking_Click(object sender, EventArgs e)
             => MostrarVista(() => new FrmAnaRanking(), btnRanking, "Ranking",
-                "Clasificacion de productos por rendimiento");
+                "Unidades, ingresos, ganancia, margen, ROI y rotacion (una metrica)");
 
         private void btnVentas_Click(object sender, EventArgs e)
             => MostrarVista(() => new FrmAnaVentas(), btnVentas, "Ventas",
@@ -59,19 +59,27 @@ namespace UI
 
         private void btnCapital_Click(object sender, EventArgs e)
             => MostrarVista(() => new FrmAnaCapitalCongelado(), btnCapital, "Capital congelado",
-                "Capital inmovilizado en inventario lento o critico");
+                "Capital inmovilizado clasificado (Frozen + Critical)");
 
         private void btnAlertas_Click(object sender, EventArgs e)
             => MostrarVista(() => new FrmAnaAlertas(), btnAlertas, "Alertas",
-                "Avisos financieros, inventario y rentabilidad");
+                "Avisos de capital, inventario y riesgo");
 
         private void btnTendencias_Click(object sender, EventArgs e)
             => MostrarVista(() => new FrmAnaTendencias(), btnTendencias, "Tendencias",
-                "Evolucion de ventas, ganancia, ROI y capital");
+                "MoM por producto (creciendo / estable / cayendo)");
 
         private void btnDecisiones_Click(object sender, EventArgs e)
+            => MostrarDecisiones();
+
+        /// <summary>Navegación pública al Centro (FASE 10.28 — Dashboard Ver/Analizar).</summary>
+        public void MostrarDecisiones()
             => MostrarVista(() => new FrmAnaDecisiones(), btnDecisiones, "Centro de decisiones",
-                "Oportunidades, riesgos y acciones recomendadas (mock)");
+                "Prioridades de hoy · detectar / analizar / recomendar — usted decide");
+
+        private void btnEstrellas_Click(object sender, EventArgs e)
+            => MostrarVista(() => new FrmAnaProductosEstrella(), btnConfiguracion, "Productos estrella",
+                "Impacto + eficiencia + bajo riesgo (explicable)");
 
         /// <summary>
         /// Solo hospeda la vista hija en pnlContent. Sin logica de negocio.

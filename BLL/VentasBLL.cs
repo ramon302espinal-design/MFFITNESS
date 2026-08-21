@@ -11,6 +11,7 @@ namespace BLL
     {
         private readonly VentasDAL ventasDAL = new VentasDAL();
         private readonly StockBLL stockBLL = new StockBLL();
+        private readonly ProductoDAL productoDAL = new ProductoDAL();
         private readonly CajaDAL cajaDAL = new CajaDAL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
 
@@ -76,7 +77,15 @@ namespace BLL
                     decimal precio = Convert.ToDecimal(row["Precio"]);
                     decimal subtotal = Convert.ToDecimal(row["Total"]);
 
-                    ventasDAL.RegistrarDetalleVenta(ventaId, productoId, cantidad, precio, subtotal);
+                    // Snapshot CRM (FASE 4.4): costo vigente al momento de la venta.
+                    // Si costo <= 0 → NULL (línea sin ganancia realizada confiable).
+                    var (costoVigente, _) = productoDAL.ObtenerCostoYStock(productoId);
+                    decimal? costoSnapshot = costoVigente > 0
+                        ? Math.Round(costoVigente, 4, MidpointRounding.AwayFromZero)
+                        : null;
+
+                    ventasDAL.RegistrarDetalleVenta(
+                        ventaId, productoId, cantidad, precio, subtotal, costoSnapshot);
 
                     int movId = stockBLL.RegistrarSalidaConId(
                         productoId,

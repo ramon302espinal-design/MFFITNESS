@@ -62,13 +62,18 @@ namespace BLL.Commands
             }
         }
 
-        public static CommandResult RegistrarEntrada(int productoId, int cantidad, string descripcion, string? usuario = null)
+        public static CommandResult RegistrarEntrada(
+            int productoId,
+            int cantidad,
+            string descripcion,
+            string? usuario = null,
+            decimal? costoUnitario = null)
         {
             try
             {
                 var stock = new StockBLL();
                 int movimientoId = stock.RegistrarEntradaConId(
-                    productoId, cantidad, ResolveUsuario(usuario), descripcion.Trim());
+                    productoId, cantidad, ResolveUsuario(usuario), descripcion.Trim(), costoUnitario);
                 return CommandResult.Ok("Entrada registrada.", movimientoId);
             }
             catch (Exception ex)

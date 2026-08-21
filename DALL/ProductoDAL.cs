@@ -100,5 +100,34 @@ namespace DL
 
             db.ExecuteNonQuery(query, parametros);
         }
+
+        /// <summary>
+        /// Costo vigente (PrecioCompra) y stock para snapshot CRM / promedio ponderado.
+        /// </summary>
+        public (decimal CostoUnitario, int StockActual) ObtenerCostoYStock(int productoId)
+        {
+            string query = @"SELECT PrecioCompra, StockActual
+                             FROM Productos
+                             WHERE Id = @Id";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Id", productoId)
+            };
+
+            DataTable table = db.ExecuteQuery(query, parametros);
+            if (table.Rows.Count == 0)
+                throw new Exception("Producto no encontrado.");
+
+            DataRow row = table.Rows[0];
+            decimal costo = row["PrecioCompra"] == DBNull.Value
+                ? 0m
+                : Convert.ToDecimal(row["PrecioCompra"]);
+            int stock = row["StockActual"] == DBNull.Value
+                ? 0
+                : Convert.ToInt32(row["StockActual"]);
+
+            return (costo, stock);
+        }
     }
 }

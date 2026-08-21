@@ -63,21 +63,28 @@ namespace DL
         //================================
         // REGISTRAR DETALLE DE VENTA
         //================================
-        public void RegistrarDetalleVenta(int ventaId, int productoId, int cantidad, decimal precio, decimal subtotal)
+        public void RegistrarDetalleVenta(
+            int ventaId,
+            int productoId,
+            int cantidad,
+            decimal precio,
+            decimal subtotal,
+            decimal? costoUnitario = null)
         {
             string query = @"INSERT INTO DetalleVentas
-                     (VentaId, ProductoId, Cantidad, Precio, Subtotal)
+                     (VentaId, ProductoId, Cantidad, Precio, Subtotal, CostoUnitario)
                      VALUES
-                     (@VentaId, @ProductoId, @Cantidad, @Precio, @Subtotal)";
+                     (@VentaId, @ProductoId, @Cantidad, @Precio, @Subtotal, @CostoUnitario)";
 
             SqlParameter[] parametros =
             {
-        new SqlParameter("@VentaId", ventaId),
-        new SqlParameter("@ProductoId", productoId),
-        new SqlParameter("@Cantidad", cantidad),
-        new SqlParameter("@Precio", precio),
-        new SqlParameter("@Subtotal", subtotal)
-    };
+                new SqlParameter("@VentaId", ventaId),
+                new SqlParameter("@ProductoId", productoId),
+                new SqlParameter("@Cantidad", cantidad),
+                new SqlParameter("@Precio", precio),
+                new SqlParameter("@Subtotal", subtotal),
+                new SqlParameter("@CostoUnitario", (object?)costoUnitario ?? DBNull.Value)
+            };
 
             db.ExecuteNonQuery(query, parametros);
         }

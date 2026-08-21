@@ -272,18 +272,19 @@ namespace UI
             // 
             btnConfiguracion.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btnConfiguracion.BackColor = Color.FromArgb(245, 247, 250);
-            btnConfiguracion.Enabled = false;
+            btnConfiguracion.Enabled = true;
             btnConfiguracion.FlatAppearance.BorderSize = 0;
             btnConfiguracion.FlatStyle = FlatStyle.Flat;
-            btnConfiguracion.Font = new Font("Segoe UI", 9F);
-            btnConfiguracion.ForeColor = Color.FromArgb(113, 128, 150);
+            btnConfiguracion.Font = new Font("Segoe UI", 9.5F);
+            btnConfiguracion.ForeColor = Color.FromArgb(45, 55, 72);
             btnConfiguracion.Location = new Point(12, 668);
             btnConfiguracion.Name = "btnConfiguracion";
             btnConfiguracion.Size = new Size(192, 36);
             btnConfiguracion.TabIndex = 13;
-            btnConfiguracion.Text = "  Configuracion";
+            btnConfiguracion.Text = "  Estrellas";
             btnConfiguracion.TextAlign = ContentAlignment.MiddleLeft;
             btnConfiguracion.UseVisualStyleBackColor = false;
+            btnConfiguracion.Click += btnEstrellas_Click;
             // 
             // panelMain
             // 

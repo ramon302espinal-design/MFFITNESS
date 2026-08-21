@@ -471,7 +471,7 @@
             lblDecision3.Size = new Size(700, 24);
             lblDecision3.TabIndex = 2;
             lblDecision3.Text = "RENTABILIDAD — El margen de un producto disminuyo.";
-            btnDecisionVer.Enabled = false;
+            btnDecisionVer.Enabled = true;
             btnDecisionVer.Location = new Point(760, 56);
             btnDecisionVer.Name = "btnDecisionVer";
             btnDecisionVer.Size = new Size(150, 32);
