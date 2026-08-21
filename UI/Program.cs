@@ -1,4 +1,5 @@
 using BLL;
+using CORE;
 using CORE.Update;
 using System;
 using System.Globalization;
@@ -19,6 +20,24 @@ namespace UI
             ApplicationConfiguration.Initialize();
             Application.AddMessageFilter(new EscapeInicioMessageFilter());
             FacturaMembresiaPdfService.ConfigurarLicencia();
+
+            try
+            {
+                AppConfig.EnsureDatabaseLogged();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message + Environment.NewLine + Environment.NewLine +
+                    "Entorno: " + AppConfig.EnvironmentName + Environment.NewLine +
+                    "Base: " + AppConfig.DatabaseName + Environment.NewLine + Environment.NewLine +
+                    "Cambia el entorno con DOTNET_ENVIRONMENT / MFFITNESS_ENVIRONMENT " +
+                    "(Development = MF_CYBER_DB_DEV, Production = [MF CYBER DB]).",
+                    "Base de datos",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
 
             var startup = UpdateSessionGuard.Evaluate();
             if (startup.BlockStartup)

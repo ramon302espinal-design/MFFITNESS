@@ -7,8 +7,6 @@ using System.Windows.Forms;
 using UI.DISEÑO;
 using UI.Theme;
 
-using FrmReportesUi = UI.FrmReportes;
-
 namespace UI.Helpers
 {
     /// <summary>
@@ -205,7 +203,9 @@ namespace UI.Helpers
             });
             WireClick(panelNav, host, "btnNavReportes", () =>
             {
-                using var frm = new FrmReportesUi();
+                // Misma entrada que FrmPresentacion.btnReportes → CRM Financiero.
+                // FrmReportes (legacy) no se toca.
+                using var frm = new FrmCRMFinanciero { StartPosition = FormStartPosition.CenterScreen };
                 frm.ShowDialog(host);
             });
             WireClick(panelNav, host, "btnNavClientes", () =>

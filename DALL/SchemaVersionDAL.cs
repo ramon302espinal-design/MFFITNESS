@@ -77,6 +77,20 @@ END";
             }
         }
 
+        /// <summary>
+        /// True si existen tablas núcleo del POS (el baseline Version=1 las asume ya creadas).
+        /// </summary>
+        public static bool HasCorePosSchema(DBHelper db)
+        {
+            object? result = db.ExecuteScalar(@"
+SELECT CASE
+    WHEN OBJECT_ID(N'dbo.Clientes', N'U') IS NOT NULL
+     AND OBJECT_ID(N'dbo.DetalleCaja', N'U') IS NOT NULL
+     AND OBJECT_ID(N'dbo.Caja', N'U') IS NOT NULL
+    THEN 1 ELSE 0 END");
+            return Convert.ToInt32(result) == 1;
+        }
+
         public static SchemaVersionInfo GetCurrent(DBHelper db)
         {
             EnsureBaseline(db);

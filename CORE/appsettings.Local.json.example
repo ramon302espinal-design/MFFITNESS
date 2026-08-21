@@ -1,0 +1,9 @@
+{
+  "_comment": "Copia este archivo como appsettings.Local.json (gitignored) solo si necesitas sobrescribir la cadena localmente.",
+  "Database": {
+    "ConnectionStrings": {
+      "Development": "Server=(localdb)\\MSSQLLocalDB;Database=MF_CYBER_DB_DEV;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True",
+      "Production": "Server=(localdb)\\MSSQLLocalDB;Database=MF CYBER DB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+    }
+  }
+}

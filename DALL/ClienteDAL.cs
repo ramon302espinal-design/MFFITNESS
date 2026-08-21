@@ -92,16 +92,82 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
                 throw new InvalidOperationException("No se encontró el cliente a actualizar.");
         }
 
+        /// <summary>
+        /// Estado de membresía SSOT (misma regla que Estado / dashboard).
+        /// </summary>
+        public string ObtenerEstadoMembresia(int clienteId)
+        {
+            if (clienteId <= 0)
+                return "SIN MEMBRESIA";
+
+            new CongelacionDAL().EnsureSchema();
+
+            string query = $@"
+                SELECT {MembresiaEstadoSql.CasoEstado} AS Estado
+                FROM Clientes c
+                {MembresiaEstadoSql.OuterApplyUltimaMembresia}
+                WHERE c.ID = @Id";
+
+            object? result = db.ExecuteScalar(query, new[] { new SqlParameter("@Id", clienteId) });
+            string estado = Convert.ToString(result)?.Trim() ?? string.Empty;
+            return string.IsNullOrEmpty(estado) ? "SIN MEMBRESIA" : estado.ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// Elimina el cliente y sus vínculos operativos en una transacción
+        /// (orden seguro ante FKs). No aplica reglas de negocio: las valida BLL.
+        /// </summary>
         public void EliminarCliente(int id)
         {
-            string query = "DELETE FROM dbo.Clientes WHERE ID = @Id";
+            if (id <= 0)
+                throw new InvalidOperationException("Cliente inválido.");
 
-            SqlParameter[] parametros =
+            new CongelacionDAL().EnsureSchema();
+
+            using SqlConnection conn = db.GetConnection();
+            conn.Open();
+            using SqlTransaction tx = conn.BeginTransaction();
+
+            try
             {
-                new SqlParameter("@Id", id)
-            };
+                void Exec(string sql)
+                {
+                    using var cmd = new SqlCommand(sql, conn, tx);
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.ExecuteNonQuery();
+                }
 
-            db.ExecuteNonQuery(query, parametros);
+                // Ventas / detalle
+                Exec(@"DELETE FROM dbo.DetalleVentas
+                       WHERE VentaId IN (SELECT Id FROM dbo.Ventas WHERE ClienteId = @Id)");
+                Exec("DELETE FROM dbo.Ventas WHERE ClienteId = @Id");
+
+                // Deudas y satélites
+                Exec(@"DELETE FROM dbo.PagosDeuda
+                       WHERE DeudaId IN (SELECT Id FROM dbo.Deudas WHERE ClienteId = @Id)");
+                Exec("DELETE FROM dbo.HistorialDeudas WHERE ClienteId = @Id");
+                Exec(@"DELETE FROM dbo.HistorialDeudas
+                       WHERE DeudaId IN (SELECT Id FROM dbo.Deudas WHERE ClienteId = @Id)");
+                Exec("DELETE FROM dbo.Deudas WHERE ClienteId = @Id");
+
+                // Caja: conservar movimiento, desvincular miembro
+                Exec("UPDATE dbo.DetalleCaja SET ClienteId = NULL WHERE ClienteId = @Id");
+
+                Exec("DELETE FROM dbo.RegistroMensajes WHERE ClienteId = @Id");
+                Exec("DELETE FROM dbo.ClienteFichaSalud WHERE ClienteId = @Id");
+                Exec("DELETE FROM dbo.CongelacionesMembresia WHERE ClienteId = @Id");
+                Exec("DELETE FROM dbo.Pagos WHERE ClienteId = @Id");
+                Exec("DELETE FROM dbo.Membresias WHERE ClienteId = @Id");
+                Exec("DELETE FROM dbo.HistorialMembresias WHERE ClienteId = @Id");
+                Exec("DELETE FROM dbo.Clientes WHERE ID = @Id");
+
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
 
         public DataRow? ObtenerClientePorId(int id)

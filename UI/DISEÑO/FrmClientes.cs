@@ -46,6 +46,7 @@ namespace UI.DISEÑO
             InicializarFichaSaludUi();
 
             ucFichaResumen.EditarInformacionClick += (_, _) => IniciarEdicionMiembro();
+            ucFichaResumen.EliminarMiembroClick += (_, _) => EliminarMiembroSeleccionado();
             ucFichaResumen.Limpiar();
         }
 
@@ -408,6 +409,65 @@ namespace UI.DISEÑO
             }
 
             ucFichaResumen.Mostrar(id, nombre, telefono, direccion, fechaNac, sexo, ficha);
+        }
+
+        private void EliminarMiembroSeleccionado()
+        {
+            int clienteId = ucFichaResumen.ClienteIdCargado > 0
+                ? ucFichaResumen.ClienteIdCargado
+                : idSeleccionado;
+
+            if (clienteId <= 0)
+            {
+                MessageBox.Show(
+                    "Debe seleccionar un cliente.",
+                    "Aviso",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            string nombre = "este cliente";
+            foreach (DataGridViewRow r in dgvClientes.Rows)
+            {
+                if (TryObtenerIdCliente(r, out int id) && id == clienteId)
+                {
+                    nombre = r.Cells["Nombre"].Value?.ToString()?.Trim() ?? nombre;
+                    break;
+                }
+            }
+
+            var confirmar = MessageBox.Show(
+                $"¿Eliminar a \"{nombre}\" (#{clienteId}) de la aplicación?\n\n" +
+                "Solo se permite si está DESACTIVADO o VENCIDO y sin deudas pendientes.\n" +
+                "Esta acción no se puede deshacer.",
+                "Eliminar de la app",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+
+            if (confirmar != DialogResult.Yes)
+                return;
+
+            var result = ClienteCommandService.Eliminar(clienteId);
+            if (!result.Success)
+            {
+                MessageBox.Show(
+                    result.Message,
+                    "No se pudo eliminar",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            idSeleccionado = 0;
+            LimpiarFormularioEdicion();
+            CargarClientes();
+            MessageBox.Show(
+                result.Message,
+                "Cliente eliminado",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         private void IniciarEdicionMiembro()

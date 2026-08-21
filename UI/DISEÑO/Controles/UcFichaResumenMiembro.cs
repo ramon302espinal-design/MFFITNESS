@@ -15,6 +15,7 @@ namespace UI.DISEÑO.Controles
         private bool _tieneMiembro;
 
         public event EventHandler? EditarInformacionClick;
+        public event EventHandler? EliminarMiembroClick;
 
         public bool TieneMiembroCargado => _tieneMiembro;
         public int ClienteIdCargado => _clienteId;
@@ -24,6 +25,7 @@ namespace UI.DISEÑO.Controles
             InitializeComponent();
 
             btnEditarInformacion.Click += (_, _) => EditarInformacionClick?.Invoke(this, EventArgs.Empty);
+            btnEliminarMiembro.Click += (_, _) => EliminarMiembroClick?.Invoke(this, EventArgs.Empty);
 
             Limpiar();
         }
@@ -33,6 +35,7 @@ namespace UI.DISEÑO.Controles
             _clienteId = 0;
             _tieneMiembro = false;
             btnEditarInformacion.Enabled = false;
+            btnEliminarMiembro.Enabled = false;
 
             SetValor(lblIdValor, "—");
             SetValor(lblNombreValor, "—");
@@ -71,6 +74,7 @@ namespace UI.DISEÑO.Controles
             _clienteId = id;
             _tieneMiembro = id > 0;
             btnEditarInformacion.Enabled = _tieneMiembro;
+            btnEliminarMiembro.Enabled = _tieneMiembro;
 
             SetValor(lblIdValor, id > 0 ? id.ToString() : "—");
             SetValor(lblNombreValor, TextoOGuion(nombre));

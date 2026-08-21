@@ -191,7 +191,8 @@ namespace UI.Helpers
                                         CajaMovimientoId = cajaMovIdBg,
                                         FechaFinMembresia = finBg
                                     },
-                                    abrirPdf: false);
+                                    abrirPdf: false,
+                                    precioLista: precioBg);
 
                                 // 2) Solo el PDF al WhatsApp del cliente (sin texto adicional).
                                 if (pagoIdBg > 0)
@@ -263,7 +264,7 @@ namespace UI.Helpers
             {
                 // Todos los planes reales de Planes; solo se excluye el pseudo-plan de
                 // producto a crédito. Así un plan nuevo (M-A) es renovable sin tocar código.
-                dv.RowFilter = "Nombre <> 'PRODUCTO A CRÉDITO'";
+                dv.RowFilter = "Nombre <> 'PRODUCTO A CRÉDITO' AND Nombre <> 'OFERTA'";
                 DataTable filtrada = dv.ToTable();
                 return filtrada.Rows.Count > 0 ? filtrada : planes.Copy();
             }

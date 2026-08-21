@@ -1,6 +1,17 @@
 -- Auditoría operativa de movimientos de caja:
 -- Método de pago + ClienteId (miembro) para reportes y trazabilidad.
 -- Destino: SchemaVersion 5.
+-- Requiere esquema POS base (dbo.DetalleCaja). No crea la tabla: solo la altera.
+
+IF OBJECT_ID(N'dbo.DetalleCaja', N'U') IS NULL
+BEGIN
+    RAISERROR(
+        N'Migración 0005: no existe dbo.DetalleCaja. Esta BD no tiene el esquema POS base. Use MF_CYBER_DB_DEV o [MF CYBER DB] con esquema completo (no una BD vacía).',
+        16,
+        1);
+    RETURN;
+END
+GO
 
 IF COL_LENGTH(N'dbo.DetalleCaja', N'MetodoPago') IS NULL
     ALTER TABLE dbo.DetalleCaja ADD MetodoPago NVARCHAR(50) NULL;

@@ -16,6 +16,7 @@ namespace UI.DISEÑO.Controles
         private void InitializeComponent()
         {
             panelAcciones = new Panel();
+            btnEliminarMiembro = new Button();
             btnEditarInformacion = new Button();
             grpDatosGenerales = new GroupBox();
             lblCapId = new Label();
@@ -71,6 +72,7 @@ namespace UI.DISEÑO.Controles
             // panelAcciones
             // 
             panelAcciones.BackColor = Color.White;
+            panelAcciones.Controls.Add(btnEliminarMiembro);
             panelAcciones.Controls.Add(btnEditarInformacion);
             panelAcciones.Dock = DockStyle.Top;
             panelAcciones.Location = new Point(0, 0);
@@ -92,6 +94,20 @@ namespace UI.DISEÑO.Controles
             btnEditarInformacion.TabIndex = 0;
             btnEditarInformacion.Text = "Editar Información";
             btnEditarInformacion.UseVisualStyleBackColor = false;
+            // 
+            // btnEliminarMiembro
+            // 
+            btnEliminarMiembro.BackColor = Color.FromArgb(185, 28, 28);
+            btnEliminarMiembro.FlatAppearance.BorderSize = 0;
+            btnEliminarMiembro.FlatStyle = FlatStyle.Flat;
+            btnEliminarMiembro.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnEliminarMiembro.ForeColor = Color.White;
+            btnEliminarMiembro.Location = new Point(248, 8);
+            btnEliminarMiembro.Name = "btnEliminarMiembro";
+            btnEliminarMiembro.Size = new Size(200, 36);
+            btnEliminarMiembro.TabIndex = 1;
+            btnEliminarMiembro.Text = "Eliminar de la app";
+            btnEliminarMiembro.UseVisualStyleBackColor = false;
             // 
             // grpDatosGenerales
             // 
@@ -657,6 +673,7 @@ namespace UI.DISEÑO.Controles
 
         private Panel panelAcciones;
         private Button btnEditarInformacion;
+        private Button btnEliminarMiembro;
         private GroupBox grpDatosGenerales;
         private Label lblCapId;
         private Label lblIdValor;

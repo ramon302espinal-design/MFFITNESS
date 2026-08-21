@@ -47,6 +47,15 @@ namespace UI.DISEÑO
             dgvCarrito = new DataGridView();
             btnPagarProductos = new Button();
             tabMembresia = new TabPage();
+            pnlOferta = new Panel();
+            lblOfertaPct = new Label();
+            txtDescuentoPorcental = new TextBox();
+            lblOfertaMonto = new Label();
+            txtDescuentoMonto = new TextBox();
+            lblTotalPagarTitulo = new Label();
+            lblTotalPagar = new Label();
+            lblMotivoOferta = new Label();
+            txtMotivo = new TextBox();
             pnlFinanciamiento = new Panel();
             lblFechaLimite = new Label();
             dtpFechaVencimiento = new DateTimePicker();
@@ -67,6 +76,7 @@ namespace UI.DISEÑO
             tabPago.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCarrito).BeginInit();
             tabMembresia.SuspendLayout();
+            pnlOferta.SuspendLayout();
             pnlFinanciamiento.SuspendLayout();
             panelNav.SuspendLayout();
             SuspendLayout();
@@ -276,6 +286,7 @@ namespace UI.DISEÑO
             // 
             // tabMembresia
             // 
+            tabMembresia.Controls.Add(pnlOferta);
             tabMembresia.Controls.Add(pnlFinanciamiento);
             tabMembresia.Controls.Add(chkFinanciamiento);
             tabMembresia.Controls.Add(btnPagar);
@@ -292,6 +303,107 @@ namespace UI.DISEÑO
             tabMembresia.TabIndex = 1;
             tabMembresia.Text = "MEMBRESIA";
             tabMembresia.UseVisualStyleBackColor = true;
+            // 
+            // pnlOferta
+            // 
+            pnlOferta.BackColor = Color.FromArgb(255, 247, 237);
+            pnlOferta.BorderStyle = BorderStyle.FixedSingle;
+            pnlOferta.Controls.Add(lblOfertaPct);
+            pnlOferta.Controls.Add(txtDescuentoPorcental);
+            pnlOferta.Controls.Add(lblOfertaMonto);
+            pnlOferta.Controls.Add(txtDescuentoMonto);
+            pnlOferta.Controls.Add(lblTotalPagarTitulo);
+            pnlOferta.Controls.Add(lblTotalPagar);
+            pnlOferta.Controls.Add(lblMotivoOferta);
+            pnlOferta.Controls.Add(txtMotivo);
+            pnlOferta.Location = new Point(640, 376);
+            pnlOferta.Name = "pnlOferta";
+            pnlOferta.Size = new Size(420, 270);
+            pnlOferta.TabIndex = 11;
+            pnlOferta.Visible = false;
+            // 
+            // lblOfertaPct
+            // 
+            lblOfertaPct.AutoSize = true;
+            lblOfertaPct.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblOfertaPct.Location = new Point(14, 16);
+            lblOfertaPct.Name = "lblOfertaPct";
+            lblOfertaPct.Size = new Size(120, 25);
+            lblOfertaPct.TabIndex = 0;
+            lblOfertaPct.Text = "Descuento %:";
+            // 
+            // txtDescuentoPorcental
+            // 
+            txtDescuentoPorcental.Font = new Font("Segoe UI", 14F);
+            txtDescuentoPorcental.Location = new Point(160, 12);
+            txtDescuentoPorcental.Name = "txtDescuentoPorcental";
+            txtDescuentoPorcental.Size = new Size(120, 39);
+            txtDescuentoPorcental.TabIndex = 1;
+            txtDescuentoPorcental.Text = "0";
+            txtDescuentoPorcental.TextAlign = HorizontalAlignment.Right;
+            txtDescuentoPorcental.TextChanged += txtDescuentoPorcental_TextChanged;
+            // 
+            // lblOfertaMonto
+            // 
+            lblOfertaMonto.AutoSize = true;
+            lblOfertaMonto.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblOfertaMonto.Location = new Point(14, 68);
+            lblOfertaMonto.Name = "lblOfertaMonto";
+            lblOfertaMonto.Size = new Size(139, 25);
+            lblOfertaMonto.TabIndex = 2;
+            lblOfertaMonto.Text = "Descuento RD$:";
+            // 
+            // txtDescuentoMonto
+            // 
+            txtDescuentoMonto.Font = new Font("Segoe UI", 14F);
+            txtDescuentoMonto.Location = new Point(160, 64);
+            txtDescuentoMonto.Name = "txtDescuentoMonto";
+            txtDescuentoMonto.Size = new Size(160, 39);
+            txtDescuentoMonto.TabIndex = 3;
+            txtDescuentoMonto.Text = "0.00";
+            txtDescuentoMonto.TextAlign = HorizontalAlignment.Right;
+            txtDescuentoMonto.TextChanged += txtDescuentoMonto_TextChanged;
+            // 
+            // lblTotalPagarTitulo
+            // 
+            lblTotalPagarTitulo.AutoSize = true;
+            lblTotalPagarTitulo.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblTotalPagarTitulo.Location = new Point(14, 118);
+            lblTotalPagarTitulo.Name = "lblTotalPagarTitulo";
+            lblTotalPagarTitulo.Size = new Size(122, 25);
+            lblTotalPagarTitulo.TabIndex = 4;
+            lblTotalPagarTitulo.Text = "Total a pagar:";
+            // 
+            // lblTotalPagar
+            // 
+            lblTotalPagar.AutoSize = true;
+            lblTotalPagar.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
+            lblTotalPagar.ForeColor = Color.FromArgb(22, 163, 74);
+            lblTotalPagar.Location = new Point(160, 112);
+            lblTotalPagar.Name = "lblTotalPagar";
+            lblTotalPagar.Size = new Size(120, 37);
+            lblTotalPagar.TabIndex = 5;
+            lblTotalPagar.Text = "RD$ 0.00";
+            // 
+            // lblMotivoOferta
+            // 
+            lblMotivoOferta.AutoSize = true;
+            lblMotivoOferta.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblMotivoOferta.Location = new Point(14, 162);
+            lblMotivoOferta.Name = "lblMotivoOferta";
+            lblMotivoOferta.Size = new Size(74, 25);
+            lblMotivoOferta.TabIndex = 6;
+            lblMotivoOferta.Text = "Motivo:";
+            // 
+            // txtMotivo
+            // 
+            txtMotivo.Font = new Font("Segoe UI", 11F);
+            txtMotivo.Location = new Point(14, 190);
+            txtMotivo.Multiline = true;
+            txtMotivo.Name = "txtMotivo";
+            txtMotivo.PlaceholderText = "Ej. promo temporada, referido...";
+            txtMotivo.Size = new Size(386, 60);
+            txtMotivo.TabIndex = 7;
             // 
             // pnlFinanciamiento
             // 
@@ -488,6 +600,8 @@ namespace UI.DISEÑO
             ((System.ComponentModel.ISupportInitialize)dgvCarrito).EndInit();
             tabMembresia.ResumeLayout(false);
             tabMembresia.PerformLayout();
+            pnlOferta.ResumeLayout(false);
+            pnlOferta.PerformLayout();
             pnlFinanciamiento.ResumeLayout(false);
             pnlFinanciamiento.PerformLayout();
             panelNav.ResumeLayout(false);
@@ -532,5 +646,14 @@ namespace UI.DISEÑO
         private Label lblSaldoValor;
         private Label lblFechaLimite;
         private DateTimePicker dtpFechaVencimiento;
+        private Panel pnlOferta;
+        private Label lblOfertaPct;
+        private TextBox txtDescuentoPorcental;
+        private Label lblOfertaMonto;
+        private TextBox txtDescuentoMonto;
+        private Label lblTotalPagarTitulo;
+        private Label lblTotalPagar;
+        private Label lblMotivoOferta;
+        private TextBox txtMotivo;
     }
 }

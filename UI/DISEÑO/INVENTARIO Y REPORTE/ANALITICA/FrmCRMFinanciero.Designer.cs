@@ -19,6 +19,7 @@ namespace UI
         {
             panelSidebar = new Panel();
             btnConfiguracion = new Button();
+            btnReportesPos = new Button();
             btnDecisiones = new Button();
             btnTendencias = new Button();
             btnAlertas = new Button();
@@ -52,6 +53,7 @@ namespace UI
             panelSidebar.BackColor = Color.FromArgb(248, 250, 252);
             panelSidebar.BorderStyle = BorderStyle.FixedSingle;
             panelSidebar.Controls.Add(btnConfiguracion);
+            panelSidebar.Controls.Add(btnReportesPos);
             panelSidebar.Controls.Add(btnDecisiones);
             panelSidebar.Controls.Add(btnTendencias);
             panelSidebar.Controls.Add(btnAlertas);
@@ -268,6 +270,22 @@ namespace UI
             btnDecisiones.UseVisualStyleBackColor = false;
             btnDecisiones.Click += btnDecisiones_Click;
             // 
+            // btnReportesPos
+            // 
+            btnReportesPos.BackColor = Color.FromArgb(245, 247, 250);
+            btnReportesPos.FlatAppearance.BorderSize = 0;
+            btnReportesPos.FlatStyle = FlatStyle.Flat;
+            btnReportesPos.Font = new Font("Segoe UI", 9.5F);
+            btnReportesPos.ForeColor = Color.FromArgb(45, 55, 72);
+            btnReportesPos.Location = new Point(12, 520);
+            btnReportesPos.Name = "btnReportesPos";
+            btnReportesPos.Size = new Size(192, 36);
+            btnReportesPos.TabIndex = 13;
+            btnReportesPos.Text = "  Reportes POS";
+            btnReportesPos.TextAlign = ContentAlignment.MiddleLeft;
+            btnReportesPos.UseVisualStyleBackColor = false;
+            btnReportesPos.Click += btnReportesPos_Click;
+            // 
             // btnConfiguracion
             // 
             btnConfiguracion.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
@@ -280,7 +298,7 @@ namespace UI
             btnConfiguracion.Location = new Point(12, 668);
             btnConfiguracion.Name = "btnConfiguracion";
             btnConfiguracion.Size = new Size(192, 36);
-            btnConfiguracion.TabIndex = 13;
+            btnConfiguracion.TabIndex = 14;
             btnConfiguracion.Text = "  Estrellas";
             btnConfiguracion.TextAlign = ContentAlignment.MiddleLeft;
             btnConfiguracion.UseVisualStyleBackColor = false;
@@ -430,6 +448,7 @@ namespace UI
         private Button btnAlertas;
         private Button btnTendencias;
         private Button btnDecisiones;
+        private Button btnReportesPos;
         private Button btnConfiguracion;
         private Panel panelMain;
         private Panel panelHeader;

@@ -42,9 +42,10 @@ namespace UI.DISEÑO
             {
                 DateTime hoy = CongelacionHelper.HoyPc();
                 int ancla = CongelacionHelper.CalcularDiaAncla(hoy);
+                DateTime desde = CongelacionHelper.CalcularFechaReactivacionDesde(ancla, hoy);
                 lblInfo.Text =
-                    $"Hoy: {hoy:dd/MM/yyyy}. Podrá reactivarse el día {ancla} o después (lunes a viernes), hasta fin de mes.\n" +
-                    "No sábado ni domingo. Si el plan es de 15, al reactivar vence el 15 de ese mismo mes.";
+                    $"Hoy: {hoy:dd/MM/yyyy}. Podrá volver a entrar desde el día {ancla} ({desde:dd/MM/yyyy}).\n" +
+                    "Si el plan es de 15, al reactivar vence el 15 de ese mismo mes.";
                 txtMotivo.ReadOnly = false;
                 txtMotivo.Text = "";
                 btnConfirmar.Text = "CONGELAR";
@@ -55,9 +56,10 @@ namespace UI.DISEÑO
                 int diaAncla = _congelacion.FechaCongelacion.Day > 0
                     ? _congelacion.FechaCongelacion.Day
                     : _congelacion.DiaAncla;
+                DateTime desde = CongelacionHelper.CalcularFechaReactivacionDesde(diaAncla);
                 lblInfo.Text =
                     $"Congelado el {_congelacion.FechaCongelacion:dd/MM/yyyy}. " +
-                    $"Reactivación: día {diaAncla} o después, lunes a viernes (no sábado ni domingo).\n" +
+                    $"Puede volver a entrar desde el día {diaAncla} ({desde:dd/MM/yyyy}).\n" +
                     "Si el plan es de 15 y ya pasó la fecha original, al activar vence el 15 de este mes.";
                 txtMotivo.ReadOnly = true;
                 txtMotivo.Text = _congelacion.Motivo;
@@ -86,21 +88,70 @@ namespace UI.DISEÑO
                         return;
                     }
 
-                    _membresiaBLL.CongelarMiembro(_clienteId, motivo, usuario);
+                    CongelacionDTO cong = _membresiaBLL.CongelarMiembro(_clienteId, motivo, usuario);
+                    DateTime desde = CongelacionHelper.CalcularFechaReactivacionDesde(cong.DiaAncla);
+
                     MessageBox.Show(
-                        $"{_nombreCliente} quedó CONGELADO.\nPodrá activarse el día {CongelacionHelper.CalcularDiaAncla(CongelacionHelper.HoyPc())} o después (lunes a viernes), hasta fin de mes.",
+                        $"{_nombreCliente} quedó CONGELADO.\n" +
+                        $"Puede volver a entrar desde el día {cong.DiaAncla} ({desde:dd/MM/yyyy}).\n" +
+                        "Se intentará avisar por WhatsApp.",
                         "Congelar",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
+
+                    int clienteWa = _clienteId;
+                    string motivoWa = cong.Motivo ?? motivo;
+                    DateTime fechaCong = cong.FechaCongelacion;
+                    int ancla = cong.DiaAncla;
+                    DateTime fechaDesde = desde;
+                    int diasRest = cong.DiasRestantes;
+                    DateTime finOrig = cong.FechaFinOriginal ?? cong.FechaCongelacion;
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        try
+                        {
+                            new MensajeAutomaticoBLL().EnviarMensajeCongelacion(
+                                clienteWa,
+                                motivoWa,
+                                fechaCong,
+                                ancla,
+                                fechaDesde,
+                                diasRest,
+                                finOrig);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine("WhatsApp congelación: " + ex.Message);
+                        }
+                    });
                 }
                 else
                 {
                     DateTime nuevaFin = _membresiaBLL.ActivarMiembroCongelado(_clienteId, usuario);
+                    DateTime hoy = CongelacionHelper.HoyPc();
+
                     MessageBox.Show(
-                        $"{_nombreCliente} fue activado.\nEl plan continúa. Nueva fecha de vencimiento: {nuevaFin:dd/MM/yyyy}.",
+                        $"{_nombreCliente} fue activado.\nEl plan continúa. Nueva fecha de vencimiento: {nuevaFin:dd/MM/yyyy}.\n" +
+                        "Se intentará avisar por WhatsApp.",
                         "Activar",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
+
+                    int clienteWa = _clienteId;
+                    DateTime fechaAct = hoy;
+                    DateTime fechaVence = nuevaFin;
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        try
+                        {
+                            new MensajeAutomaticoBLL().EnviarMensajeDescongelacion(
+                                clienteWa, fechaAct, fechaVence);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine("WhatsApp descongelación: " + ex.Message);
+                        }
+                    });
                 }
 
                 CambioRealizado = true;

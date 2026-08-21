@@ -53,6 +53,19 @@ namespace CORE
             return $"{nombre} solo se puede activar el {diaAncla} de este mes o del otro mes.";
         }
 
+        /// <summary>
+        /// Primera fecha del mes actual en la que el día ya alcanza el ancla
+        /// (si hoy ya lo alcanzó, hoy). Usada en aviso WhatsApp.
+        /// </summary>
+        public static DateTime CalcularFechaReactivacionDesde(int diaAncla, DateTime? hoy = null)
+        {
+            DateTime fecha = (hoy ?? HoyPc()).Date;
+            int limite = DiaLimiteDelMes(diaAncla, fecha);
+            if (fecha.Day >= limite)
+                return fecha;
+            return new DateTime(fecha.Year, fecha.Month, limite);
+        }
+
         public static int CalcularDiasRestantes(DateTime fechaFin, DateTime fechaCongelacion)
         {
             int dias = (fechaFin.Date - fechaCongelacion.Date).Days;

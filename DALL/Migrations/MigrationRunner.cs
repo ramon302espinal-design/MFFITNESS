@@ -151,6 +151,19 @@ namespace DL.Migrations
                     return MigrationRunResult.Ok(initialVersion, initialVersion, Array.Empty<int>(), none);
                 }
 
+                // Migraciones >= 5 alteran tablas de negocio. Baseline v1 NO crea el esquema POS.
+                if (pending.Any(m => m.Version >= 5) && !SchemaVersionDAL.HasCorePosSchema(_db))
+                {
+                    string catalog = ResolveCatalogName();
+                    string msg =
+                        $"La base [{catalog}] no tiene el esquema POS (faltan dbo.DetalleCaja / dbo.Clientes / dbo.Caja). " +
+                        "El baseline Version=1 asume un esquema ya existente; no se puede aplicar 0005+. " +
+                        "Usa Development (MF_CYBER_DB_DEV) o la BD del gimnasio [MF CYBER DB], " +
+                        "o restaura un backup completo. No uses una BD vacía creada solo para renombrar.";
+                    _log(msg);
+                    return MigrationRunResult.Fail(initialVersion, initialVersion, msg);
+                }
+
                 ValidateSequence(initialVersion, pending);
 
                 using SqlConnection conn = _db.GetConnection();
@@ -353,6 +366,21 @@ namespace DL.Migrations
                 batches.Add(last);
 
             return batches;
+        }
+
+        private string ResolveCatalogName()
+        {
+            try
+            {
+                var builder = new SqlConnectionStringBuilder(_db.ConnectionString);
+                return string.IsNullOrWhiteSpace(builder.InitialCatalog)
+                    ? "(desconocida)"
+                    : builder.InitialCatalog;
+            }
+            catch
+            {
+                return "(desconocida)";
+            }
         }
 
         private static bool TryAcquireAppLock(SqlConnection conn, out string error)

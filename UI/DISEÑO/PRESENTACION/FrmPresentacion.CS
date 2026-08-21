@@ -661,13 +661,15 @@ namespace UI.DISEÑO
         {
             try
             {
-                FrmReportes frm = new FrmReportes();
+                // Entrada al CRM Financiero (shell FrmCRMFinanciero → pnlContent).
+                // FrmReportes (legacy) permanece intacto; no se modifica ni se reemplaza su código.
+                using FrmCRMFinanciero frm = new FrmCRMFinanciero();
                 frm.StartPosition = FormStartPosition.CenterScreen;
-                frm.ShowDialog();
+                frm.ShowDialog(this);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al abrir módulo de reportes: " + ex.Message);
+                MessageBox.Show("Error al abrir CRM financiero: " + ex.Message);
             }
         }
 

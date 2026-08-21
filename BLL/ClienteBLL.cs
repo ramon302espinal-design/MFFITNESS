@@ -85,8 +85,36 @@ namespace BLL
             fichaDAL.Guardar(ficha);
         }
 
+        /// <summary>
+        /// Elimina el cliente de la app. Solo si está DESACTIVADO o VENCIDO
+        /// y no tiene deudas activas con saldo. No borra miembros ACTIVO/CONGELADO.
+        /// </summary>
         public void Eliminar(int id)
         {
+            if (id <= 0)
+                throw new Exception("Cliente inválido.");
+
+            if (clienteDAL.ObtenerClientePorId(id) == null)
+                throw new Exception("Cliente no encontrado.");
+
+            string estado = clienteDAL.ObtenerEstadoMembresia(id);
+            if (string.Equals(estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("No se puede eliminar un cliente ACTIVO. Desactívelo o espere a que esté vencido.");
+
+            if (string.Equals(estado, "CONGELADO", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("No se puede eliminar un cliente CONGELADO. Reactívelo o desactívelo primero.");
+
+            bool elegible =
+                string.Equals(estado, "DESACTIVADO", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(estado, "VENCIDO", StringComparison.OrdinalIgnoreCase);
+
+            if (!elegible)
+                throw new Exception(
+                    "Solo se puede eliminar un cliente DESACTIVADO o VENCIDO. Estado actual: " + estado + ".");
+
+            if (new DeudaDAL().TieneDeudasActivas(id))
+                throw new Exception("No se puede eliminar: el cliente tiene deudas pendientes. Liquide o cierre la deuda primero.");
+
             clienteDAL.EliminarCliente(id);
         }
 
@@ -94,6 +122,10 @@ namespace BLL
         {
             return clienteDAL.ObtenerClientePorId(id);
         }
+
+        /// <summary>Estado SSOT de membresía (ACTIVO / VENCIDO / CONGELADO / …).</summary>
+        public string ObtenerEstadoMembresia(int clienteId) =>
+            clienteDAL.ObtenerEstadoMembresia(clienteId);
 
         public ClienteFichaSaludDTO? ObtenerFichaSalud(int clienteId) =>
             clienteId > 0 ? fichaDAL.ObtenerPorClienteId(clienteId) : null;

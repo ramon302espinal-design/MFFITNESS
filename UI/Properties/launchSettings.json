@@ -1,0 +1,18 @@
+{
+  "profiles": {
+    "UI (Development)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "MFFITNESS_ENVIRONMENT": "Development"
+      }
+    },
+    "UI (Production)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Production",
+        "MFFITNESS_ENVIRONMENT": "Production"
+      }
+    }
+  }
+}

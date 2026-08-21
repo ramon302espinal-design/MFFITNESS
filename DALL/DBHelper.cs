@@ -1,25 +1,20 @@
 ﻿using System.Data;
+using CORE;
 using Microsoft.Data.SqlClient;
 
 namespace DL
 {
     public class DBHelper
     {
-       
-       
-
         private readonly string _connectionString;
 
         public string ConnectionString =>
-     _connectionString ?? throw new Exception("ConnectionString no inicializado");
+            _connectionString ?? throw new Exception("ConnectionString no inicializado");
 
         public DBHelper()
         {
-            _connectionString =
-                @"Server=(localdb)\MSSQLLocalDB;
-                  Database=MF CYBER DB;
-                  Trusted_Connection=True;
-                  MultipleActiveResultSets=true";
+            // SSOT: CORE.AppConfig (appsettings + entorno). Sin hardcode de BD aquí.
+            _connectionString = AppConfig.ConnectionString;
         }
 
         private SqlConnection CreateConnection()

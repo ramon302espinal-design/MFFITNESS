@@ -104,6 +104,16 @@ namespace UI.DISEÑO
         {
             try
             {
+                if (comboUsuarios.SelectedValue == null || comboUsuarios.SelectedIndex < 0)
+                {
+                    MessageBox.Show(
+                        "No hay usuario seleccionado. Verifique que existan usuarios activos en la base.",
+                        "Validación",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
                 int idUsuario = Convert.ToInt32(comboUsuarios.SelectedValue);
                 string clave = txtContraseña.Text.Trim();
 
@@ -159,24 +169,33 @@ namespace UI.DISEÑO
             ShellTheme.TryApplyFormIcon(this);
             chkMostrarContraseña.Checked = false;
             ActualizarVisibilidadContraseña();
-            var dtUsuarios = usuarioBLL.TraerUsuariosActivos(); // devuelve DataTable con Id, Usuario, Rol
-            comboUsuarios.DataSource = dtUsuarios;
-            comboUsuarios.DisplayMember = "Usuario"; // lo que se ve
-            comboUsuarios.ValueMember = "Id";        // valor interno
-            comboUsuarios.SelectedIndex = 0;         // seleccionamos el primero
 
-            // 🔹 Formateamos el texto a mayúsculas
+            DataTable dtUsuarios = usuarioBLL.TraerUsuariosActivos();
+            comboUsuarios.DataSource = dtUsuarios;
+            comboUsuarios.DisplayMember = "Usuario";
+            comboUsuarios.ValueMember = "Id";
+
+            // Solo seleccionar si hay filas (BD vacía / sin Activo=1 → Items.Count = 0).
+            if (comboUsuarios.Items.Count > 0)
+                comboUsuarios.SelectedIndex = 0;
+            else
+            {
+                comboUsuarios.SelectedIndex = -1;
+                btnIniciar.Enabled = false;
+                MessageBox.Show(
+                    "No hay usuarios activos en esta base de datos.\n\n" +
+                    $"BD: {AppConfig.DatabaseName} ({AppConfig.EnvironmentName})\n\n" +
+                    "Si estás en Development (MF_CYBER_DB_DEV), clona usuarios desde producción " +
+                    "o cambia a Production ([MF CYBER DB]).",
+                    "Sin usuarios",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+
             comboUsuarios.Format += (s, ev) =>
             {
-                if (ev.ListItem != null)
-                {
-                    DataRowView drv = ev.ListItem as DataRowView;
-                    if (drv != null)
-                        ev.Value = drv["Usuario"].ToString()?.ToUpper(); // todo en mayúscula
-
-
-
-                }
+                if (ev.ListItem is DataRowView drv)
+                    ev.Value = drv["Usuario"]?.ToString()?.ToUpperInvariant();
             };
         }
 

@@ -24,11 +24,29 @@ namespace BLL
             string metodoPago,
             string concepto,
             string usuario)
+            => RegistrarPagoConResultado(
+                clienteId, fechaPago, fechaVencimiento, monto, metodoPago, concepto, usuario,
+                permitirMontoCero: false);
+
+        public (int pagoId, int cajaMovimientoId) RegistrarPagoConResultado(
+            int clienteId,
+            DateTime fechaPago,
+            DateTime fechaVencimiento,
+            decimal monto,
+            string metodoPago,
+            string concepto,
+            string usuario,
+            bool permitirMontoCero)
         {
             if (clienteId <= 0)
                 throw new Exception("Cliente inválido.");
 
-            if (monto <= 0)
+            if (monto < 0)
+                throw new Exception("El monto no puede ser negativo.");
+
+            // Oferta/cortesía: RD$ 0 registra pago + historial sin movimiento de caja.
+            bool esCortesiaCero = monto == 0;
+            if (monto == 0 && !permitirMontoCero)
                 throw new Exception("El monto debe ser mayor a 0.");
 
             if (string.IsNullOrWhiteSpace(metodoPago))
@@ -52,8 +70,11 @@ namespace BLL
                     clienteId, fechaPago, fechaVencimiento,
                     monto, metodoPago, concepto, usuario);
 
-                cajaMovId = txService.RegistrarIngresoConId(
-                    conn, tx, monto, conceptoCaja, usuario, metodoPago, clienteId);
+                if (!esCortesiaCero)
+                {
+                    cajaMovId = txService.RegistrarIngresoConId(
+                        conn, tx, monto, conceptoCaja, usuario, metodoPago, clienteId);
+                }
             });
 
             return (pagoId, cajaMovId);

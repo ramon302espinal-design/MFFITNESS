@@ -6,7 +6,7 @@ using CORE;
 namespace UI.Facturas
 {
     /// <summary>
-    /// Wrapper UI: reutiliza PDF ya generado (WhatsApp) o lo crea si falta.
+    /// Wrapper UI: genera PDF coherente (lista/descuento/total) y reutiliza si ya existe.
     /// </summary>
     public static class FacturaMembresiaPdfService
     {
@@ -36,7 +36,12 @@ namespace UI.Facturas
             string metodoPago,
             MembresiaOperacionResult operacion,
             string? notaExtra = null,
-            bool abrirPdf = false)
+            bool abrirPdf = false,
+            decimal? precioLista = null,
+            decimal? descuentoMonto = null,
+            decimal? descuentoPorcentaje = null,
+            string? asuntoOferta = null,
+            bool forzarRegenerar = false)
         {
             try
             {
@@ -44,7 +49,10 @@ namespace UI.Facturas
                     ? operacion.PagoId
                     : (operacion.MembresiaId > 0 ? operacion.MembresiaId : clienteId);
 
-                string? path = FacturaStorage.ResolverRutaFacturaExistente(pagoId);
+                string? path = forzarRegenerar
+                    ? null
+                    : FacturaStorage.ResolverRutaFacturaExistente(pagoId);
+
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 {
                     path = FacturaMembresiaPdfGenerator.GenerarDesdePago(
@@ -54,7 +62,11 @@ namespace UI.Facturas
                         fechaVencimiento,
                         metodoPago,
                         pagoId,
-                        notaExtra);
+                        notaExtra,
+                        precioLista,
+                        descuentoMonto,
+                        descuentoPorcentaje,
+                        asuntoOferta);
                 }
 
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -67,7 +79,6 @@ namespace UI.Facturas
             }
             catch (Exception ex)
             {
-                // Solo avisar si hay owner UI y se pidió abrir; post-pago silencioso solo loguea.
                 if (owner != null && abrirPdf)
                 {
                     MessageBox.Show(

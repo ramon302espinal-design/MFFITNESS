@@ -563,11 +563,14 @@ namespace UI.DISEÑO
             {
                 txtMonto.Text = Convert.ToDecimal(row["Precio"]).ToString("0.00");
 
-                // 🆕 Actualizar cálculo de saldo si financiamiento está activo
                 if (chkFinanciamiento.Checked)
-                {
                     CalcularSaldoFinanciamiento();
-                }
+
+                ActualizarPanelOfertaPorPlan();
+            }
+            else
+            {
+                ActualizarPanelOfertaPorPlan();
             }
         }
 
@@ -591,9 +594,8 @@ namespace UI.DISEÑO
                 if (AvisoDeudaPendiente.BloqueaOperacionDePlan(this, clienteId, deudaBLL))
                     return;
 
-                // Con financiamiento: vencido/desactivado/sin plan puede activarse a crédito.
-                // Sin financiamiento: ofrecer renovación (misma regla que Estado) si aplica.
-                if (!chkFinanciamiento.Checked && IntentarRedirigirRenovacion(clienteId))
+                // Con financiamiento u oferta: no forzar diálogo de renovación.
+                if (!chkFinanciamiento.Checked && !EsPlanOfertaSeleccionado() && IntentarRedirigirRenovacion(clienteId))
                     return;
 
                 int planId = Convert.ToInt32(cmbMembresia.SelectedValue);
@@ -616,7 +618,11 @@ namespace UI.DISEÑO
 
                 try
                 {
-                    if (chkFinanciamiento.Checked)
+                    if (EsPlanOfertaSeleccionado())
+                    {
+                        CobrarMembresiaConOferta(clienteId, planId, plan, fin, usuario);
+                    }
+                    else if (chkFinanciamiento.Checked)
                     {
                         CobrarMembresiaFinanciada(clienteId, planId, plan, fin, usuario);
                     }
@@ -734,9 +740,9 @@ namespace UI.DISEÑO
             if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
             {
                 string? nota = saldo > 0
-                    ? $"Tu membresía está activa. Saldo pendiente: RD${saldo:N0}. Vence el {fin:dd/MM/yyyy}."
+                    ? $"Tu membresía está activa. Saldo pendiente: RD${saldo:N2}. Vence el {fin:dd/MM/yyyy}."
                     : null;
-                // WhatsApp ya lo dispara MembresiaBLL en background; aquí solo PDF de respaldo.
+                // WhatsApp financiamiento lo dispara MembresiaBLL; aquí PDF con precio lista + abono.
                 IniciarPostPagoEnSegundoPlano(
                     clienteId,
                     planId,
@@ -746,7 +752,8 @@ namespace UI.DISEÑO
                     metodoPago,
                     opFin,
                     notaExtra: nota,
-                    enviarWhatsAppFactura: false);
+                    enviarWhatsAppFactura: false,
+                    precioLista: plan.Precio);
             }
         }
 
@@ -803,7 +810,8 @@ namespace UI.DISEÑO
                     monto,
                     fin,
                     metodoPago,
-                    opPago);
+                    opPago,
+                    precioLista: plan.Precio);
             }
         }
 
@@ -870,7 +878,7 @@ namespace UI.DISEÑO
         }
 
         /// <summary>
-        /// PDF + Supabase + WhatsApp fuera del hilo UI. Sin popups ni abrir factura en el PC.
+        /// PDF primero (lista/descuento/asunto), luego WhatsApp factura. Sin popups en PC.
         /// </summary>
         private void IniciarPostPagoEnSegundoPlano(
             int clienteId,
@@ -881,10 +889,39 @@ namespace UI.DISEÑO
             string metodoPago,
             MembresiaOperacionResult opPago,
             string? notaExtra = null,
-            bool enviarWhatsAppFactura = true)
+            bool enviarWhatsAppFactura = true,
+            decimal? precioLista = null,
+            decimal? descuentoMonto = null,
+            decimal? descuentoPorcentaje = null,
+            string? asuntoOferta = null,
+            bool enviarWhatsAppOferta = false)
         {
             System.Threading.Tasks.Task.Run(() =>
             {
+                try
+                {
+                    FacturaMembresiaPdfService.GenerarDesdeOperacion(
+                        owner: null,
+                        clienteId,
+                        nombrePlan,
+                        monto,
+                        fin,
+                        metodoPago,
+                        opPago,
+                        notaExtra: notaExtra,
+                        abrirPdf: false,
+                        precioLista: precioLista,
+                        descuentoMonto: descuentoMonto,
+                        descuentoPorcentaje: descuentoPorcentaje,
+                        asuntoOferta: asuntoOferta,
+                        forzarRegenerar: descuentoMonto.GetValueOrDefault() > 0
+                            || !string.IsNullOrWhiteSpace(asuntoOferta));
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PDF post-pago] {ex.Message}");
+                }
+
                 if (enviarWhatsAppFactura)
                 {
                     try
@@ -907,22 +944,25 @@ namespace UI.DISEÑO
                     }
                 }
 
-                try
+                if (enviarWhatsAppOferta
+                    && descuentoMonto.GetValueOrDefault() > 0
+                    && !string.IsNullOrWhiteSpace(asuntoOferta))
                 {
-                    FacturaMembresiaPdfService.GenerarDesdeOperacion(
-                        owner: null,
-                        clienteId,
-                        nombrePlan,
-                        monto,
-                        fin,
-                        metodoPago,
-                        opPago,
-                        notaExtra: notaExtra,
-                        abrirPdf: false);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[PDF post-pago] {ex.Message}");
+                    try
+                    {
+                        new MensajeAutomaticoBLL().EnviarMensajeOfertaMembresia(
+                            clienteId,
+                            nombrePlan,
+                            precioLista ?? monto,
+                            descuentoPorcentaje ?? 0,
+                            descuentoMonto ?? 0,
+                            monto,
+                            asuntoOferta!);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[WhatsApp oferta] " + ex.Message);
+                    }
                 }
             });
         }
@@ -941,6 +981,7 @@ namespace UI.DISEÑO
             dtpFechaVencimiento.Value = DateTime.Today.AddDays(30);
             dtpFechaVencimiento.Enabled = false;
             pnlFinanciamiento.Visible = false;
+            ResetOfertaCampos();
         }
 
         private bool ConfirmarPerfilCliente(int clienteId)
@@ -1046,6 +1087,17 @@ namespace UI.DISEÑO
                         "Financiamiento no disponible",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
+                    chkFinanciamiento.Checked = false;
+                    return;
+                }
+
+                if (EsPlanOfertaSeleccionado())
+                {
+                    MessageBox.Show(
+                        "El plan OFERTA no admite financiamiento. Elija otro plan o quite el financiamiento.",
+                        "Financiamiento",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
                     chkFinanciamiento.Checked = false;
                     return;
                 }

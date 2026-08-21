@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CORE\CORE.csproj" />
     <ProjectReference Include="..\MODELS\DTO.csproj" />
   </ItemGroup>
 

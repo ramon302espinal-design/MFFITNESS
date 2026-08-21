@@ -77,6 +77,51 @@ namespace UI
             => MostrarVista(() => new FrmAnaDecisiones(), btnDecisiones, "Centro de decisiones",
                 "Prioridades de hoy · detectar / analizar / recomendar — usted decide");
 
+        /// <summary>
+        /// Hospeda FrmReportes (POS) en el shell. No modifica su lógica:
+        /// solo oculta la barra de navegación duplicada al embeber.
+        /// </summary>
+        private void btnReportesPos_Click(object sender, EventArgs e)
+            => MostrarVista(CrearVistaReportesPos, btnReportesPos, "Reportes POS",
+                "Reportes operativos del sistema (legado)");
+
+        private static Form CrearVistaReportesPos()
+        {
+            var vista = new FrmReportes();
+            PrepararReportesEmbebido(vista);
+            return vista;
+        }
+
+        /// <summary>
+        /// Ajuste solo de presentación al embeber: oculta panelNav del POS
+        /// y revierte el offset vertical que FrmReportes aplica para esa barra.
+        /// Sin cambios en generación/exportación de reportes.
+        /// </summary>
+        private static void PrepararReportesEmbebido(FrmReportes vista)
+        {
+            const int offsetNav = 52;
+            Control? nav = null;
+            foreach (Control c in vista.Controls)
+            {
+                if (string.Equals(c.Name, "panelNav", StringComparison.Ordinal))
+                {
+                    nav = c;
+                    break;
+                }
+            }
+
+            if (nav == null)
+                return;
+
+            nav.Visible = false;
+            foreach (Control c in vista.Controls)
+            {
+                if (c.Dock != DockStyle.None)
+                    continue;
+                c.Top = Math.Max(0, c.Top - offsetNav);
+            }
+        }
+
         private void btnEstrellas_Click(object sender, EventArgs e)
             => MostrarVista(() => new FrmAnaProductosEstrella(), btnConfiguracion, "Productos estrella",
                 "Impacto + eficiencia + bajo riesgo (explicable)");

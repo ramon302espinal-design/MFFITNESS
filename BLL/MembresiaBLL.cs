@@ -289,6 +289,13 @@ namespace BLL
             DateTime inicio = DateTime.Now;
             DateTime fin = MembresiaHelper.CalcularFechaVencimiento(inicio);
             decimal monto = montoOverride ?? plan.Precio;
+            if (monto < 0)
+                throw new Exception("El monto no puede ser negativo.");
+
+            bool esOferta = PlanNombres.EsOferta(plan.Nombre);
+            if (monto == 0 && !esOferta)
+                throw new Exception("El monto debe ser mayor a 0.");
+
             string concepto = conceptoMembresia ?? $"Membresía {plan.Nombre}";
             DateTime fechaVencimientoPago = fechaVencimientoOverride ?? fin;
 
@@ -305,7 +312,8 @@ namespace BLL
                     monto,
                     metodoPago,
                     concepto,
-                    usuario);
+                    usuario,
+                    permitirMontoCero: esOferta);
 
                 // Historial PAGO anula SALIDA/BAJA (DESACTIVADO/VENCIDO → ACTIVO en Estado).
                 new HistorialMembresiaDAL().Insertar(
@@ -314,7 +322,11 @@ namespace BLL
                     planId,
                     monto,
                     usuario,
-                    "Pago de membresía");
+                    string.IsNullOrWhiteSpace(conceptoMembresia)
+                        ? "Pago de membresía"
+                        : (conceptoMembresia!.Length > 200
+                            ? conceptoMembresia.Substring(0, 200)
+                            : conceptoMembresia));
 
                 new CongelacionDAL().CerrarActiva(clienteId, DateTime.Today);
 

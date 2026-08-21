@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using CORE;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -32,7 +33,6 @@ namespace BLL.Facturas
 
             FacturaStorage.GuardarFactura(pagoId, bytes);
 
-            // Publicar en Supabase Storage (bucket FACTURAS) para Twilio sin Ngrok.
             try
             {
                 FacturaSupabaseUploader.TryUploadAndGetPublicUrl(pagoId, bytes);
@@ -42,7 +42,6 @@ namespace BLL.Facturas
                 System.Diagnostics.Debug.WriteLine($"Supabase upload: {ex.Message}");
             }
 
-            // Copia legible adicional con nombre FAC
             try
             {
                 string fac = $"FAC-{pagoId:D2}";
@@ -66,7 +65,11 @@ namespace BLL.Facturas
             DateTime fechaVencimiento,
             string metodoPago,
             int pagoId,
-            string? notaExtra = null)
+            string? notaExtra = null,
+            decimal? precioLista = null,
+            decimal? descuentoMonto = null,
+            decimal? descuentoPorcentaje = null,
+            string? asuntoOferta = null)
         {
             try
             {
@@ -75,6 +78,16 @@ namespace BLL.Facturas
                 string nombre = row?["Nombre"]?.ToString()?.Trim() ?? $"Cliente #{clienteId}";
                 string telefono = row?["Telefono"]?.ToString()?.Trim() ?? string.Empty;
 
+                decimal lista = precioLista.HasValue && precioLista.Value > 0
+                    ? Math.Round(precioLista.Value, 2, MidpointRounding.AwayFromZero)
+                    : Math.Round(montoPagado, 2, MidpointRounding.AwayFromZero);
+                decimal desc = Math.Round(descuentoMonto ?? 0m, 2, MidpointRounding.AwayFromZero);
+                if (desc < 0) desc = 0;
+                if (desc > lista) desc = lista;
+                decimal pct = descuentoPorcentaje ?? 0m;
+                if (pct <= 0 && lista > 0 && desc > 0)
+                    pct = Math.Round(desc * 100m / lista, 2, MidpointRounding.AwayFromZero);
+
                 int numero = pagoId > 0 ? pagoId : clienteId;
                 var data = new FacturaMembresiaData
                 {
@@ -82,8 +95,11 @@ namespace BLL.Facturas
                     ClienteNombre = nombre,
                     ClienteTelefono = telefono,
                     NombrePlan = nombrePlan,
-                    MontoPagado = montoPagado,
-                    PrecioUnitario = montoPagado,
+                    MontoPagado = Math.Round(montoPagado, 2, MidpointRounding.AwayFromZero),
+                    PrecioUnitario = lista,
+                    DescuentoMonto = desc,
+                    DescuentoPorcentaje = pct,
+                    AsuntoOferta = string.IsNullOrWhiteSpace(asuntoOferta) ? null : asuntoOferta.Trim(),
                     FechaEmision = DateTime.Now,
                     FechaVencimientoMembresia = fechaVencimiento,
                     MetodoPago = string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago,
@@ -131,18 +147,23 @@ namespace BLL.Facturas
         {
             var es = CultureInfo.GetCultureInfo("es-DO");
             string monto = FormatearMonto(_data.MontoPagado);
-            string precio = FormatearMonto(_data.PrecioUnitario > 0 ? _data.PrecioUnitario : _data.MontoPagado);
+            string precioLista = FormatearMonto(_data.PrecioUnitario > 0 ? _data.PrecioUnitario : _data.MontoPagado);
             string fac = $"FAC-{Math.Max(1, _data.NumeroFactura):D2}";
             string miembro = $"#{Math.Max(1, _data.ClienteId):D2}";
             string plan = NormalizarPlan(_data.NombrePlan);
             string venceLargo = CapitalizarMes(
                 _data.FechaVencimientoMembresia.ToString("dd 'de' MMMM 'de' yyyy", es), es);
-            string nota = string.IsNullOrWhiteSpace(_data.NotaImportanteExtra)
-                ? $"Tu membresía vence el próximo {venceLargo}. Recuerda registrar tu pago."
-                : _data.NotaImportanteExtra.Trim();
+            string nota = ConstruirNota(venceLargo);
             string telefonoCliente = string.IsNullOrWhiteSpace(_data.ClienteTelefono)
                 ? "-"
                 : _data.ClienteTelefono;
+
+            bool tieneOferta = _data.DescuentoMonto > 0
+                || !string.IsNullOrWhiteSpace(_data.AsuntoOferta);
+            bool tieneAbono = !tieneOferta
+                && _data.PrecioUnitario > 0
+                && _data.MontoPagado > 0
+                && _data.MontoPagado < _data.PrecioUnitario;
 
             container.Page(page =>
             {
@@ -200,8 +221,10 @@ namespace BLL.Facturas
                         {
                             right.Item().Text("DETALLES DE LA FACTURA").Bold().FontSize(11);
                             right.Item().PaddingTop(6).Text($"Fecha de emisión: {_data.FechaEmision:dd/MM/yyyy}");
-                            right.Item().Text($"Fecha de vencimiento: {_data.FechaVencimientoMembresia:dd/MM/yyyy}");
+                            right.Item().Text($"Vence membresía: {_data.FechaVencimientoMembresia:dd/MM/yyyy}");
                             right.Item().Text($"Metodo de pago: {_data.MetodoPago}");
+                            if (!string.IsNullOrWhiteSpace(_data.AsuntoOferta))
+                                right.Item().Text($"Asunto oferta: {_data.AsuntoOferta.Trim()}");
                         });
                     });
 
@@ -223,13 +246,39 @@ namespace BLL.Facturas
                             header.Cell().Element(HeaderCell).AlignRight().Text("TOTAL");
                         });
 
-                        table.Cell().PaddingVertical(12).PaddingHorizontal(10).Text(plan).Bold();
-                        table.Cell().PaddingVertical(12).PaddingHorizontal(10).AlignRight().Text(precio);
-                        table.Cell().PaddingVertical(12).PaddingHorizontal(10).AlignCenter().Text("01");
-                        table.Cell().PaddingVertical(12).PaddingHorizontal(10).AlignRight().Text(monto).Bold();
+                        table.Cell().PaddingVertical(10).PaddingHorizontal(10).Text(plan).Bold();
+                        table.Cell().PaddingVertical(10).PaddingHorizontal(10).AlignRight().Text(precioLista);
+                        table.Cell().PaddingVertical(10).PaddingHorizontal(10).AlignCenter().Text("01");
+                        table.Cell().PaddingVertical(10).PaddingHorizontal(10).AlignRight().Text(precioLista).Bold();
+
+                        if (tieneOferta && _data.DescuentoMonto > 0)
+                        {
+                            string descPct = _data.DescuentoPorcentaje > 0
+                                ? $" ({_data.DescuentoPorcentaje:0.##}%)"
+                                : string.Empty;
+                            string descLabel = string.IsNullOrWhiteSpace(_data.AsuntoOferta)
+                                ? $"Descuento oferta{descPct}"
+                                : $"Descuento oferta{descPct}: {_data.AsuntoOferta.Trim()}";
+                            string descMonto = "-" + FormatearMonto(_data.DescuentoMonto);
+
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10).Text(descLabel);
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10).AlignRight().Text(descMonto);
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10).AlignCenter().Text("01");
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10).AlignRight().Text(descMonto);
+                        }
+                        else if (tieneAbono)
+                        {
+                            decimal abono = _data.MontoPagado;
+                            string abonoTxt = FormatearMonto(abono);
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10)
+                                .Text("Abono / pago a cuenta (financiamiento)");
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10).AlignRight().Text(abonoTxt);
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10).AlignCenter().Text("01");
+                            table.Cell().PaddingVertical(8).PaddingHorizontal(10).AlignRight().Text(abonoTxt);
+                        }
                     });
 
-                    col.Item().Height(160);
+                    col.Item().Height(tieneOferta || tieneAbono ? 120 : 160);
                     col.Item().LineHorizontal(3).LineColor(Colors.Black);
 
                     col.Item().PaddingTop(14).Row(row =>
@@ -264,18 +313,41 @@ namespace BLL.Facturas
                     .DefaultTextStyle(x => x.FontColor(Colors.White).Bold().FontSize(10));
         }
 
+        private string ConstruirNota(string venceLargo)
+        {
+            var sb = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(_data.AsuntoOferta))
+                sb.AppendLine($"Asunto de la oferta: {_data.AsuntoOferta.Trim()}");
+
+            if (_data.DescuentoMonto > 0)
+            {
+                string pct = _data.DescuentoPorcentaje > 0
+                    ? $" ({_data.DescuentoPorcentaje:0.##}%)"
+                    : string.Empty;
+                sb.AppendLine(
+                    $"Oferta aplicada{pct}: -{FormatearMonto(_data.DescuentoMonto)}. " +
+                    $"Precio lista {FormatearMonto(_data.PrecioUnitario)} → pagado {FormatearMonto(_data.MontoPagado)}.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(_data.NotaImportanteExtra))
+                sb.AppendLine(_data.NotaImportanteExtra.Trim());
+            else
+                sb.AppendLine($"Tu membresía vence el próximo {venceLargo}. Recuerda registrar tu pago a tiempo.");
+
+            return sb.ToString().Trim();
+        }
+
+        /// <summary>Misma etiqueta que WhatsApp/catálogo (sin prefijo forzado "PLAN ").</summary>
         private static string NormalizarPlan(string plan)
         {
             string p = (plan ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(p))
                 return "PLAN";
-            if (!p.StartsWith("PLAN", StringComparison.OrdinalIgnoreCase))
-                return $"PLAN {p}".ToUpperInvariant();
             return p.ToUpperInvariant();
         }
 
         private static string FormatearMonto(decimal monto) =>
-            "RD$" + monto.ToString("#,0", CultureInfo.GetCultureInfo("es-DO"));
+            "RD$" + monto.ToString("#,0.00", CultureInfo.GetCultureInfo("es-DO"));
 
         private static string CapitalizarMes(string texto, CultureInfo culture)
         {

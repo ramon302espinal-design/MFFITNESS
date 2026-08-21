@@ -120,7 +120,7 @@ namespace UI
                 DataView dv = tabla.DefaultView;
                 // Todos los planes reales de Planes; el pseudo-plan PRODUCTO A CRÉDITO
                 // se agrega aparte más abajo. Sin nombres a mano: M-A y futuros planes entran solos.
-                dv.RowFilter = $"Nombre <> '{NombreProductoCredito}'";
+                dv.RowFilter = $"Nombre <> '{NombreProductoCredito}' AND Nombre <> 'OFERTA'";
 
                 DataTable opciones = tabla.Clone();
                 if (!opciones.Columns.Contains("Etiqueta"))

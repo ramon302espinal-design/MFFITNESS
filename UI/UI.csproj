@@ -32,6 +32,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- SSOT de conexión: mismos appsettings que CORE (se copian al output de UI). -->
+		<None Include="..\CORE\appsettings.json" Link="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\CORE\appsettings.Development.json" Link="appsettings.Development.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\CORE\appsettings.Production.json" Link="appsettings.Production.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- Copia mf.ico a output\Resources\ para carga dinámica segura en formularios. -->
 		<None Update="Resources\mf.ico">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

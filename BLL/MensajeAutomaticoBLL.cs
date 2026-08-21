@@ -350,6 +350,60 @@ namespace BLL
             });
         }
 
+        /// <summary>
+        /// Aviso al congelar: incluye desde qué día puede volver a entrar (ancla / fecha calculada).
+        /// </summary>
+        public bool EnviarMensajeCongelacion(
+            int clienteId,
+            string motivo,
+            DateTime fechaCongelacion,
+            int diaAncla,
+            DateTime fechaReactivacionDesde,
+            int diasRestantes,
+            DateTime fechaFinOriginal)
+        {
+            return EnviarMensajeTemplado(clienteId, "CONGELACION_MEMBRESIA", new Dictionary<string, string>
+            {
+                ["MOTIVO"] = string.IsNullOrWhiteSpace(motivo) ? "Sin especificar" : motivo.Trim(),
+                ["FECHA_CONGELACION"] = fechaCongelacion.ToString("dd/MM/yyyy"),
+                ["DIA_ANCLA"] = diaAncla.ToString(),
+                ["FECHA_REACTIVACION_DESDE"] = fechaReactivacionDesde.ToString("dd/MM/yyyy"),
+                ["DIAS_RESTANTES"] = Math.Max(0, diasRestantes).ToString(),
+                ["FECHA_FIN_ORIGINAL"] = fechaFinOriginal.ToString("dd/MM/yyyy")
+            });
+        }
+
+        /// <summary>Aviso al reactivar membresía tras congelamiento.</summary>
+        public bool EnviarMensajeDescongelacion(int clienteId, DateTime fechaActivacion, DateTime fechaVence)
+        {
+            return EnviarMensajeTemplado(clienteId, "DESCONGELACION_MEMBRESIA", new Dictionary<string, string>
+            {
+                ["FECHA_ACTIVACION"] = fechaActivacion.ToString("dd/MM/yyyy"),
+                ["FECHA_VENCE"] = fechaVence.ToString("dd/MM/yyyy")
+            });
+        }
+
+        /// <summary>Aviso de membresía cobrada con oferta/descuento.</summary>
+        public bool EnviarMensajeOfertaMembresia(
+            int clienteId,
+            string nombrePlan,
+            decimal precioLista,
+            decimal porcentajeDescuento,
+            decimal montoDescuento,
+            decimal totalPagar,
+            string motivo)
+        {
+            return EnviarMensajeTemplado(clienteId, "OFERTA_MEMBRESIA", new Dictionary<string, string>
+            {
+                ["PLAN"] = string.IsNullOrWhiteSpace(nombrePlan) ? "Plan" : nombrePlan.Trim(),
+                ["PRECIO_LISTA"] = FormatearMonto(precioLista),
+                ["PORCENTAJE"] = porcentajeDescuento.ToString("0.##", CultureInfo.InvariantCulture),
+                ["DESCUENTO"] = FormatearMonto(montoDescuento),
+                ["TOTAL"] = FormatearMonto(totalPagar),
+                ["MOTIVO"] = string.IsNullOrWhiteSpace(motivo) ? "Oferta especial" : motivo.Trim()
+            });
+        }
+
         public void EnviarMensajeFinanciamiento(
             int clienteId,
             string nombrePlan,
@@ -933,6 +987,9 @@ namespace BLL
             "DEUDA_PAGADA_COMPLETA" => "Deuda saldada",
             "RESUMEN_DEUDAS" => "Estado de cuenta de financiamientos",
             "PRUEBA_SISTEMA" => "Mensaje de prueba",
+            "CONGELACION_MEMBRESIA" => "Membresia congelada",
+            "DESCONGELACION_MEMBRESIA" => "Membresia reactivada",
+            "OFERTA_MEMBRESIA" => "Oferta de membresia aplicada",
             _ => "Actualizacion de cuenta"
         };
 
@@ -945,7 +1002,7 @@ namespace BLL
         }
 
         private static string FormatearMonto(decimal monto) =>
-            $"RD {monto.ToString("0.00", CultureInfo.InvariantCulture)}";
+            $"RD${monto.ToString("#,0.00", CultureInfo.GetCultureInfo("es-DO"))}";
 
         private static string FormatearDetalleRespuesta(WhatsAppEnvioResult resultado)
         {
