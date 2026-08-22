@@ -205,15 +205,19 @@ namespace UI.DISEÑO
             panelAcciones.Dock = DockStyle.Bottom;
             panelAcciones.Location = new Point(0, 609);
             panelAcciones.Name = "panelAcciones";
+            panelAcciones.Padding = new Padding(12, 8, 12, 8);
             panelAcciones.Size = new Size(1062, 64);
             panelAcciones.TabIndex = 3;
+            panelAcciones.Tag = "classic";
             // 
             // btnRenovar
             // 
             btnRenovar.Anchor = AnchorStyles.None;
-            btnRenovar.Location = new Point(300, 9);
+            btnRenovar.Enabled = false;
+            btnRenovar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnRenovar.Location = new Point(300, 11);
             btnRenovar.Name = "btnRenovar";
-            btnRenovar.Size = new Size(142, 46);
+            btnRenovar.Size = new Size(142, 42);
             btnRenovar.TabIndex = 0;
             btnRenovar.Text = "RENOVAR";
             btnRenovar.UseVisualStyleBackColor = true;
@@ -222,27 +226,26 @@ namespace UI.DISEÑO
             // btnDesactivar
             // 
             btnDesactivar.Anchor = AnchorStyles.None;
-            btnDesactivar.BackColor = Color.Red;
-            btnDesactivar.ForeColor = Color.White;
-            btnDesactivar.Location = new Point(462, 9);
+            btnDesactivar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnDesactivar.Location = new Point(462, 11);
             btnDesactivar.Name = "btnDesactivar";
-            btnDesactivar.Size = new Size(126, 46);
+            btnDesactivar.Size = new Size(126, 42);
             btnDesactivar.TabIndex = 1;
             btnDesactivar.Text = "DESACTIVAR";
-            btnDesactivar.UseVisualStyleBackColor = false;
+            btnDesactivar.UseVisualStyleBackColor = true;
             btnDesactivar.Click += btnDesactivar_Click;
             // 
             // btnCongelar
             // 
             btnCongelar.Anchor = AnchorStyles.None;
-            btnCongelar.BackColor = Color.FromArgb(14, 165, 233);
-            btnCongelar.ForeColor = Color.White;
-            btnCongelar.Location = new Point(608, 9);
+            btnCongelar.Enabled = false;
+            btnCongelar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnCongelar.Location = new Point(608, 11);
             btnCongelar.Name = "btnCongelar";
-            btnCongelar.Size = new Size(126, 46);
+            btnCongelar.Size = new Size(126, 42);
             btnCongelar.TabIndex = 2;
             btnCongelar.Text = "CONGELAR";
-            btnCongelar.UseVisualStyleBackColor = false;
+            btnCongelar.UseVisualStyleBackColor = true;
             btnCongelar.Click += btnCongelar_Click;
             // 
             // dgvEstado
@@ -250,9 +253,7 @@ namespace UI.DISEÑO
             dgvEstado.AllowUserToAddRows = false;
             dgvEstado.AllowUserToDeleteRows = false;
             dgvEstado.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvEstado.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
             dgvEstado.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvEstado.Dock = DockStyle.Fill;
             dgvEstado.Location = new Point(0, 108);
             dgvEstado.MultiSelect = false;
             dgvEstado.Name = "dgvEstado";
@@ -260,7 +261,7 @@ namespace UI.DISEÑO
             dgvEstado.RowHeadersWidth = 51;
             dgvEstado.RowTemplate.Height = 32;
             dgvEstado.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvEstado.Size = new Size(1062, 501);
+            dgvEstado.Size = new Size(1062, 342);
             dgvEstado.TabIndex = 2;
             dgvEstado.CellDoubleClick += dgvEstado_CellDoubleClick;
             dgvEstado.CellFormatting += dgvEstado_CellFormatting;

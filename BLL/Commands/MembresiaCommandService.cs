@@ -66,12 +66,20 @@ namespace BLL.Commands
             int planId,
             decimal precio,
             string? usuario = null)
+            => RenovarMembresia(clienteId, planId, precio, concepto: null, usuario);
+
+        public static CommandResult RenovarMembresia(
+            int clienteId,
+            int planId,
+            decimal precio,
+            string? concepto,
+            string? usuario = null)
         {
             try
             {
                 var bll = new RenovacionBLL();
                 var operacion = bll.RenovarClienteConResultado(
-                    clienteId, planId, precio, ResolveUsuario(usuario));
+                    clienteId, planId, precio, ResolveUsuario(usuario), concepto);
                 return CommandResult.Ok("Renovación registrada correctamente.", operacion);
             }
             catch (Exception ex)

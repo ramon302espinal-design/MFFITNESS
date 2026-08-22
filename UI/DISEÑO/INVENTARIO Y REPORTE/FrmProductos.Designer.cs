@@ -70,6 +70,12 @@ namespace UI.DISEÑO
             btnNavDeudas = new Button();
             btnNavPagar = new Button();
             btnBack = new Button();
+            panel1 = new Panel();
+            lblKpiInvVal = new Label();
+            label11 = new Label();
+            panel3 = new Panel();
+            lblKpiGanVal = new Label();
+            label12 = new Label();
             tabProductos.SuspendLayout();
             panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numSalida).BeginInit();
@@ -78,10 +84,14 @@ namespace UI.DISEÑO
             ((System.ComponentModel.ISupportInitialize)dgvProductos).BeginInit();
             tabControl1.SuspendLayout();
             panelNav.SuspendLayout();
+            panel1.SuspendLayout();
+            panel3.SuspendLayout();
             SuspendLayout();
             // 
             // tabProductos
             // 
+            tabProductos.Controls.Add(panel3);
+            tabProductos.Controls.Add(panel1);
             tabProductos.Controls.Add(panel2);
             tabProductos.Controls.Add(label9);
             tabProductos.Controls.Add(txtMotivoExtra);
@@ -113,7 +123,7 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(4, 29);
             tabProductos.Name = "tabProductos";
             tabProductos.Padding = new Padding(3);
-            tabProductos.Size = new Size(1054, 588);
+            tabProductos.Size = new Size(1916, 940);
             tabProductos.TabIndex = 0;
             tabProductos.Text = "REGISTRO DE PRODUCTOS";
             tabProductos.UseVisualStyleBackColor = true;
@@ -126,9 +136,9 @@ namespace UI.DISEÑO
             panel2.Controls.Add(labelStock);
             panel2.ForeColor = Color.Crimson;
             panel2.ImeMode = ImeMode.On;
-            panel2.Location = new Point(1372, 123);
+            panel2.Location = new Point(1354, 61);
             panel2.Name = "panel2";
-            panel2.Size = new Size(250, 194);
+            panel2.Size = new Size(212, 153);
             panel2.TabIndex = 63;
             // 
             // lblStockActual
@@ -137,7 +147,7 @@ namespace UI.DISEÑO
             lblStockActual.BackColor = Color.Transparent;
             lblStockActual.Font = new Font("Segoe UI", 30F, FontStyle.Bold);
             lblStockActual.ForeColor = SystemColors.HotTrack;
-            lblStockActual.Location = new Point(94, 81);
+            lblStockActual.Location = new Point(82, 56);
             lblStockActual.Name = "lblStockActual";
             lblStockActual.Size = new Size(58, 67);
             lblStockActual.TabIndex = 61;
@@ -148,7 +158,7 @@ namespace UI.DISEÑO
             labelStock.AutoSize = true;
             labelStock.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
             labelStock.ForeColor = Color.Black;
-            labelStock.Location = new Point(25, 31);
+            labelStock.Location = new Point(11, 0);
             labelStock.Name = "labelStock";
             labelStock.Size = new Size(198, 35);
             labelStock.TabIndex = 60;
@@ -423,7 +433,7 @@ namespace UI.DISEÑO
             tabControl1.Location = new Point(0, 52);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(1062, 621);
+            tabControl1.Size = new Size(1924, 973);
             tabControl1.SizeMode = TabSizeMode.FillToRight;
             tabControl1.TabIndex = 18;
             // 
@@ -442,7 +452,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1062, 52);
+            panelNav.Size = new Size(1924, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -538,11 +548,81 @@ namespace UI.DISEÑO
             btnBack.TabIndex = 0;
             btnBack.UseVisualStyleBackColor = true;
             // 
+            // panel1
+            // 
+            panel1.BackColor = Color.Gold;
+            panel1.Controls.Add(lblKpiInvVal);
+            panel1.Controls.Add(label11);
+            panel1.ForeColor = Color.Crimson;
+            panel1.ImeMode = ImeMode.On;
+            panel1.Location = new Point(1354, 216);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(212, 153);
+            panel1.TabIndex = 64;
+            // 
+            // lblKpiInvVal
+            // 
+            lblKpiInvVal.AutoSize = true;
+            lblKpiInvVal.BackColor = Color.Transparent;
+            lblKpiInvVal.Font = new Font("Segoe UI", 17F, FontStyle.Bold);
+            lblKpiInvVal.ForeColor = SystemColors.HotTrack;
+            lblKpiInvVal.Location = new Point(11, 94);
+            lblKpiInvVal.Name = "lblKpiInvVal";
+            lblKpiInvVal.Size = new Size(34, 40);
+            lblKpiInvVal.TabIndex = 61;
+            lblKpiInvVal.Text = "0";
+            // 
+            // label11
+            // 
+            label11.AutoSize = true;
+            label11.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label11.ForeColor = Color.Black;
+            label11.Location = new Point(19, 0);
+            label11.Name = "label11";
+            label11.Size = new Size(167, 35);
+            label11.TabIndex = 60;
+            label11.Text = "INVENTARIO";
+            // 
+            // panel3
+            // 
+            panel3.BackColor = Color.Gold;
+            panel3.Controls.Add(lblKpiGanVal);
+            panel3.Controls.Add(label12);
+            panel3.ForeColor = Color.Crimson;
+            panel3.ImeMode = ImeMode.On;
+            panel3.Location = new Point(1474, 559);
+            panel3.Name = "panel3";
+            panel3.Size = new Size(212, 153);
+            panel3.TabIndex = 65;
+            // 
+            // lblKpiGanVal
+            // 
+            lblKpiGanVal.AutoSize = true;
+            lblKpiGanVal.BackColor = Color.Transparent;
+            lblKpiGanVal.Font = new Font("Segoe UI", 17F, FontStyle.Bold);
+            lblKpiGanVal.ForeColor = SystemColors.HotTrack;
+            lblKpiGanVal.Location = new Point(11, 94);
+            lblKpiGanVal.Name = "lblKpiGanVal";
+            lblKpiGanVal.Size = new Size(34, 40);
+            lblKpiGanVal.TabIndex = 61;
+            lblKpiGanVal.Text = "0";
+            // 
+            // label12
+            // 
+            label12.AutoSize = true;
+            label12.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label12.ForeColor = Color.Black;
+            label12.Location = new Point(19, 0);
+            label12.Name = "label12";
+            label12.Size = new Size(151, 35);
+            label12.TabIndex = 60;
+            label12.Text = "GANANCIA";
+            // 
             // FrmProductos
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1062, 673);
+            ClientSize = new Size(1924, 1025);
             Controls.Add(tabControl1);
             Controls.Add(panelNav);
             Name = "FrmProductos";
@@ -560,6 +640,10 @@ namespace UI.DISEÑO
             ((System.ComponentModel.ISupportInitialize)dgvProductos).EndInit();
             tabControl1.ResumeLayout(false);
             panelNav.ResumeLayout(false);
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            panel3.ResumeLayout(false);
+            panel3.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -607,5 +691,12 @@ namespace UI.DISEÑO
         private Button btnNavInventario;
         private Button btnNavReportes;
         private Button btnNavClientes;
+        private Panel panel1;
+        private Label label10;
+        private Label label11;
+        private Panel panel3;
+        private Label label12;
+        private Label lblKpiInvVal;
+        private Label lblKpiGanVal;
     }
 }

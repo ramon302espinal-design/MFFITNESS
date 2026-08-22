@@ -3,7 +3,6 @@ using System.Linq;
 using System.Windows.Forms;
 using BLL.Models.Crm;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
@@ -17,25 +16,21 @@ namespace UI
         public FrmAnaDashboard()
         {
             InitializeComponent();
-            CrmVisualTokens.MarkClassic(this);
-            Load += (_, _) => CargarDatos();
-            btnDecisionVer.Enabled = true;
-            btnDecisionVer.Click += (_, _) => NavegarADecisiones();
-            btnAccionesVer.Click += (_, _) => NavegarADecisiones();
         }
 
-        private void NavegarADecisiones()
+        private void FrmAnaDashboard_Load(object? sender, EventArgs e)
         {
-            Control? c = Parent;
-            while (c != null && c is not FrmCRMFinanciero)
-                c = c.Parent;
+            if (DesignMode)
+                return;
 
-            if (c is FrmCRMFinanciero crm)
-                crm.MostrarDecisiones();
+            CargarDatos();
         }
 
         private void CargarDatos()
         {
+            if (DesignMode)
+                return;
+
             ProfitSummary? profit = CrmProfitUiBinder.TryLoadThisMonth(out string? error);
             InventoryFinancialSummary? summary = CrmInventoryUiBinder.TryLoadSummary(out string? invError);
             InventoryCapitalHealthReport? health = CrmInventoryUiBinder.TryLoadHealth(out _);
@@ -343,6 +338,9 @@ namespace UI
                 lblAccImpacto.Text = "Impacto observado: " + actions.ImpactHint
                     + " · " + CrmBusinessActionUiBinder.ClosedLoopStatusLine();
             }
+
+            ActualizarGraficoCapital(health, dash);
+            ActualizarGraficoTendencias();
         }
     }
 }

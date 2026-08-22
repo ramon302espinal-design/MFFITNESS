@@ -69,13 +69,29 @@ namespace UI
             => MostrarVista(() => new FrmAnaTendencias(), btnTendencias, "Tendencias",
                 "MoM por producto (creciendo / estable / cayendo)");
 
-        private void btnDecisiones_Click(object sender, EventArgs e)
-            => MostrarDecisiones();
-
         /// <summary>Navegación pública al Centro (FASE 10.28 — Dashboard Ver/Analizar).</summary>
         public void MostrarDecisiones()
             => MostrarVista(() => new FrmAnaDecisiones(), btnDecisiones, "Centro de decisiones",
                 "Prioridades de hoy · detectar / analizar / recomendar — usted decide");
+
+        public void MostrarCapitalCongelado()
+            => MostrarVista(() => new FrmAnaCapitalCongelado(), btnCapital, "Capital congelado",
+                "Capital inmovilizado clasificado (Frozen + Critical)");
+
+        public void MostrarAlertas()
+            => MostrarVista(() => new FrmAnaAlertas(), btnAlertas, "Alertas",
+                "Avisos de capital, inventario y riesgo");
+
+        public void MostrarProductosEstrella()
+            => MostrarVista(() => new FrmAnaProductosEstrella(), btnConfiguracion, "Productos estrella",
+                "Impacto + eficiencia + bajo riesgo (explicable)");
+
+        public void MostrarTendencias()
+            => MostrarVista(() => new FrmAnaTendencias(), btnTendencias, "Tendencias",
+                "MoM por producto (creciendo / estable / cayendo)");
+
+        private void btnDecisiones_Click(object sender, EventArgs e)
+            => MostrarDecisiones();
 
         /// <summary>
         /// Hospeda FrmReportes (POS) en el shell. No modifica su lógica:

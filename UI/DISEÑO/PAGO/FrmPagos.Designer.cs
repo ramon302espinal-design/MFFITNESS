@@ -318,7 +318,7 @@ namespace UI.DISEÑO
             pnlOferta.Controls.Add(txtMotivo);
             pnlOferta.Location = new Point(640, 376);
             pnlOferta.Name = "pnlOferta";
-            pnlOferta.Size = new Size(420, 270);
+            pnlOferta.Size = new Size(420, 225);
             pnlOferta.TabIndex = 11;
             pnlOferta.Visible = false;
             // 
@@ -328,7 +328,7 @@ namespace UI.DISEÑO
             lblOfertaPct.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblOfertaPct.Location = new Point(14, 16);
             lblOfertaPct.Name = "lblOfertaPct";
-            lblOfertaPct.Size = new Size(120, 25);
+            lblOfertaPct.Size = new Size(132, 25);
             lblOfertaPct.TabIndex = 0;
             lblOfertaPct.Text = "Descuento %:";
             // 
@@ -349,7 +349,7 @@ namespace UI.DISEÑO
             lblOfertaMonto.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblOfertaMonto.Location = new Point(14, 68);
             lblOfertaMonto.Name = "lblOfertaMonto";
-            lblOfertaMonto.Size = new Size(139, 25);
+            lblOfertaMonto.Size = new Size(153, 25);
             lblOfertaMonto.TabIndex = 2;
             lblOfertaMonto.Text = "Descuento RD$:";
             // 
@@ -370,7 +370,7 @@ namespace UI.DISEÑO
             lblTotalPagarTitulo.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblTotalPagarTitulo.Location = new Point(14, 118);
             lblTotalPagarTitulo.Name = "lblTotalPagarTitulo";
-            lblTotalPagarTitulo.Size = new Size(122, 25);
+            lblTotalPagarTitulo.Size = new Size(133, 25);
             lblTotalPagarTitulo.TabIndex = 4;
             lblTotalPagarTitulo.Text = "Total a pagar:";
             // 
@@ -381,7 +381,7 @@ namespace UI.DISEÑO
             lblTotalPagar.ForeColor = Color.FromArgb(22, 163, 74);
             lblTotalPagar.Location = new Point(160, 112);
             lblTotalPagar.Name = "lblTotalPagar";
-            lblTotalPagar.Size = new Size(120, 37);
+            lblTotalPagar.Size = new Size(133, 37);
             lblTotalPagar.TabIndex = 5;
             lblTotalPagar.Text = "RD$ 0.00";
             // 
@@ -389,20 +389,20 @@ namespace UI.DISEÑO
             // 
             lblMotivoOferta.AutoSize = true;
             lblMotivoOferta.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblMotivoOferta.Location = new Point(14, 162);
+            lblMotivoOferta.Location = new Point(14, 156);
             lblMotivoOferta.Name = "lblMotivoOferta";
-            lblMotivoOferta.Size = new Size(74, 25);
+            lblMotivoOferta.Size = new Size(81, 25);
             lblMotivoOferta.TabIndex = 6;
             lblMotivoOferta.Text = "Motivo:";
             // 
             // txtMotivo
             // 
             txtMotivo.Font = new Font("Segoe UI", 11F);
-            txtMotivo.Location = new Point(14, 190);
+            txtMotivo.Location = new Point(14, 180);
             txtMotivo.Multiline = true;
             txtMotivo.Name = "txtMotivo";
             txtMotivo.PlaceholderText = "Ej. promo temporada, referido...";
-            txtMotivo.Size = new Size(386, 60);
+            txtMotivo.Size = new Size(386, 34);
             txtMotivo.TabIndex = 7;
             // 
             // pnlFinanciamiento

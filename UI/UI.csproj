@@ -111,6 +111,18 @@
 		<Compile Update="DISEÑO\ESTADO\FrmCongelarMiembro.Designer.cs">
 			<DependentUpon>FrmCongelarMiembro.cs</DependentUpon>
 		</Compile>
+		<Compile Update="DISEÑO\ESTADO\FrmRenovarMembresia.cs">
+			<SubType>Form</SubType>
+		</Compile>
+        <Compile Update="DISEÑO\ESTADO\FrmRenovarMembresia.Designer.cs">
+			<DependentUpon>FrmRenovarMembresia.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\ESTADO\FrmRenovarMembresia.Oferta.cs">
+			<DependentUpon>FrmRenovarMembresia.cs</DependentUpon>
+		</Compile>
+		<EmbeddedResource Update="DISEÑO\ESTADO\FrmRenovarMembresia.resx">
+			<DependentUpon>FrmRenovarMembresia.cs</DependentUpon>
+		</EmbeddedResource>
 		<Compile Update="DISEÑO\PAGO\FrmPagos.cs">
 			<SubType>Form</SubType>
 		</Compile>
@@ -206,6 +218,9 @@
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDashboard.Designer.cs">
+			<DependentUpon>FrmAnaDashboard.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDashboard.Charts.cs">
 			<DependentUpon>FrmAnaDashboard.cs</DependentUpon>
 		</Compile>
 		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaInversiones.cs">

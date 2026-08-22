@@ -17,9 +17,25 @@ namespace BLL
         private readonly PlanDAL planDAL = new PlanDAL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
 
-        public RenovacionOperacionResult RenovarClienteConResultado(int clienteId, int planId, decimal precio, string usuario)
+        public RenovacionOperacionResult RenovarClienteConResultado(
+            int clienteId,
+            int planId,
+            decimal precio,
+            string usuario,
+            string? conceptoRenovacion = null)
         {
             deudaBLL.ValidarSinDeudaPendienteParaMembresia(clienteId);
+
+            if (precio < 0)
+                throw new Exception("El monto no puede ser negativo.");
+
+            bool esCortesiaCero = precio == 0;
+            string conceptoPago = string.IsNullOrWhiteSpace(conceptoRenovacion)
+                ? "Renovación de membresía"
+                : conceptoRenovacion.Trim();
+            string conceptoHistorial = conceptoPago.Length > 200
+                ? conceptoPago.Substring(0, 200)
+                : conceptoPago;
 
             var result = new RenovacionOperacionResult();
 
@@ -30,11 +46,12 @@ namespace BLL
                 if (plan == null)
                     throw new Exception("Plan no válido.");
 
-                // Evitar dos membresías ACTIVA: cerrar las previas en la misma TX.
                 result.MembresiasCerradas = membresiaDAL.CerrarMembresiasActivas(conn, tx, clienteId);
 
                 DateTime inicio = CORE.TimeZoneHelper.NowDominicanRepublic();
                 DateTime fin = MembresiaHelper.CalcularFechaVencimiento(inicio);
+
+                decimal precioMembresia = plan.Precio > 0 ? plan.Precio : precio;
 
                 result.MembresiaId = membresiaDAL.CrearMembresiaConId(conn, tx, new MembresiaDTO
                 {
@@ -42,7 +59,7 @@ namespace BLL
                     PlanId = planId,
                     FechaInicio = inicio,
                     FechaFin = fin
-                }, precio, usuario);
+                }, precioMembresia, usuario);
 
                 result.PagoId = pagoDAL.RegistrarPagoConId(conn, tx,
                     clienteId,
@@ -50,16 +67,19 @@ namespace BLL
                     fin,
                     precio,
                     "EFECTIVO",
-                    "Renovación de membresía",
+                    conceptoPago,
                     usuario);
 
-                string? nombreCliente = new ClienteDAL().ObtenerClientePorId(clienteId)?["Nombre"]?.ToString();
-                result.CajaMovimientoId = txService.RegistrarIngresoConId(conn, tx,
-                    precio,
-                    CajaConceptoHelper.IngresoRenovacion(clienteId, nombreCliente),
-                    usuario,
-                    "EFECTIVO",
-                    clienteId);
+                if (!esCortesiaCero)
+                {
+                    string? nombreCliente = new ClienteDAL().ObtenerClientePorId(clienteId)?["Nombre"]?.ToString();
+                    result.CajaMovimientoId = txService.RegistrarIngresoConId(conn, tx,
+                        precio,
+                        CajaConceptoHelper.IngresoRenovacion(clienteId, nombreCliente),
+                        usuario,
+                        "EFECTIVO",
+                        clienteId);
+                }
 
                 result.FechaFinMembresia = fin;
 
@@ -69,16 +89,17 @@ namespace BLL
                     planId,
                     precio,
                     usuario,
-                    "Renovación de membresía");
+                    conceptoHistorial);
 
                 new CongelacionDAL().CerrarActiva(conn, tx, clienteId, DateTime.Today);
             });
 
-            // WhatsApp de factura lo dispara la UI (RenovacionMembresiaDialog)
-            // para evitar doble envío y garantizar solo el PDF adjunto.
-
             return result;
         }
+
+        /// <summary>Compat: renovación estándar sin concepto personalizado.</summary>
+        public RenovacionOperacionResult RenovarClienteConResultado(int clienteId, int planId, decimal precio, string usuario)
+            => RenovarClienteConResultado(clienteId, planId, precio, usuario, conceptoRenovacion: null);
 
         public void RevertirRenovacion(RenovacionOperacionResult operacion, string usuario)
         {
