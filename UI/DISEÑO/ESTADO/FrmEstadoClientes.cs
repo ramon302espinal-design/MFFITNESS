@@ -2,7 +2,9 @@ using DTO;
 using BLL;
 using BLL.Models;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Windows.Forms;
 using System.Data;
 using CORE;
@@ -20,9 +22,11 @@ namespace UI.DISEÑO
         // ===============================
         private readonly EstadoBLL estadoBLL = new EstadoBLL();
         private readonly MembresiaBLL membresiaBLL = new MembresiaBLL();
+        private readonly PlanBLL planBLL = new PlanBLL();
         private readonly FrmPresentacion _presentacion;
         private readonly MensajeAutomaticoBLL mensajeBLL = new MensajeAutomaticoBLL();
         private readonly BindingSource _bsEstado = new BindingSource();
+        private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
 
         // ===============================
         // CONTROL
@@ -159,6 +163,7 @@ namespace UI.DISEÑO
                 dgvEstado.DataSource = _bsEstado;
                 AplicarFiltroBusqueda();
                 FormatearGrid();
+                ActualizarKpisPlanes(tabla);
                 dgvEstado.ClearSelection();
             }
             catch (Exception ex)
@@ -172,6 +177,120 @@ namespace UI.DISEÑO
                 dgvEstado.ResumeLayout();
                 cargando = false;
             }
+        }
+
+        /// <summary>
+        /// Conteo y monto por plan (miembros ACTIVO).
+        /// M-A se agrupa en MENSUALIDAD. Monto = Σ Precio del plan de cada miembro.
+        /// </summary>
+        private void ActualizarKpisPlanes(DataTable tabla)
+        {
+            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0;
+            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m;
+
+            Dictionary<string, decimal> precios = ObtenerPreciosPlanes();
+
+            if (tabla != null && tabla.Columns.Contains("Membresia") && tabla.Columns.Contains("Estado"))
+            {
+                foreach (DataRow row in tabla.Rows)
+                {
+                    string estado = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
+                    if (!string.Equals(estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(plan)
+                        || string.Equals(plan, "SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    decimal precio = precios.TryGetValue(plan, out decimal p) ? p : 0m;
+                    string bucket = ClasificarPlanKpi(plan);
+
+                    switch (bucket)
+                    {
+                        case "MENSUALIDAD":
+                            cMensualidad++;
+                            mMensualidad += precio;
+                            break;
+                        case "PREMIUM":
+                            cPremium++;
+                            mPremium += precio;
+                            break;
+                        case "PRO":
+                            cPro++;
+                            mPro += precio;
+                            break;
+                        case "3X":
+                            c3x++;
+                            m3x += precio;
+                            break;
+                    }
+                }
+            }
+
+            SetKpi(lblCMensualidad, cMensualidad.ToString("N0", CulturaDo));
+            SetKpi(lblMMensualidad, "RD$ " + mMensualidad.ToString("N2", CulturaDo));
+            SetKpi(lblCPremium, cPremium.ToString("N0", CulturaDo));
+            SetKpi(lblMPremium, "RD$ " + mPremium.ToString("N2", CulturaDo));
+            SetKpi(lblCPro, cPro.ToString("N0", CulturaDo));
+            SetKpi(lblMPro, "RD$ " + mPro.ToString("N2", CulturaDo));
+            SetKpi(lblC3x, c3x.ToString("N0", CulturaDo));
+            SetKpi(lblM3x, "RD$ " + m3x.ToString("N2", CulturaDo));
+
+            int cTotal = cMensualidad + cPremium + cPro + c3x;
+            decimal mTotal = mMensualidad + mPremium + mPro + m3x;
+            SetKpi(lblCTotal, cTotal.ToString("N0", CulturaDo));
+            SetKpi(lblMTotal, "RD$ " + mTotal.ToString("N2", CulturaDo));
+        }
+
+        /// <summary>M-A y MENSUALIDAD → bucket MENSUALIDAD.</summary>
+        private static string ClasificarPlanKpi(string nombrePlan)
+        {
+            string n = (nombrePlan ?? string.Empty).Trim();
+            if (string.Equals(n, "M-A", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(n, "MENSUALIDAD", StringComparison.OrdinalIgnoreCase))
+                return "MENSUALIDAD";
+            if (string.Equals(n, "PREMIUM", StringComparison.OrdinalIgnoreCase))
+                return "PREMIUM";
+            if (string.Equals(n, "PRO", StringComparison.OrdinalIgnoreCase))
+                return "PRO";
+            if (string.Equals(n, "3x", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(n, "3X", StringComparison.OrdinalIgnoreCase))
+                return "3X";
+            return string.Empty;
+        }
+
+        private Dictionary<string, decimal> ObtenerPreciosPlanes()
+        {
+            var map = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                DataTable planes = planBLL.ObtenerPlanes();
+                if (planes == null || !planes.Columns.Contains("Nombre") || !planes.Columns.Contains("Precio"))
+                    return map;
+
+                foreach (DataRow row in planes.Rows)
+                {
+                    string nombre = Convert.ToString(row["Nombre"])?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(nombre))
+                        continue;
+                    decimal precio = row["Precio"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Precio"]);
+                    map[nombre] = precio;
+                }
+            }
+            catch
+            {
+                // KPI degradado a 0 si no hay catálogo.
+            }
+
+            return map;
+        }
+
+        private static void SetKpi(Label? label, string text)
+        {
+            if (label == null || label.IsDisposed)
+                return;
+            label.Text = text;
         }
 
         private static void AsegurarColumnasEstado(DataTable tabla)

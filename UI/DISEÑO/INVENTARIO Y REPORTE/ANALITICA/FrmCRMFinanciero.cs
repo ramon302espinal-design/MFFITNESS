@@ -1,20 +1,22 @@
 using System;
-using System.Drawing;
 using System.Windows.Forms;
+using BLL.Models.Crm;
+using UI.Helpers;
 using UI.Theme;
 
 namespace UI
 {
     /// <summary>
     /// Shell visual del CRM Financiero (FASE 1).
-    /// Solo estructura UI: Sidebar + Header + Content + Footer.
-    /// Sin BLL/DAL/SQL. Hospeda Forms existentes en pnlContent.
+    /// Sidebar + Header (título / período / Actualizar) + Content + Footer.
+    /// Hospeda Forms existentes en pnlContent.
     /// </summary>
     [System.ComponentModel.DesignerCategory("Form")]
     public partial class FrmCRMFinanciero : Form
     {
         private Form? _vistaActual;
         private Button? _botonActivo;
+        private bool _suppressPeriodRefresh;
 
         public FrmCRMFinanciero()
         {
@@ -25,12 +27,24 @@ namespace UI
 
         private void FrmCRMFinanciero_Load(object sender, EventArgs e)
         {
-            MostrarVista(() => new FrmAnaDashboard(), btnDashboard, "Dashboard financiero",
+            _suppressPeriodRefresh = true;
+            if (cmbPeriodo.Items.Count > 0 && cmbPeriodo.SelectedIndex < 0)
+                cmbPeriodo.SelectedIndex = 0;
+
+            cmbPeriodo.Enabled = true;
+            btnActualizar.Enabled = true;
+            panelHeader.Visible = true;
+            panelHeader.BringToFront();
+
+            MostrarVista(() => new FrmAnaDashboard(PeriodoSeleccionado()), btnDashboard,
+                "Dashboard financiero",
                 "Vision general del rendimiento financiero");
+            _suppressPeriodRefresh = false;
         }
 
         private void btnDashboard_Click(object sender, EventArgs e)
-            => MostrarVista(() => new FrmAnaDashboard(), btnDashboard, "Dashboard financiero",
+            => MostrarVista(() => new FrmAnaDashboard(PeriodoSeleccionado()), btnDashboard,
+                "Dashboard financiero",
                 "Vision general del rendimiento financiero");
 
         private void btnInversiones_Click(object sender, EventArgs e)
@@ -142,6 +156,16 @@ namespace UI
             => MostrarVista(() => new FrmAnaProductosEstrella(), btnConfiguracion, "Productos estrella",
                 "Impacto + eficiencia + bajo riesgo (explicable)");
 
+        private void btnActualizar_Click(object sender, EventArgs e)
+            => RefrescarVistaActual();
+
+        private void cmbPeriodo_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressPeriodRefresh)
+                return;
+            RefrescarVistaActual();
+        }
+
         /// <summary>
         /// Solo hospeda la vista hija en pnlContent. Sin logica de negocio.
         /// </summary>
@@ -165,8 +189,30 @@ namespace UI
 
             lblTitle.Text = titulo;
             lblSubtitle.Text = subtitulo;
+            panelHeader.Visible = true;
+            panelHeader.BringToFront();
             MarcarBotonActivo(boton);
         }
+
+        private void RefrescarVistaActual()
+        {
+            if (_vistaActual is ICrmPeriodRefreshable refreshable)
+            {
+                refreshable.Recargar(PeriodoSeleccionado());
+                return;
+            }
+
+            // Vistas sin período: no-op seguro (header sigue visible/usable).
+        }
+
+        private ProfitPeriodKind PeriodoSeleccionado()
+            => cmbPeriodo.SelectedIndex switch
+            {
+                1 => ProfitPeriodKind.Last30Days,
+                2 => ProfitPeriodKind.ThisQuarter,
+                3 => ProfitPeriodKind.ThisYear,
+                _ => ProfitPeriodKind.ThisMonth
+            };
 
         private void MarcarBotonActivo(Button boton)
         {

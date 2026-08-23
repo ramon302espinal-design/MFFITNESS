@@ -1,6 +1,8 @@
 using BLL;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using CORE;
 using UI.Helpers;
@@ -13,6 +15,10 @@ namespace UI.DISEÑO
     {
         private System.Windows.Forms.Timer? _timerWhatsApp;
         private System.Windows.Forms.Timer? _timerDashboard;
+        private System.Windows.Forms.Timer? _timerStockAlert;
+        private System.Windows.Forms.Timer? _timerStockCriticoDebounce;
+        private readonly HashSet<int> _stockCriticoPendiente = new();
+        private readonly object _stockCriticoSync = new();
         private volatile bool _whatsappAutomatizacionEnCurso;
         private readonly DeudaBLL deudaNotificacionBLL = new DeudaBLL();
         // KPI de deudas: instancia propia; la de notificaciones corre en hilo aparte.
@@ -58,6 +64,12 @@ namespace UI.DISEÑO
 
                 // 4️⃣ AUTOMATIZACIÓN: Revisamos quién venció hoy y lanzamos el Popup de alertas
                 MostrarAlertas();
+
+                // 4️⃣b Inventario: agotados / stock mínimo al abrir + cada 15 min + tiempo real
+                StockInventoryAlert.TryShow(this);
+                IniciarAvisosStockPeriodicos();
+                AppEventos.OnStockCritico -= OnStockCriticoTiempoReal;
+                AppEventos.OnStockCritico += OnStockCriticoTiempoReal;
 
                 // 5️⃣ WhatsApp: recordatorios de deuda y membresías
                 IniciarAutomatizacionWhatsApp();
@@ -144,6 +156,7 @@ namespace UI.DISEÑO
         {
             AppEventos.OnPagoRegistrado -= RefrescarKpiDeudas;
             AppEventos.OnDeudaModificada -= RefrescarKpiDeudas;
+            AppEventos.OnStockCritico -= OnStockCriticoTiempoReal;
 
             if (_timerWhatsApp != null)
             {
@@ -159,7 +172,94 @@ namespace UI.DISEÑO
                 _timerDashboard = null;
             }
 
+            if (_timerStockAlert != null)
+            {
+                _timerStockAlert.Stop();
+                _timerStockAlert.Dispose();
+                _timerStockAlert = null;
+            }
+
+            if (_timerStockCriticoDebounce != null)
+            {
+                _timerStockCriticoDebounce.Stop();
+                _timerStockCriticoDebounce.Dispose();
+                _timerStockCriticoDebounce = null;
+            }
+
             base.OnFormClosed(e);
+        }
+
+        private void IniciarAvisosStockPeriodicos()
+        {
+            _timerStockAlert?.Stop();
+            _timerStockAlert?.Dispose();
+
+            _timerStockAlert = new System.Windows.Forms.Timer
+            {
+                Interval = StockInventoryAlert.IntervaloMinutos * 60 * 1000
+            };
+            _timerStockAlert.Tick += (_, _) =>
+            {
+                if (IsDisposed || !IsHandleCreated)
+                    return;
+                StockInventoryAlert.TryShow(this);
+            };
+            _timerStockAlert.Start();
+        }
+
+        /// <summary>
+        /// Tiempo real: agrupa avisos de una misma venta/movimiento (debounce ~350 ms).
+        /// </summary>
+        private void OnStockCriticoTiempoReal(int productoId)
+        {
+            if (productoId <= 0 || IsDisposed)
+                return;
+
+            lock (_stockCriticoSync)
+                _stockCriticoPendiente.Add(productoId);
+
+            void ArmarDebounce()
+            {
+                if (IsDisposed)
+                    return;
+
+                _timerStockCriticoDebounce ??= new System.Windows.Forms.Timer { Interval = 350 };
+                _timerStockCriticoDebounce.Tick -= TimerStockCriticoDebounce_Tick;
+                _timerStockCriticoDebounce.Tick += TimerStockCriticoDebounce_Tick;
+                _timerStockCriticoDebounce.Stop();
+                _timerStockCriticoDebounce.Start();
+            }
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(ArmarDebounce);
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                return;
+            }
+
+            ArmarDebounce();
+        }
+
+        private void TimerStockCriticoDebounce_Tick(object? sender, EventArgs e)
+        {
+            _timerStockCriticoDebounce?.Stop();
+
+            List<int> ids;
+            lock (_stockCriticoSync)
+            {
+                ids = _stockCriticoPendiente.ToList();
+                _stockCriticoPendiente.Clear();
+            }
+
+            if (ids.Count == 0 || IsDisposed)
+                return;
+
+            StockInventoryAlert.AvisarProductosSiCriticos(this, ids);
         }
 
         private void AplicarEstiloSidebarModern()

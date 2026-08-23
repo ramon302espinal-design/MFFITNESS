@@ -4,6 +4,7 @@ using CORE;
 using System;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Windows.Forms;
 using UI.Helpers;
 
@@ -15,11 +16,13 @@ namespace UI.DISEÑO
         private readonly ProductoBLL productoBLL = new ProductoBLL();
         private readonly CategoriaBLL categoriaBLL = new CategoriaBLL();
         private readonly StockBLL stockBLL = new StockBLL();
+        private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
 
         public FrmProductos()
         {
             InitializeComponent();
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloInventario);
+            dgvProductos.DataBindingComplete += (_, _) => ActualizarKpisInventario();
         }
 
         // ===============================
@@ -99,6 +102,52 @@ namespace UI.DISEÑO
         private void CargarProductos()
         {
             dgvProductos.DataSource = productoBLL.ObtenerProductos();
+            ActualizarKpisInventario();
+        }
+
+        /// <summary>
+        /// KPIs desde dgvProductos (tiempo real al rebind):
+        /// - Costo inventario = Σ Stock × PrecioCompra
+        /// - Ganancia potencial = Σ Stock × (PrecioVenta − PrecioCompra)
+        /// Solo filas con stock &gt; 0 y costos/precios válidos.
+        /// </summary>
+        private void ActualizarKpisInventario()
+        {
+            decimal costoTotal = 0m;
+            decimal gananciaPotencial = 0m;
+
+            foreach (DataGridViewRow row in dgvProductos.Rows)
+            {
+                if (row.IsNewRow)
+                    continue;
+
+                object? stockObj = row.Cells["StockActual"]?.Value;
+                object? costoObj = row.Cells["PrecioCompra"]?.Value;
+                object? ventaObj = row.Cells["PrecioVenta"]?.Value;
+                if (stockObj == null || stockObj == DBNull.Value
+                    || costoObj == null || costoObj == DBNull.Value)
+                    continue;
+
+                int stock = Convert.ToInt32(stockObj);
+                decimal costo = Convert.ToDecimal(costoObj);
+                if (stock <= 0 || costo <= 0)
+                    continue;
+
+                costoTotal += stock * costo;
+
+                if (ventaObj != null && ventaObj != DBNull.Value)
+                {
+                    decimal venta = Convert.ToDecimal(ventaObj);
+                    if (venta > 0)
+                        gananciaPotencial += stock * (venta - costo);
+                }
+            }
+
+            if (lblKpiInvVal != null && !lblKpiInvVal.IsDisposed)
+                lblKpiInvVal.Text = "RD$ " + costoTotal.ToString("N2", CulturaDo);
+
+            if (lblKpiGanVal != null && !lblKpiGanVal.IsDisposed)
+                lblKpiGanVal.Text = "RD$ " + gananciaPotencial.ToString("N2", CulturaDo);
         }
 
         private void CargarProductosCombo()

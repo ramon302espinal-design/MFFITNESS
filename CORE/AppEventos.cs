@@ -28,5 +28,17 @@ namespace CORE
         {
             OnDeudaModificada?.Invoke();
         }
+
+        /// <summary>
+        /// Stock de un producto quedó en 0 o en/bajo StockMinimo (tras salida/venta).
+        /// </summary>
+        public static event Action<int>? OnStockCritico;
+
+        public static void StockCritico(int productoId)
+        {
+            if (productoId <= 0)
+                return;
+            OnStockCritico?.Invoke(productoId);
+        }
     }
 }

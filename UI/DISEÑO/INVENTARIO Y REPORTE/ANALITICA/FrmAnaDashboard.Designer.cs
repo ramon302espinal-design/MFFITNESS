@@ -133,7 +133,7 @@
             panelScroll.Location = new Point(0, 0);
             panelScroll.Name = "panelScroll";
             panelScroll.Padding = new Padding(12);
-            panelScroll.Size = new Size(1186, 700);
+            panelScroll.Size = new Size(1800, 720);
             panelScroll.TabIndex = 0;
             // 
             // pnlActions
@@ -148,7 +148,7 @@
             pnlActions.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             pnlActions.Location = new Point(16, 1060);
             pnlActions.Name = "pnlActions";
-            pnlActions.Size = new Size(1105, 130);
+            pnlActions.Size = new Size(1718, 130);
             pnlActions.TabIndex = 8;
             pnlActions.TabStop = false;
             pnlActions.Text = "Acciones de negocio";
@@ -219,7 +219,7 @@
             pnlDecisions.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             pnlDecisions.Location = new Point(16, 900);
             pnlDecisions.Name = "pnlDecisions";
-            pnlDecisions.Size = new Size(1105, 150);
+            pnlDecisions.Size = new Size(1718, 150);
             pnlDecisions.TabIndex = 7;
             pnlDecisions.TabStop = false;
             pnlDecisions.Text = "Centro de decisiones";
@@ -264,9 +264,9 @@
             pnlTrends.Controls.Add(cmbTrendPeriod);
             pnlTrends.Controls.Add(cmbTrendMetric);
             pnlTrends.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            pnlTrends.Location = new Point(496, 680);
+            pnlTrends.Location = new Point(779, 680);
             pnlTrends.Name = "pnlTrends";
-            pnlTrends.Size = new Size(460, 200);
+            pnlTrends.Size = new Size(469, 200);
             pnlTrends.TabIndex = 6;
             pnlTrends.TabStop = false;
             pnlTrends.Text = "Tendencias";
@@ -315,7 +315,7 @@
             pnlProducts.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             pnlProducts.Location = new Point(16, 680);
             pnlProducts.Name = "pnlProducts";
-            pnlProducts.Size = new Size(460, 200);
+            pnlProducts.Size = new Size(757, 200);
             pnlProducts.TabIndex = 5;
             pnlProducts.TabStop = false;
             pnlProducts.Text = "Productos";
@@ -324,9 +324,9 @@
             // 
             lstWatch.Font = new Font("Segoe UI", 9F);
             lstWatch.FormattingEnabled = true;
-            lstWatch.Location = new Point(240, 52);
+            lstWatch.Location = new Point(396, 52);
             lstWatch.Name = "lstWatch";
-            lstWatch.Size = new Size(200, 124);
+            lstWatch.Size = new Size(355, 124);
             lstWatch.TabIndex = 3;
             lstWatch.DoubleClick += lstWatch_DoubleClick;
             // 
@@ -336,7 +336,7 @@
             lstTop.FormattingEnabled = true;
             lstTop.Location = new Point(16, 52);
             lstTop.Name = "lstTop";
-            lstTop.Size = new Size(200, 124);
+            lstTop.Size = new Size(374, 124);
             lstTop.TabIndex = 1;
             lstTop.DoubleClick += lstTop_DoubleClick;
             // 
@@ -344,7 +344,7 @@
             // 
             lblWatchTitle.AutoSize = true;
             lblWatchTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblWatchTitle.Location = new Point(240, 28);
+            lblWatchTitle.Location = new Point(412, 28);
             lblWatchTitle.Name = "lblWatchTitle";
             lblWatchTitle.Size = new Size(176, 20);
             lblWatchTitle.TabIndex = 2;
@@ -371,7 +371,7 @@
             pnlCapital.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             pnlCapital.Location = new Point(496, 504);
             pnlCapital.Name = "pnlCapital";
-            pnlCapital.Size = new Size(460, 160);
+            pnlCapital.Size = new Size(555, 160);
             pnlCapital.TabIndex = 4;
             pnlCapital.TabStop = false;
             pnlCapital.Text = "Capital";
@@ -380,9 +380,9 @@
             // 
             pnlChartCapital.BackColor = Color.FromArgb(237, 242, 247);
             pnlChartCapital.BorderStyle = BorderStyle.FixedSingle;
-            pnlChartCapital.Location = new Point(230, 32);
+            pnlChartCapital.Location = new Point(303, 32);
             pnlChartCapital.Name = "pnlChartCapital";
-            pnlChartCapital.Size = new Size(210, 110);
+            pnlChartCapital.Size = new Size(246, 110);
             pnlChartCapital.TabIndex = 5;
             pnlChartCapital.Paint += pnlChartCapital_Paint;
             // 
@@ -390,7 +390,7 @@
             // 
             lblCapCaja.AutoSize = true;
             lblCapCaja.Font = new Font("Segoe UI", 8.5F);
-            lblCapCaja.Location = new Point(16, 120);
+            lblCapCaja.Location = new Point(8, 120);
             lblCapCaja.Name = "lblCapCaja";
             lblCapCaja.Size = new Size(134, 20);
             lblCapCaja.TabIndex = 4;
@@ -400,7 +400,7 @@
             // 
             lblCapInventario.AutoSize = true;
             lblCapInventario.Font = new Font("Segoe UI", 8.5F);
-            lblCapInventario.Location = new Point(16, 98);
+            lblCapInventario.Location = new Point(8, 98);
             lblCapInventario.Name = "lblCapInventario";
             lblCapInventario.Size = new Size(173, 20);
             lblCapInventario.TabIndex = 3;
@@ -410,7 +410,7 @@
             // 
             lblCapPendiente.AutoSize = true;
             lblCapPendiente.Font = new Font("Segoe UI", 8.5F);
-            lblCapPendiente.Location = new Point(16, 76);
+            lblCapPendiente.Location = new Point(8, 76);
             lblCapPendiente.Name = "lblCapPendiente";
             lblCapPendiente.Size = new Size(152, 20);
             lblCapPendiente.TabIndex = 2;
@@ -420,7 +420,7 @@
             // 
             lblCapRecuperado.AutoSize = true;
             lblCapRecuperado.Font = new Font("Segoe UI", 8.5F);
-            lblCapRecuperado.Location = new Point(16, 54);
+            lblCapRecuperado.Location = new Point(8, 54);
             lblCapRecuperado.Name = "lblCapRecuperado";
             lblCapRecuperado.Size = new Size(167, 20);
             lblCapRecuperado.TabIndex = 1;
@@ -430,7 +430,7 @@
             // 
             lblCapInvertido.AutoSize = true;
             lblCapInvertido.Font = new Font("Segoe UI", 8.5F);
-            lblCapInvertido.Location = new Point(16, 32);
+            lblCapInvertido.Location = new Point(8, 32);
             lblCapInvertido.Name = "lblCapInvertido";
             lblCapInvertido.Size = new Size(154, 20);
             lblCapInvertido.TabIndex = 0;
@@ -456,7 +456,7 @@
             lblGanPotencial.AutoSize = true;
             lblGanPotencial.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblGanPotencial.ForeColor = Color.FromArgb(49, 130, 206);
-            lblGanPotencial.Location = new Point(220, 84);
+            lblGanPotencial.Location = new Point(258, 111);
             lblGanPotencial.Name = "lblGanPotencial";
             lblGanPotencial.Size = new Size(176, 20);
             lblGanPotencial.TabIndex = 4;
@@ -467,7 +467,7 @@
             lblGanRealizada.AutoSize = true;
             lblGanRealizada.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblGanRealizada.ForeColor = Color.FromArgb(56, 161, 105);
-            lblGanRealizada.Location = new Point(220, 48);
+            lblGanRealizada.Location = new Point(258, 48);
             lblGanRealizada.Name = "lblGanRealizada";
             lblGanRealizada.Size = new Size(179, 20);
             lblGanRealizada.TabIndex = 3;
@@ -515,7 +515,7 @@
             pnlFrozenCapital.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             pnlFrozenCapital.Location = new Point(16, 360);
             pnlFrozenCapital.Name = "pnlFrozenCapital";
-            pnlFrozenCapital.Size = new Size(1105, 130);
+            pnlFrozenCapital.Size = new Size(1718, 130);
             pnlFrozenCapital.TabIndex = 2;
             pnlFrozenCapital.TabStop = false;
             pnlFrozenCapital.Text = "Capital congelado";
@@ -588,9 +588,9 @@
             pnlInventoryHealth.Controls.Add(pnlBuenos);
             pnlInventoryHealth.Controls.Add(pnlEstrella);
             pnlInventoryHealth.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            pnlInventoryHealth.Location = new Point(16, 176);
+            pnlInventoryHealth.Location = new Point(16, 185);
             pnlInventoryHealth.Name = "pnlInventoryHealth";
-            pnlInventoryHealth.Size = new Size(1105, 170);
+            pnlInventoryHealth.Size = new Size(1718, 170);
             pnlInventoryHealth.TabIndex = 1;
             pnlInventoryHealth.TabStop = false;
             pnlInventoryHealth.Text = "Estado del inventario";
@@ -749,9 +749,9 @@
             pnlKPIs.Controls.Add(pnlKpiInventario);
             pnlKPIs.Controls.Add(pnlKpiCapital);
             pnlKPIs.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            pnlKPIs.Location = new Point(17, 12);
+            pnlKPIs.Location = new Point(17, 48);
             pnlKPIs.Name = "pnlKPIs";
-            pnlKPIs.Size = new Size(1105, 150);
+            pnlKPIs.Size = new Size(1718, 134);
             pnlKPIs.TabIndex = 0;
             pnlKPIs.TabStop = false;
             pnlKPIs.Text = "KPIs";
@@ -986,7 +986,7 @@
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.White;
-            ClientSize = new Size(1186, 700);
+            ClientSize = new Size(1800, 720);
             Controls.Add(panelScroll);
             FormBorderStyle = FormBorderStyle.None;
             Name = "FrmAnaDashboard";

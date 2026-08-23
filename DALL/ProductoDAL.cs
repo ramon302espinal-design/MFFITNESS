@@ -106,7 +106,14 @@ namespace DL
         /// </summary>
         public (decimal CostoUnitario, int StockActual) ObtenerCostoYStock(int productoId)
         {
-            string query = @"SELECT PrecioCompra, StockActual
+            var (costo, stock, _) = ObtenerCostoStockYMinimo(productoId);
+            return (costo, stock);
+        }
+
+        /// <summary>Costo, stock actual y stock mínimo (avisos en tiempo real).</summary>
+        public (decimal CostoUnitario, int StockActual, int StockMinimo) ObtenerCostoStockYMinimo(int productoId)
+        {
+            string query = @"SELECT PrecioCompra, StockActual, StockMinimo
                              FROM Productos
                              WHERE Id = @Id";
 
@@ -126,8 +133,11 @@ namespace DL
             int stock = row["StockActual"] == DBNull.Value
                 ? 0
                 : Convert.ToInt32(row["StockActual"]);
+            int minimo = row["StockMinimo"] == DBNull.Value
+                ? 0
+                : Convert.ToInt32(row["StockMinimo"]);
 
-            return (costo, stock);
+            return (costo, stock, minimo);
         }
     }
 }

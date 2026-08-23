@@ -1,3 +1,4 @@
+using CORE;
 using DL;
 using System;
 using System.Data;
@@ -7,6 +8,7 @@ namespace BLL
     public class StockBLL
     {
         private readonly StockDAL dal = new StockDAL();
+        private readonly ProductoDAL productoDal = new ProductoDAL();
 
         public DataTable ObtenerMovimientos()
         {
@@ -24,13 +26,17 @@ namespace BLL
             if (costoUnitario.HasValue && costoUnitario.Value <= 0)
                 throw new Exception("El costo de entrada debe ser mayor a cero.");
 
-            return dal.RegistrarEntrada(productoId, cantidad, usuario, descripcion, costoUnitario);
+            int movimientoId = dal.RegistrarEntrada(productoId, cantidad, usuario, descripcion, costoUnitario);
+            NotificarSiStockCritico(productoId);
+            return movimientoId;
         }
 
         public int RegistrarSalidaConId(int productoId, int cantidad, string usuario, string descripcion)
         {
             ValidarParametros(productoId, cantidad, usuario, descripcion);
-            return dal.RegistrarSalida(productoId, cantidad, usuario, descripcion);
+            int movimientoId = dal.RegistrarSalida(productoId, cantidad, usuario, descripcion);
+            NotificarSiStockCritico(productoId);
+            return movimientoId;
         }
 
         public void RevertirMovimiento(int movimientoId, string usuario)
@@ -42,6 +48,20 @@ namespace BLL
                 throw new Exception("Usuario obligatorio.");
 
             dal.RevertirMovimiento(movimientoId, usuario);
+        }
+
+        private void NotificarSiStockCritico(int productoId)
+        {
+            try
+            {
+                var (_, stock, minimo) = productoDal.ObtenerCostoStockYMinimo(productoId);
+                if (stock <= 0 || stock <= minimo)
+                    AppEventos.StockCritico(productoId);
+            }
+            catch
+            {
+                // El movimiento ya se registró; el aviso es best-effort.
+            }
         }
 
         private void ValidarParametros(int productoId, int cantidad, string usuario, string descripcion)

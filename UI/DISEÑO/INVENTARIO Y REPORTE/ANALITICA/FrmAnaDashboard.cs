@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using BLL.Models.Crm;
@@ -11,11 +12,29 @@ namespace UI
     /// Sin lógica financiera: solo binders BLL.
     /// </summary>
     [System.ComponentModel.DesignerCategory("Form")]
-    public partial class FrmAnaDashboard : Form
+    public partial class FrmAnaDashboard : Form, ICrmPeriodRefreshable
     {
+        private ProfitPeriodKind _periodo = ProfitPeriodKind.ThisMonth;
+
         public FrmAnaDashboard()
+            : this(ProfitPeriodKind.ThisMonth)
         {
+        }
+
+        public FrmAnaDashboard(ProfitPeriodKind period)
+        {
+            _periodo = period;
             InitializeComponent();
+        }
+
+        /// <summary>Recarga KPIs/listas según el período del header del shell CRM.</summary>
+        public void Recargar(ProfitPeriodKind period)
+        {
+            if (DesignMode || IsDisposed)
+                return;
+
+            _periodo = period;
+            CargarDatos();
         }
 
         private void FrmAnaDashboard_Load(object? sender, EventArgs e)
@@ -31,13 +50,13 @@ namespace UI
             if (DesignMode)
                 return;
 
-            ProfitSummary? profit = CrmProfitUiBinder.TryLoadThisMonth(out string? error);
+            ProfitSummary? profit = CrmProfitUiBinder.TryLoadSummary(_periodo, out string? error);
             InventoryFinancialSummary? summary = CrmInventoryUiBinder.TryLoadSummary(out string? invError);
             InventoryCapitalHealthReport? health = CrmInventoryUiBinder.TryLoadHealth(out _);
             ProductPerformanceDashboardReport? dash =
-                CrmProductPerformanceUiBinder.TryLoadDashboard(out _, topLists: 5);
+                CrmProductPerformanceUiBinder.TryLoadDashboard(out _, _periodo, topLists: 5);
             SalesDashboardReport? salesDash =
-                CrmSalesUiBinder.TryLoadDashboard(out _, ProfitPeriodKind.ThisMonth, topLists: 5);
+                CrmSalesUiBinder.TryLoadDashboard(out _, _periodo, topLists: 5);
 
             if (profit == null && summary == null && health == null && dash == null)
             {
@@ -115,33 +134,7 @@ namespace UI
             lblKpiRoiVal.Text = CrmProfitUiBinder.Pct(roiGlobal);
             lblKpiRoiDelta.Text = "Ganancia / COGS";
 
-            if (dash != null)
-            {
-                lblEstrellaTitle.Text = "ESTRELLA";
-                lblBuenosTitle.Text = "SALUDABLE";
-                lblLentosTitle.Text = "LENTOS";
-                lblCriticosTitle.Text = "CRÍTICOS";
-                lblEstrellaVal.Text = CrmProductPerformanceUiBinder.Count(dash.StarCount);
-                lblBuenosVal.Text = CrmProductPerformanceUiBinder.Count(dash.HealthyCount);
-                lblLentosVal.Text = CrmProductPerformanceUiBinder.Count(dash.SlowCount);
-                lblCriticosVal.Text = CrmProductPerformanceUiBinder.Count(dash.CriticalCount);
-                lblHealthScore.Text =
-                    $"{dash.PortfolioHealthScore} / 100 · Opp {CrmProductPerformanceUiBinder.Count(dash.OpportunityCount)}";
-            }
-            else if (summary != null)
-            {
-                var (nuevos, saludables, lentos, criticos, salud) =
-                    CrmInventoryUiBinder.HealthBuckets(summary);
-                lblEstrellaTitle.Text = "NUEVOS";
-                lblBuenosTitle.Text = "SALUDABLE";
-                lblLentosTitle.Text = "LENTOS";
-                lblCriticosTitle.Text = "FRÍO/CRÍT.";
-                lblEstrellaVal.Text = CrmInventoryUiBinder.Count(nuevos);
-                lblBuenosVal.Text = CrmInventoryUiBinder.Count(saludables);
-                lblLentosVal.Text = CrmInventoryUiBinder.Count(lentos);
-                lblCriticosVal.Text = CrmInventoryUiBinder.Count(criticos);
-                lblHealthScore.Text = $"{salud} / 100";
-            }
+            ActualizarInventoryHealth(dash, summary);
 
             // Panel capital congelado = clasificado Frozen+Critical
             lblFrozenValor.Text = CrmInventoryUiBinder.Money(frozenCapital);
@@ -229,7 +222,7 @@ namespace UI
             }
             else
             {
-                var topProducts = CrmProfitUiBinder.TryLoadByProduct(ProfitPeriodKind.ThisMonth, out _, top: 5);
+                var topProducts = CrmProfitUiBinder.TryLoadByProduct(_periodo, out _, top: 5);
                 if (topProducts != null && topProducts.Count > 0)
                 {
                     foreach (var row in topProducts)
@@ -290,7 +283,7 @@ namespace UI
             IReadOnlyList<string> decisionLines = CrmDecisionUiBinder.TryLoadDashboardDecisionLines(
                 out _,
                 out DecisionCenterReport? center,
-                ProfitPeriodKind.ThisMonth,
+                _periodo,
                 decisionSnapshot,
                 maxLines: 3);
 
@@ -341,6 +334,98 @@ namespace UI
 
             ActualizarGraficoCapital(health, dash);
             ActualizarGraficoTendencias();
+        }
+
+        /// <summary>
+        /// pnlInventoryHealth: FASE 8 (estrella/saludable/lentos/críticos) o fallback FASE 7.
+        /// Si solo hay InsufficientData (sin ventas/ENTRADA), lo deja explícito en el score.
+        /// </summary>
+        private void ActualizarInventoryHealth(
+            ProductPerformanceDashboardReport? dash,
+            InventoryFinancialSummary? summary)
+        {
+            Color scoreOk = Color.FromArgb(56, 161, 105);
+            Color scoreMuted = Color.FromArgb(113, 128, 150);
+
+            if (dash != null)
+            {
+                int classifiable = dash.StarCount + dash.HealthyCount + dash.OpportunityCount
+                    + dash.SlowCount + dash.CriticalCount + dash.NewCount;
+
+                lblEstrellaTitle.Text = "ESTRELLA";
+                lblBuenosTitle.Text = "SALUDABLE";
+                lblLentosTitle.Text = "LENTOS";
+                lblCriticosTitle.Text = "CRÍTICOS";
+                lblEstrellaVal.Text = CrmProductPerformanceUiBinder.Count(dash.StarCount);
+                lblBuenosVal.Text = CrmProductPerformanceUiBinder.Count(dash.HealthyCount);
+                lblLentosVal.Text = CrmProductPerformanceUiBinder.Count(dash.SlowCount);
+                lblCriticosVal.Text = CrmProductPerformanceUiBinder.Count(dash.CriticalCount);
+
+                if (classifiable == 0 && dash.InsufficientCount > 0)
+                {
+                    lblEstrellaTitle.Text = "SIN DATOS";
+                    lblEstrellaVal.Text = CrmProductPerformanceUiBinder.Count(dash.InsufficientCount);
+                    lblHealthScore.Text =
+                        $"N/D · {CrmProductPerformanceUiBinder.Count(dash.InsufficientCount)} sin historial";
+                    lblHealthScore.ForeColor = scoreMuted;
+                    return;
+                }
+
+                string score =
+                    $"{dash.PortfolioHealthScore} / 100 · Opp {CrmProductPerformanceUiBinder.Count(dash.OpportunityCount)}";
+                if (dash.NewCount > 0)
+                    score += $" · Nuevos {CrmProductPerformanceUiBinder.Count(dash.NewCount)}";
+                if (dash.InsufficientCount > 0)
+                    score += $" · Sin datos {CrmProductPerformanceUiBinder.Count(dash.InsufficientCount)}";
+
+                lblHealthScore.Text = score;
+                lblHealthScore.ForeColor = scoreOk;
+                return;
+            }
+
+            if (summary != null)
+            {
+                var (nuevos, saludables, lentos, criticos, salud) =
+                    CrmInventoryUiBinder.HealthBuckets(summary);
+                int classified = nuevos + saludables + lentos + criticos;
+                int insuf = Math.Max(0, summary.ProductsWithStock - classified);
+
+                lblEstrellaTitle.Text = "NUEVOS";
+                lblBuenosTitle.Text = "SALUDABLE";
+                lblLentosTitle.Text = "LENTOS";
+                lblCriticosTitle.Text = "FRÍO/CRÍT.";
+                lblEstrellaVal.Text = CrmInventoryUiBinder.Count(nuevos);
+                lblBuenosVal.Text = CrmInventoryUiBinder.Count(saludables);
+                lblLentosVal.Text = CrmInventoryUiBinder.Count(lentos);
+                lblCriticosVal.Text = CrmInventoryUiBinder.Count(criticos);
+
+                if (classified == 0 && summary.ProductsWithStock > 0)
+                {
+                    lblEstrellaTitle.Text = "SIN DATOS";
+                    lblEstrellaVal.Text = CrmInventoryUiBinder.Count(summary.ProductsWithStock);
+                    lblHealthScore.Text =
+                        $"N/D · {CrmInventoryUiBinder.Count(summary.ProductsWithStock)} sin historial";
+                    lblHealthScore.ForeColor = scoreMuted;
+                    return;
+                }
+
+                lblHealthScore.Text = insuf > 0
+                    ? $"{salud} / 100 · Sin datos {CrmInventoryUiBinder.Count(insuf)}"
+                    : $"{salud} / 100";
+                lblHealthScore.ForeColor = scoreOk;
+                return;
+            }
+
+            lblEstrellaTitle.Text = "ESTRELLA";
+            lblBuenosTitle.Text = "SALUDABLE";
+            lblLentosTitle.Text = "LENTOS";
+            lblCriticosTitle.Text = "CRÍTICOS";
+            lblEstrellaVal.Text = "0";
+            lblBuenosVal.Text = "0";
+            lblLentosVal.Text = "0";
+            lblCriticosVal.Text = "0";
+            lblHealthScore.Text = "N/D";
+            lblHealthScore.ForeColor = scoreMuted;
         }
     }
 }

@@ -329,6 +329,7 @@ namespace UI
             panelHeader.Name = "panelHeader";
             panelHeader.Size = new Size(1060, 72);
             panelHeader.TabIndex = 0;
+            panelHeader.Visible = true;
             // 
             // lblTitle
             // 
@@ -356,19 +357,18 @@ namespace UI
             // 
             cmbPeriodo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             cmbPeriodo.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbPeriodo.Enabled = false;
             cmbPeriodo.Font = new Font("Segoe UI", 9F);
             cmbPeriodo.FormattingEnabled = true;
-            cmbPeriodo.Items.AddRange(new object[] { "Este mes", "Ultimos 3 meses", "Ultimos 12 meses", "Anio actual" });
+            cmbPeriodo.Items.AddRange(new object[] { "Este mes", "Ultimos 30 dias", "Este trimestre", "Anio actual" });
             cmbPeriodo.Location = new Point(780, 22);
             cmbPeriodo.Name = "cmbPeriodo";
             cmbPeriodo.Size = new Size(160, 28);
             cmbPeriodo.TabIndex = 2;
+            cmbPeriodo.SelectedIndexChanged += cmbPeriodo_SelectedIndexChanged;
             // 
             // btnActualizar
             // 
             btnActualizar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnActualizar.Enabled = false;
             btnActualizar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnActualizar.Location = new Point(952, 20);
             btnActualizar.Name = "btnActualizar";
@@ -376,6 +376,7 @@ namespace UI
             btnActualizar.TabIndex = 3;
             btnActualizar.Text = "Actualizar";
             btnActualizar.UseVisualStyleBackColor = true;
+            btnActualizar.Click += btnActualizar_Click;
             // 
             // pnlContent
             // 
