@@ -495,6 +495,53 @@ namespace DL
             db.ExecuteNonQuery(query, p);
         }
 
+        /// <summary>
+        /// Última membresía del cliente (mismo criterio que OuterApplyUltimaMembresia).
+        /// </summary>
+        public DataRow? ObtenerUltimaMembresia(int clienteId)
+        {
+            string query = @"
+                SELECT TOP 1
+                    m.Id,
+                    m.ClienteId,
+                    m.PlanId,
+                    m.FechaInicio,
+                    m.FechaFin,
+                    m.Activa,
+                    m.Precio,
+                    ISNULL(p.Nombre, 'N/A') AS [Plan]
+                FROM Membresias m
+                LEFT JOIN Planes p ON p.Id = m.PlanId
+                WHERE m.ClienteId = @ClienteId
+                ORDER BY m.FechaFin DESC, m.Id DESC";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@ClienteId", clienteId)
+            };
+
+            DataTable dt = db.ExecuteQuery(query, parametros);
+            return dt.Rows.Count > 0 ? dt.Rows[0] : null;
+        }
+
+        public void ActualizarFechaFinMembresia(int membresiaId, DateTime fechaFin, bool activa)
+        {
+            string query = @"
+                UPDATE Membresias
+                SET FechaFin = @FechaFin,
+                    Activa = @Activa
+                WHERE Id = @MembresiaId";
+
+            SqlParameter[] p =
+            {
+                new SqlParameter("@MembresiaId", membresiaId),
+                new SqlParameter("@FechaFin", fechaFin.Date),
+                new SqlParameter("@Activa", activa ? 1 : 0)
+            };
+
+            db.ExecuteNonQuery(query, p);
+        }
+
         // ===============================
         // 🆕 REGISTRAR MEMBRESÍA FINANCIADA Y RETORNAR ID
         // ===============================

@@ -191,6 +191,9 @@ internal static class Program
         if (n.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
             return false;
 
+        // appsettings.Local.json del publish Release (DefaultEnvironment=Production)
+        // SÍ se incluye: OTA refuerza que el POS instalado use [MF CYBER DB].
+
         if (!includePdbs && n.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase))
             return false;
 

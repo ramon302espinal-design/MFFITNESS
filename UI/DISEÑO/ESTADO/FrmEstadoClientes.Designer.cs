@@ -300,6 +300,7 @@ namespace UI.DISEÑO
             dgvEstado.TabIndex = 2;
             dgvEstado.CellDoubleClick += dgvEstado_CellDoubleClick;
             dgvEstado.CellFormatting += dgvEstado_CellFormatting;
+            dgvEstado.CellMouseDown += dgvEstado_CellMouseDown;
             dgvEstado.SelectionChanged += dgvEstado_SelectionChanged;
             // 
             // btnAtras

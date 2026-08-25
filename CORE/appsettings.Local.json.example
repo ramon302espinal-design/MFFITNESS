@@ -1,9 +1,16 @@
 {
-  "_comment": "Copia este archivo como appsettings.Local.json (gitignored) solo si necesitas sobrescribir la cadena localmente.",
+  "_comment": "Copia como appsettings.Local.json (gitignored). El Deploy/Publish Release escribe DefaultEnvironment=Production en el POS instalado. En VS usa el perfil UI (Development).",
   "Database": {
+    "DefaultEnvironment": "Development",
     "ConnectionStrings": {
       "Development": "Server=(localdb)\\MSSQLLocalDB;Database=MF_CYBER_DB_DEV;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True",
       "Production": "Server=(localdb)\\MSSQLLocalDB;Database=MF CYBER DB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
     }
+  },
+  "Ollama": {
+    "BaseUrl": "http://127.0.0.1:11434",
+    "VisionModel": "llava:7b",
+    "TimeoutSeconds": 90,
+    "VisionMaxSide": 896
   }
 }

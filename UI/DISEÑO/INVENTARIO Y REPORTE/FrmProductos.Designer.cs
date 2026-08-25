@@ -56,6 +56,7 @@ namespace UI.DISEÑO
             label1 = new Label();
             label7 = new Label();
             btnGuardar = new Button();
+            btnAgregarProductos = new Button();
             label5 = new Label();
             label4 = new Label();
             label3 = new Label();
@@ -65,6 +66,11 @@ namespace UI.DISEÑO
             txtStock = new TextBox();
             txtStockMinimo = new TextBox();
             txtNombre = new TextBox();
+            txtCodigo = new TextBox();
+            labelCodigo = new Label();
+            lblFotoaqui = new Label();
+            picFotoProducto = new PictureBox();
+            btnAñadirFoto = new Button();
             tabControl1 = new TabControl();
             panelNav = new Panel();
             btnNavClientes = new Button();
@@ -84,6 +90,7 @@ namespace UI.DISEÑO
             ((System.ComponentModel.ISupportInitialize)numCantidad).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dgvMovimientos).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dgvProductos).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)picFotoProducto).BeginInit();
             tabControl1.SuspendLayout();
             panelNav.SuspendLayout();
             SuspendLayout();
@@ -111,6 +118,7 @@ namespace UI.DISEÑO
             tabProductos.Controls.Add(label1);
             tabProductos.Controls.Add(label7);
             tabProductos.Controls.Add(btnGuardar);
+            tabProductos.Controls.Add(btnAgregarProductos);
             tabProductos.Controls.Add(label5);
             tabProductos.Controls.Add(label4);
             tabProductos.Controls.Add(label3);
@@ -120,6 +128,11 @@ namespace UI.DISEÑO
             tabProductos.Controls.Add(txtStock);
             tabProductos.Controls.Add(txtStockMinimo);
             tabProductos.Controls.Add(txtNombre);
+            tabProductos.Controls.Add(txtCodigo);
+            tabProductos.Controls.Add(labelCodigo);
+            tabProductos.Controls.Add(lblFotoaqui);
+            tabProductos.Controls.Add(picFotoProducto);
+            tabProductos.Controls.Add(btnAñadirFoto);
             tabProductos.Location = new Point(4, 29);
             tabProductos.Name = "tabProductos";
             tabProductos.Padding = new Padding(3);
@@ -136,7 +149,7 @@ namespace UI.DISEÑO
             panel3.Controls.Add(label12);
             panel3.ForeColor = Color.Crimson;
             panel3.ImeMode = ImeMode.On;
-            panel3.Location = new Point(1352, 89);
+            panel3.Location = new Point(1474, 574);
             panel3.Name = "panel3";
             panel3.Size = new Size(331, 85);
             panel3.TabIndex = 65;
@@ -171,7 +184,7 @@ namespace UI.DISEÑO
             panel1.Controls.Add(label11);
             panel1.ForeColor = Color.Crimson;
             panel1.ImeMode = ImeMode.On;
-            panel1.Location = new Point(1352, 174);
+            panel1.Location = new Point(1474, 659);
             panel1.Name = "panel1";
             panel1.Size = new Size(302, 72);
             panel1.TabIndex = 64;
@@ -206,7 +219,7 @@ namespace UI.DISEÑO
             panel2.Controls.Add(labelStock);
             panel2.ForeColor = Color.Crimson;
             panel2.ImeMode = ImeMode.On;
-            panel2.Location = new Point(1352, 246);
+            panel2.Location = new Point(1474, 731);
             panel2.Name = "panel2";
             panel2.Size = new Size(249, 101);
             panel2.TabIndex = 63;
@@ -238,7 +251,7 @@ namespace UI.DISEÑO
             // 
             label9.AutoSize = true;
             label9.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label9.Location = new Point(47, 447);
+            label9.Location = new Point(47, 502);
             label9.Name = "label9";
             label9.Size = new Size(251, 35);
             label9.TabIndex = 51;
@@ -247,7 +260,7 @@ namespace UI.DISEÑO
             // txtMotivoExtra
             // 
             txtMotivoExtra.Enabled = false;
-            txtMotivoExtra.Location = new Point(56, 751);
+            txtMotivoExtra.Location = new Point(56, 806);
             txtMotivoExtra.Name = "txtMotivoExtra";
             txtMotivoExtra.Size = new Size(273, 27);
             txtMotivoExtra.TabIndex = 50;
@@ -255,7 +268,7 @@ namespace UI.DISEÑO
             // cmbMotivo
             // 
             cmbMotivo.FormattingEnabled = true;
-            cmbMotivo.Location = new Point(56, 590);
+            cmbMotivo.Location = new Point(56, 645);
             cmbMotivo.Name = "cmbMotivo";
             cmbMotivo.Size = new Size(216, 28);
             cmbMotivo.TabIndex = 49;
@@ -276,7 +289,7 @@ namespace UI.DISEÑO
             // 
             label6.AutoSize = true;
             label6.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label6.Location = new Point(783, 390);
+            label6.Location = new Point(783, 442);
             label6.Name = "label6";
             label6.Size = new Size(369, 35);
             label6.TabIndex = 47;
@@ -285,7 +298,7 @@ namespace UI.DISEÑO
             // cmbProducto
             // 
             cmbProducto.FormattingEnabled = true;
-            cmbProducto.Location = new Point(56, 507);
+            cmbProducto.Location = new Point(56, 562);
             cmbProducto.Name = "cmbProducto";
             cmbProducto.Size = new Size(242, 28);
             cmbProducto.TabIndex = 44;
@@ -293,7 +306,7 @@ namespace UI.DISEÑO
             // 
             // numSalida
             // 
-            numSalida.Location = new Point(197, 695);
+            numSalida.Location = new Point(197, 750);
             numSalida.Maximum = new decimal(new int[] { 1000000, 0, 0, 0 });
             numSalida.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numSalida.Name = "numSalida";
@@ -304,7 +317,7 @@ namespace UI.DISEÑO
             // 
             // btnSalida
             // 
-            btnSalida.Location = new Point(53, 694);
+            btnSalida.Location = new Point(53, 749);
             btnSalida.Name = "btnSalida";
             btnSalida.Size = new Size(138, 28);
             btnSalida.TabIndex = 42;
@@ -314,7 +327,7 @@ namespace UI.DISEÑO
             // 
             // numCantidad
             // 
-            numCantidad.Location = new Point(197, 639);
+            numCantidad.Location = new Point(197, 694);
             numCantidad.Maximum = new decimal(new int[] { 1000000, 0, 0, 0 });
             numCantidad.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numCantidad.Name = "numCantidad";
@@ -325,7 +338,7 @@ namespace UI.DISEÑO
             // 
             // btnEntrada
             // 
-            btnEntrada.Location = new Point(53, 637);
+            btnEntrada.Location = new Point(53, 692);
             btnEntrada.Name = "btnEntrada";
             btnEntrada.Size = new Size(138, 28);
             btnEntrada.TabIndex = 40;
@@ -341,7 +354,7 @@ namespace UI.DISEÑO
             dgvMovimientos.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvMovimientos.ColumnHeadersHeight = 29;
             dgvMovimientos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            dgvMovimientos.Location = new Point(427, 438);
+            dgvMovimientos.Location = new Point(427, 493);
             dgvMovimientos.MultiSelect = false;
             dgvMovimientos.Name = "dgvMovimientos";
             dgvMovimientos.ReadOnly = true;
@@ -365,11 +378,12 @@ namespace UI.DISEÑO
             dgvProductos.TabIndex = 27;
             dgvProductos.CellClick += dgvProductos_CellClick;
             dgvProductos.CellDoubleClick += dgvProductos_CellDoubleClick;
+            dgvProductos.SelectionChanged += dgvProductos_SelectionChanged;
             dgvProductos.RowPrePaint += dgvProductos_RowPrePaint;
             // 
             // btnEditar
             // 
-            btnEditar.Location = new Point(215, 364);
+            btnEditar.Location = new Point(168, 398);
             btnEditar.Name = "btnEditar";
             btnEditar.Size = new Size(138, 28);
             btnEditar.TabIndex = 26;
@@ -379,7 +393,7 @@ namespace UI.DISEÑO
             // 
             // btnEliminar
             // 
-            btnEliminar.Location = new Point(369, 364);
+            btnEliminar.Location = new Point(304, 398);
             btnEliminar.Name = "btnEliminar";
             btnEliminar.Size = new Size(138, 28);
             btnEliminar.TabIndex = 25;
@@ -415,7 +429,7 @@ namespace UI.DISEÑO
             // 
             // btnGuardar
             // 
-            btnGuardar.Location = new Point(47, 364);
+            btnGuardar.Location = new Point(47, 398);
             btnGuardar.Name = "btnGuardar";
             btnGuardar.Size = new Size(138, 28);
             btnGuardar.TabIndex = 21;
@@ -423,9 +437,21 @@ namespace UI.DISEÑO
             btnGuardar.UseVisualStyleBackColor = true;
             btnGuardar.Click += btnGuardar_Click;
             // 
+            // btnAgregarProductos
+            // 
+            btnAgregarProductos.BackColor = Color.FromArgb(37, 99, 235);
+            btnAgregarProductos.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnAgregarProductos.ForeColor = Color.White;
+            btnAgregarProductos.Location = new Point(148, 27);
+            btnAgregarProductos.Name = "btnAgregarProductos";
+            btnAgregarProductos.Size = new Size(230, 28);
+            btnAgregarProductos.TabIndex = 22;
+            btnAgregarProductos.Text = "AGREGAR CON FOTO / ARCHIVO";
+            btnAgregarProductos.UseVisualStyleBackColor = false;
+            btnAgregarProductos.Click += btnAgregarProductos_Click;
+            // 
             // label5
             // 
-            label5.AutoSize = true;
             label5.Location = new Point(116, 170);
             label5.Name = "label5";
             label5.Size = new Size(107, 20);
@@ -495,6 +521,62 @@ namespace UI.DISEÑO
             txtNombre.Name = "txtNombre";
             txtNombre.Size = new Size(194, 27);
             txtNombre.TabIndex = 11;
+            // 
+            // txtCodigo
+            // 
+            txtCodigo.Font = new Font("Segoe UI", 11F);
+            txtCodigo.Location = new Point(227, 351);
+            txtCodigo.Name = "txtCodigo";
+            txtCodigo.PlaceholderText = "Escanear EAN para buscar o registrar…";
+            txtCodigo.Size = new Size(194, 32);
+            txtCodigo.TabIndex = 16;
+            txtCodigo.KeyDown += txtCodigo_KeyDown;
+            // 
+            // labelCodigo
+            // 
+            labelCodigo.AutoSize = true;
+            labelCodigo.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            labelCodigo.ForeColor = Color.FromArgb(45, 55, 72);
+            labelCodigo.Location = new Point(116, 357);
+            labelCodigo.Name = "labelCodigo";
+            labelCodigo.Size = new Size(107, 20);
+            labelCodigo.TabIndex = 66;
+            labelCodigo.Text = "COD. BARRAS";
+            // 
+            // lblFotoaqui
+            // 
+            lblFotoaqui.AutoSize = true;
+            lblFotoaqui.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblFotoaqui.ForeColor = Color.FromArgb(45, 55, 72);
+            lblFotoaqui.Location = new Point(1550, 54);
+            lblFotoaqui.Name = "lblFotoaqui";
+            lblFotoaqui.Size = new Size(161, 20);
+            lblFotoaqui.TabIndex = 67;
+            lblFotoaqui.Text = "FOTO DEL PRODUCTO";
+            // 
+            // picFotoProducto
+            // 
+            picFotoProducto.BackColor = Color.FromArgb(241, 245, 249);
+            picFotoProducto.BorderStyle = BorderStyle.FixedSingle;
+            picFotoProducto.Location = new Point(1358, 77);
+            picFotoProducto.Name = "picFotoProducto";
+            picFotoProducto.Size = new Size(501, 283);
+            picFotoProducto.SizeMode = PictureBoxSizeMode.Zoom;
+            picFotoProducto.TabIndex = 68;
+            picFotoProducto.TabStop = false;
+            // 
+            // btnAñadirFoto
+            // 
+            btnAñadirFoto.BackColor = Color.FromArgb(55, 65, 81);
+            btnAñadirFoto.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnAñadirFoto.ForeColor = Color.White;
+            btnAñadirFoto.Location = new Point(1358, 361);
+            btnAñadirFoto.Name = "btnAñadirFoto";
+            btnAñadirFoto.Size = new Size(501, 32);
+            btnAñadirFoto.TabIndex = 69;
+            btnAñadirFoto.Text = "AÑADIR FOTO";
+            btnAñadirFoto.UseVisualStyleBackColor = false;
+            btnAñadirFoto.Click += btnAñadirFoto_Click;
             // 
             // tabControl1
             // 
@@ -642,6 +724,7 @@ namespace UI.DISEÑO
             ((System.ComponentModel.ISupportInitialize)numCantidad).EndInit();
             ((System.ComponentModel.ISupportInitialize)dgvMovimientos).EndInit();
             ((System.ComponentModel.ISupportInitialize)dgvProductos).EndInit();
+            ((System.ComponentModel.ISupportInitialize)picFotoProducto).EndInit();
             tabControl1.ResumeLayout(false);
             panelNav.ResumeLayout(false);
             ResumeLayout(false);
@@ -665,6 +748,7 @@ namespace UI.DISEÑO
         private Label label1;
         private Label label7;
         private Button btnGuardar;
+        private Button btnAgregarProductos;
         private Label label5;
         private Label label4;
         private Label label3;
@@ -674,6 +758,11 @@ namespace UI.DISEÑO
         private TextBox txtStock;
         private TextBox txtStockMinimo;
         private TextBox txtNombre;
+        private Label labelCodigo;
+        private TextBox txtCodigo;
+        private Label lblFotoaqui;
+        private PictureBox picFotoProducto;
+        private Button btnAñadirFoto;
         private TabControl tabControl1;
         private Label label8;
         private ComboBox cmbMotivo;

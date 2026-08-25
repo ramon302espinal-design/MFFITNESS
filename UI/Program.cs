@@ -31,7 +31,8 @@ namespace UI
                     ex.Message + Environment.NewLine + Environment.NewLine +
                     "Entorno: " + AppConfig.EnvironmentName + Environment.NewLine +
                     "Base: " + AppConfig.DatabaseName + Environment.NewLine + Environment.NewLine +
-                    "Cambia el entorno con DOTNET_ENVIRONMENT / MFFITNESS_ENVIRONMENT " +
+                    "Cambia el entorno con MFFITNESS_ENVIRONMENT / DOTNET_ENVIRONMENT, " +
+                    "o Database:DefaultEnvironment en appsettings.Local.json " +
                     "(Development = MF_CYBER_DB_DEV, Production = [MF CYBER DB]).",
                     "Base de datos",
                     MessageBoxButtons.OK,

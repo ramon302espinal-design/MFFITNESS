@@ -4,6 +4,9 @@ using BLL.Models;
 using DTO;
 using System;
 using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using CORE;
 using UI.Theme;
@@ -27,10 +30,15 @@ namespace UI.DISEÑO
         private readonly MembresiaBLL membresiaBLL = new MembresiaBLL();
         private readonly DataTable carrito = new DataTable();
         private readonly BindingSource _bsProductos = new BindingSource();
+        private readonly StringBuilder _bufferEscannerPos = new();
+        private DateTime _ultimaTeclaEscannerPos = DateTime.MinValue;
+        private readonly PosScannerIntervalGate _intervaloEscannerPos = new();
+        private int _hoverProductoIdPos = -1;
 
         private FrmPresentacion? _presentacion;
         private readonly ClienteBLL clienteBLL = new ClienteBLL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
+        private string? _codigoBarraInicial;
 
         // ===============================
         // CONSTRUCTORES
@@ -136,6 +144,118 @@ namespace UI.DISEÑO
 
             dtpFechaVencimiento.Value = DateTime.Today.AddDays(30);
             dtpFechaVencimiento.Enabled = false;
+
+            ConfigurarCapturaEscannerPos();
+            ProcesarEscaneoInicialPendiente();
+
+            if (tabProductos.SelectedTab == tabPago)
+                EnfocarEscannerPos();
+        }
+
+        /// <summary>Precarga un EAN antes de ShowDialog (p. ej. escaneo desde inicio).</summary>
+        public void EstablecerEscaneoInicial(string codigoBarra)
+        {
+            _codigoBarraInicial = codigoBarra;
+        }
+
+        /// <summary>Escaneo recibido con POS ya abierto (misma instancia).</summary>
+        public void ProcesarEscaneoDesdeExterno(string codigoBarra)
+        {
+            ActivarTabProductos();
+            ProcesarEscaneoProductoPos(codigoBarra);
+        }
+
+        private void ProcesarEscaneoInicialPendiente()
+        {
+            if (string.IsNullOrWhiteSpace(_codigoBarraInicial))
+                return;
+
+            string codigo = _codigoBarraInicial;
+            _codigoBarraInicial = null;
+
+            BeginInvoke(new Action(() =>
+            {
+                ActivarTabProductos();
+                ProcesarEscaneoProductoPos(codigo);
+            }));
+        }
+
+        private void ActivarTabProductos()
+        {
+            if (tabProductos.SelectedTab != tabPago)
+                tabProductos.SelectedTab = tabPago;
+
+            EnfocarEscannerPos();
+        }
+
+        public void ActivarTabProductosPublico() => ActivarTabProductos();
+
+        private void ConfigurarCapturaEscannerPos()
+        {
+            KeyPreview = true;
+            KeyDown -= FrmPagos_CapturaEscannerKeyDown;
+            KeyDown += FrmPagos_CapturaEscannerKeyDown;
+        }
+
+        private bool DebeInterceptarEscannerGlobal()
+        {
+            if (tabProductos.SelectedTab != tabPago && tabProductos.SelectedTab != tabMembresia)
+                return false;
+
+            if (txtBuscarProducto != null && txtBuscarProducto.Focused)
+                return false;
+
+            if (cmbCliente.DroppedDown)
+                return false;
+
+            if (tabProductos.SelectedTab == tabMembresia && ActiveControl is TextBox)
+                return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Lee códigos aunque el foco esté en lista, grilla o pestaña Membresía (wedge HID).
+        /// </summary>
+        private void FrmPagos_CapturaEscannerKeyDown(object? sender, KeyEventArgs e)
+        {
+            PosScannerCaptureHelper.HandleKeyDown(
+                e,
+                _bufferEscannerPos,
+                ref _ultimaTeclaEscannerPos,
+                DebeInterceptarEscannerGlobal,
+                raw =>
+                {
+                    ActivarTabProductos();
+                    ProcesarEscaneoProductoPos(raw);
+                });
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            if (tabProductos.SelectedTab == tabPago)
+                EnfocarEscannerPos();
+        }
+
+        private void tabProductos_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (tabProductos.SelectedTab == tabPago)
+                EnfocarEscannerPos();
+        }
+
+        private void EnfocarEscannerPos()
+        {
+            if (txtBuscarProducto == null || txtBuscarProducto.IsDisposed)
+                return;
+
+            BeginInvoke(new Action(() =>
+            {
+                if (txtBuscarProducto.IsDisposed)
+                    return;
+                txtBuscarProducto.Focus();
+                txtBuscarProducto.SelectAll();
+            }));
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -227,10 +347,90 @@ namespace UI.DISEÑO
             if (lstProductosPos.Items[index] is not DataRowView row)
                 return;
 
+            MostrarFotoProductoPos(row.Row);
+
             if (e.Button == MouseButtons.Left)
                 AjustarCantidadCarrito(row.Row, 1);
             else if (e.Button == MouseButtons.Right)
                 AjustarCantidadCarrito(row.Row, -1);
+
+            EnfocarEscannerPos();
+        }
+
+        /// <summary>
+        /// Hover en vivo: cambia la ventanita de foto según el ítem bajo el cursor.
+        /// No altera carrito ni cobro.
+        /// </summary>
+        private void lstProductosPos_MouseMove(object? sender, MouseEventArgs e)
+        {
+            int index = lstProductosPos.IndexFromPoint(e.Location);
+            if (index < 0 || index >= lstProductosPos.Items.Count)
+                return;
+
+            if (lstProductosPos.Items[index] is not DataRowView row)
+                return;
+
+            MostrarFotoProductoPos(row.Row);
+        }
+
+        private void lstProductosPos_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (lstProductosPos.SelectedItem is DataRowView row)
+                MostrarFotoProductoPos(row.Row);
+        }
+
+        private void lstProductosPos_MouseLeave(object? sender, EventArgs e)
+        {
+            // Conserva la última foto vista; limpia solo el caché de hover.
+            _hoverProductoIdPos = -1;
+        }
+
+        private void MostrarFotoProductoPos(DataRow producto)
+        {
+            if (producto == null || picProductoPos == null)
+                return;
+
+            int id = 0;
+            if (producto.Table.Columns.Contains("Id")
+                && producto["Id"] != DBNull.Value)
+                id = Convert.ToInt32(producto["Id"]);
+
+            if (id > 0 && id == _hoverProductoIdPos)
+                return;
+
+            _hoverProductoIdPos = id;
+
+            string? ruta = null;
+            if (producto.Table.Columns.Contains("RutaImagen"))
+                ruta = producto["RutaImagen"]?.ToString();
+
+            if (string.IsNullOrWhiteSpace(ruta) && id > 0)
+                ruta = ProductoImagenStorage.RutaProducto(id);
+
+            string? real = ProductoImagenStorage.ResolverRutaExistente(ruta);
+            Image? old = picProductoPos.Image;
+            picProductoPos.Image = null;
+            old?.Dispose();
+
+            if (real == null)
+            {
+                if (lblFotoProductoPos != null)
+                    lblFotoProductoPos.Text = "SIN FOTO";
+                return;
+            }
+
+            try
+            {
+                using var fs = new FileStream(real, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                picProductoPos.Image = Image.FromStream(fs);
+                if (lblFotoProductoPos != null)
+                    lblFotoProductoPos.Text = "FOTO PRODUCTO";
+            }
+            catch
+            {
+                if (lblFotoProductoPos != null)
+                    lblFotoProductoPos.Text = "SIN FOTO";
+            }
         }
 
         private void lstProductosPos_KeyDown(object? sender, KeyEventArgs e)
@@ -260,6 +460,9 @@ namespace UI.DISEÑO
         {
             if (keyData == Keys.Enter || keyData == Keys.Return)
             {
+                if (txtBuscarProducto != null && txtBuscarProducto.Focused)
+                    return false;
+
                 if (tabProductos.SelectedTab == tabPago)
                 {
                     if (btnPagarProductos.Enabled && btnPagarProductos.Visible)
@@ -285,10 +488,10 @@ namespace UI.DISEÑO
         /// Suma o resta unidades del producto en el carrito y refresca el total al instante.
         /// Al llegar a cero la línea se elimina.
         /// </summary>
-        private void AjustarCantidadCarrito(DataRow producto, int delta)
+        private bool AjustarCantidadCarrito(DataRow producto, int delta)
         {
             if (producto == null || delta == 0)
-                return;
+                return false;
 
             int productoId = Convert.ToInt32(producto["Id"]);
             string nombre = producto["Nombre"]?.ToString()?.Trim() ?? "producto";
@@ -305,7 +508,7 @@ namespace UI.DISEÑO
                     carrito.AcceptChanges();
                     CalcularTotal();
                 }
-                return;
+                return true;
             }
 
             decimal precio = LeerPrecioVenta(producto);
@@ -316,7 +519,7 @@ namespace UI.DISEÑO
                     "Producto",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
-                return;
+                return false;
             }
 
             int? stock = LeerStockActual(producto);
@@ -327,7 +530,7 @@ namespace UI.DISEÑO
                     "Stock",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
-                return;
+                return false;
             }
 
             decimal total = Math.Round(precio * cantidadNueva, 2, MidpointRounding.AwayFromZero);
@@ -344,6 +547,7 @@ namespace UI.DISEÑO
             }
 
             CalcularTotal();
+            return true;
         }
 
         private static decimal LeerPrecioVenta(DataRow row) =>
@@ -358,7 +562,74 @@ namespace UI.DISEÑO
 
         private void txtBuscarProducto_TextChanged(object? sender, EventArgs e)
         {
+            if (ProductoBarcodeNormalizer.LooksLikeBarcodeInProgress(txtBuscarProducto?.Text))
+                return;
+
             AplicarFiltroBusquedaProducto();
+        }
+
+        private void txtBuscarProducto_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+                return;
+
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+
+            ActivarTabProductos();
+
+            if (string.IsNullOrWhiteSpace(txtBuscarProducto?.Text))
+            {
+                if (carrito.Rows.Count > 0)
+                    btnPagarProductos.PerformClick();
+                return;
+            }
+
+            ProcesarEscaneoProductoPos();
+        }
+
+        /// <summary>
+        /// Solo código de barras registrado (EAN / CodigoBarra). Sin popups por QR o código inexistente.
+        /// </summary>
+        private void ProcesarEscaneoProductoPos(string? rawOverride = null)
+        {
+            if (!_intervaloEscannerPos.TryAcceptScan())
+            {
+                if (rawOverride == null)
+                    LimpiarBusquedaPos();
+                return;
+            }
+
+            string? source = rawOverride ?? txtBuscarProducto?.Text;
+
+            if (!ProductoBarcodeNormalizer.TryNormalizeBarcode(source, out string? codigo))
+            {
+                LimpiarBusquedaPos();
+                return;
+            }
+
+            DataRow? filaExacta = productoBLL.BuscarPorCodigoBarra(codigo);
+            if (filaExacta != null && AjustarCantidadCarrito(filaExacta, 1))
+            {
+                SeleccionarProductoEnListaPos(Convert.ToInt32(filaExacta["Id"]));
+                LimpiarBusquedaPos();
+                return;
+            }
+
+            LimpiarBusquedaPos();
+        }
+
+        private void SeleccionarProductoEnListaPos(int productoId)
+        {
+            try { lstProductosPos.SelectedValue = productoId; }
+            catch { /* puede estar filtrado */ }
+        }
+
+        private void LimpiarBusquedaPos()
+        {
+            txtBuscarProducto!.Clear();
+            AplicarFiltroBusquedaProducto();
+            EnfocarEscannerPos();
         }
 
         private void AplicarFiltroBusquedaProducto()
@@ -542,11 +813,40 @@ namespace UI.DISEÑO
                         Sesion.Usuario ?? "ADMIN");
                 }
 
+                FinalizarPosTrasVenta();
+                ProgramarRefrescoDashboard();
                 MessageBox.Show("Venta realizada.");
-                carrito.Clear();
-                CalcularTotal();
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        /// <summary>
+        /// Tras cobrar: limpia carrito, recarga stock en lista y deja listo el escáner.
+        /// </summary>
+        private void FinalizarPosTrasVenta()
+        {
+            carrito.Clear();
+            CalcularTotal();
+            CargarProductos();
+            LimpiarBusquedaPos();
+        }
+
+        private void ProgramarRefrescoDashboard()
+        {
+            if (IsDisposed)
+                return;
+
+            BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    _presentacion?.CargarDashboard();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Dashboard post-venta POS] {ex.Message}");
+                }
+            }));
         }
 
         private decimal ObtenerTotalCarrito()

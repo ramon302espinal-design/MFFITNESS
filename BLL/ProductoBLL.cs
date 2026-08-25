@@ -13,7 +13,7 @@ namespace BLL
             return dal.ExisteNombre(nombre);
         }
 
-        public int AgregarProductoConId(string nombre, int categoriaId, decimal compra, decimal venta, int stockInicial, int stockMinimo, bool activo)
+        public int AgregarProductoConId(string nombre, int categoriaId, decimal compra, decimal venta, int stockInicial, int stockMinimo, bool activo, string? codigoBarra = null, string? rutaImagen = null)
         {
             if (string.IsNullOrWhiteSpace(nombre))
                 throw new Exception("El nombre es obligatorio.");
@@ -30,10 +30,22 @@ namespace BLL
             if (stockMinimo < 0)
                 throw new Exception("El stock mínimo no puede ser negativo.");
 
-            return dal.Agregar(nombre, categoriaId, compra, venta, stockInicial, stockMinimo, activo);
+            string? codigo = null;
+            if (!string.IsNullOrWhiteSpace(codigoBarra))
+            {
+                if (!ProductoBarcodeNormalizer.TryNormalizeBarcode(codigoBarra, out codigo))
+                {
+                    throw new Exception(
+                        "Código de barras inválido. Use EAN numérico o código interno (no QR ni URL).");
+                }
+            }
+
+            ValidarCodigoBarraUnico(codigo, null);
+
+            return dal.Agregar(nombre, categoriaId, compra, venta, stockInicial, stockMinimo, activo, codigo, rutaImagen);
         }
 
-        public void EditarProducto(int id, string nombre, int categoriaId, decimal compra, decimal venta, int stockMinimo, bool activo)
+        public void EditarProducto(int id, string nombre, int categoriaId, decimal compra, decimal venta, int stockMinimo, bool activo, string? codigoBarra = null, string? rutaImagen = null)
         {
             if (string.IsNullOrWhiteSpace(nombre))
                 throw new Exception("El nombre es obligatorio.");
@@ -47,7 +59,45 @@ namespace BLL
             if (stockMinimo < 0)
                 throw new Exception("El stock mínimo no puede ser negativo.");
 
-            dal.Editar(id, nombre, categoriaId, compra, venta, stockMinimo, activo);
+            string? codigo = null;
+            if (!string.IsNullOrWhiteSpace(codigoBarra))
+            {
+                if (!ProductoBarcodeNormalizer.TryNormalizeBarcode(codigoBarra, out codigo))
+                {
+                    throw new Exception(
+                        "Código de barras inválido. Use EAN numérico o código interno (no QR ni URL).");
+                }
+            }
+
+            ValidarCodigoBarraUnico(codigo, id);
+
+            dal.Editar(id, nombre, categoriaId, compra, venta, stockMinimo, activo, codigo, rutaImagen);
+        }
+
+        public void ActualizarRutaImagen(int id, string? rutaImagen)
+        {
+            if (id <= 0)
+                throw new Exception("Producto inválido.");
+            dal.ActualizarRutaImagen(id, rutaImagen);
+        }
+
+        public DataRow? BuscarPorCodigoBarra(string? codigoBarra)
+        {
+            if (!ProductoBarcodeNormalizer.TryNormalizeBarcode(codigoBarra, out string? codigo))
+                return null;
+            return dal.BuscarPorCodigoBarra(codigo!);
+        }
+
+        private void ValidarCodigoBarraUnico(string? codigo, int? excluirId)
+        {
+            if (codigo == null)
+                return;
+
+            if (codigo.Length > 32)
+                throw new Exception("El código de barras no puede superar 32 caracteres.");
+
+            if (dal.ExisteCodigoBarra(codigo, excluirId))
+                throw new Exception("Ya existe un producto con ese código de barras.");
         }
 
         public void EliminarProducto(int id)

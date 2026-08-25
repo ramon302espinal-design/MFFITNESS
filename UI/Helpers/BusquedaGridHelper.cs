@@ -92,6 +92,7 @@ namespace UI.Helpers
             return $"Convert(Id, 'System.String') LIKE {like} " +
                    $"OR Nombre LIKE {like} " +
                    $"OR Categoria LIKE {like} " +
+                   $"OR CodigoBarra LIKE {like} " +
                    $"OR Convert(IdCategoria, 'System.String') LIKE {like} " +
                    $"OR Convert(PrecioCompra, 'System.String') LIKE {like} " +
                    $"OR Convert(PrecioVenta, 'System.String') LIKE {like} " +

@@ -39,6 +39,8 @@ namespace UI.DISEÑO
             lblBuscarProducto = new Label();
             txtBuscarProducto = new TextBox();
             lstProductosPos = new ListBox();
+            lblFotoProductoPos = new Label();
+            picProductoPos = new PictureBox();
             tabProductos = new TabControl();
             tabPago = new TabPage();
             btnLimpiarCarrito = new Button();
@@ -72,6 +74,7 @@ namespace UI.DISEÑO
             btnNavCaja = new Button();
             btnNavEstado = new Button();
             btnNavDeudas = new Button();
+            ((System.ComponentModel.ISupportInitialize)picProductoPos).BeginInit();
             tabProductos.SuspendLayout();
             tabPago.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCarrito).BeginInit();
@@ -169,19 +172,20 @@ namespace UI.DISEÑO
             lblBuscarProducto.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
             lblBuscarProducto.Location = new Point(766, 289);
             lblBuscarProducto.Name = "lblBuscarProducto";
-            lblBuscarProducto.Size = new Size(81, 28);
+            lblBuscarProducto.Size = new Size(101, 28);
             lblBuscarProducto.TabIndex = 28;
-            lblBuscarProducto.Text = "Buscar:";
+            lblBuscarProducto.Text = "Escanear:";
             // 
             // txtBuscarProducto
             // 
             txtBuscarProducto.Font = new Font("Segoe UI", 12F);
             txtBuscarProducto.Location = new Point(846, 287);
             txtBuscarProducto.Name = "txtBuscarProducto";
-            txtBuscarProducto.PlaceholderText = "Nombre, Id, categoría, precio venta/compra...";
-            txtBuscarProducto.Size = new Size(520, 34);
+            txtBuscarProducto.PlaceholderText = "Escanear EAN (lector siempre activo en PRODUCTOS)";
+            txtBuscarProducto.Size = new Size(275, 34);
             txtBuscarProducto.TabIndex = 29;
             txtBuscarProducto.TextChanged += txtBuscarProducto_TextChanged;
+            txtBuscarProducto.KeyDown += txtBuscarProducto_KeyDown;
             // 
             // lstProductosPos
             // 
@@ -191,10 +195,35 @@ namespace UI.DISEÑO
             lstProductosPos.ItemHeight = 28;
             lstProductosPos.Location = new Point(781, 327);
             lstProductosPos.Name = "lstProductosPos";
-            lstProductosPos.Size = new Size(520, 355);
+            lstProductosPos.Size = new Size(340, 355);
             lstProductosPos.TabIndex = 31;
+            lstProductosPos.SelectedIndexChanged += lstProductosPos_SelectedIndexChanged;
             lstProductosPos.KeyDown += lstProductosPos_KeyDown;
             lstProductosPos.MouseDown += lstProductosPos_MouseDown;
+            lstProductosPos.MouseLeave += lstProductosPos_MouseLeave;
+            lstProductosPos.MouseMove += lstProductosPos_MouseMove;
+            // 
+            // lblFotoProductoPos
+            // 
+            lblFotoProductoPos.AutoSize = true;
+            lblFotoProductoPos.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblFotoProductoPos.ForeColor = Color.FromArgb(45, 55, 72);
+            lblFotoProductoPos.Location = new Point(1401, 294);
+            lblFotoProductoPos.Name = "lblFotoProductoPos";
+            lblFotoProductoPos.Size = new Size(150, 23);
+            lblFotoProductoPos.TabIndex = 41;
+            lblFotoProductoPos.Text = "FOTO PRODUCTO";
+            // 
+            // picProductoPos
+            // 
+            picProductoPos.BackColor = Color.FromArgb(241, 245, 249);
+            picProductoPos.BorderStyle = BorderStyle.FixedSingle;
+            picProductoPos.Location = new Point(1240, 327);
+            picProductoPos.Name = "picProductoPos";
+            picProductoPos.Size = new Size(390, 355);
+            picProductoPos.SizeMode = PictureBoxSizeMode.Zoom;
+            picProductoPos.TabIndex = 42;
+            picProductoPos.TabStop = false;
             // 
             // tabProductos
             // 
@@ -205,14 +234,17 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(0, 52);
             tabProductos.Name = "tabProductos";
             tabProductos.SelectedIndex = 0;
-            tabProductos.Size = new Size(1382, 807);
+            tabProductos.Size = new Size(1739, 807);
             tabProductos.TabIndex = 33;
+            tabProductos.SelectedIndexChanged += tabProductos_SelectedIndexChanged;
             // 
             // tabPago
             // 
             tabPago.Controls.Add(btnLimpiarCarrito);
             tabPago.Controls.Add(lblTotal);
             tabPago.Controls.Add(label6);
+            tabPago.Controls.Add(picProductoPos);
+            tabPago.Controls.Add(lblFotoProductoPos);
             tabPago.Controls.Add(lstProductosPos);
             tabPago.Controls.Add(dgvCarrito);
             tabPago.Controls.Add(btnPagarProductos);
@@ -221,7 +253,7 @@ namespace UI.DISEÑO
             tabPago.Location = new Point(4, 37);
             tabPago.Name = "tabPago";
             tabPago.Padding = new Padding(3);
-            tabPago.Size = new Size(1374, 766);
+            tabPago.Size = new Size(1731, 766);
             tabPago.TabIndex = 0;
             tabPago.Text = "PRODUCTOS";
             tabPago.UseVisualStyleBackColor = true;
@@ -510,7 +542,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1382, 52);
+            panelNav.Size = new Size(1739, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -587,13 +619,14 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1382, 859);
+            ClientSize = new Size(1739, 859);
             Controls.Add(tabProductos);
             Controls.Add(panelNav);
             Name = "FrmPagos";
             Text = "PAGO";
             WindowState = FormWindowState.Maximized;
             Load += FrmPagos_Load;
+            ((System.ComponentModel.ISupportInitialize)picProductoPos).EndInit();
             tabProductos.ResumeLayout(false);
             tabPago.ResumeLayout(false);
             tabPago.PerformLayout();
@@ -621,6 +654,8 @@ namespace UI.DISEÑO
         private Label lblBuscarProducto;
         private TextBox txtBuscarProducto;
         private ListBox lstProductosPos;
+        private Label lblFotoProductoPos;
+        private PictureBox picProductoPos;
         private TabControl tabProductos;
         private TabPage tabPago;
         private TabPage tabMembresia;

@@ -17,6 +17,7 @@ namespace UI.DISEÑO
         private readonly CategoriaBLL categoriaBLL = new CategoriaBLL();
         private readonly StockBLL stockBLL = new StockBLL();
         private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
+        private readonly PosScannerIntervalGate _intervaloEscanner = new();
 
         public FrmProductos()
         {
@@ -72,6 +73,7 @@ namespace UI.DISEÑO
             CargarMovimientos();
             CargarMotivos();
             txtMotivoExtra.Enabled = false;
+            BeginInvoke(new Action(() => txtCodigo.Focus()));
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -186,13 +188,24 @@ namespace UI.DISEÑO
                     decimal.Parse(txtVenta.Text),
                     0,
                     int.Parse(txtStockMinimo.Text),
-                    true
+                    true,
+                    txtCodigo.Text,
+                    null
                 );
 
                 if (!result.Success)
                 {
                     MessageBox.Show(result.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
+                }
+
+                if (result.Payload is int nuevoId && nuevoId > 0)
+                {
+                    ConfirmarImagenTrasAlta(nuevoId);
+                    string? rutaFinal = ProductoImagenStorage.ResolverRutaExistente(
+                        ProductoImagenStorage.RutaProducto(nuevoId));
+                    if (rutaFinal != null)
+                        productoBLL.ActualizarRutaImagen(nuevoId, rutaFinal);
                 }
 
                 MessageBox.Show(result.Message, "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -214,6 +227,7 @@ namespace UI.DISEÑO
             {
                 if (!ValidarCampos()) return;
                 int id = Convert.ToInt32(dgvProductos.CurrentRow.Cells["Id"].Value);
+                string? rutaImagen = ObtenerRutaImagenParaGuardar(id);
 
                 var result = ProductoCommandService.EditarProducto(
                     id,
@@ -222,7 +236,9 @@ namespace UI.DISEÑO
                     decimal.Parse(txtCompra.Text),
                     decimal.Parse(txtVenta.Text),
                     int.Parse(txtStockMinimo.Text),
-                    true
+                    true,
+                    txtCodigo.Text,
+                    rutaImagen
                 );
 
                 if (!result.Success)
@@ -265,22 +281,162 @@ namespace UI.DISEÑO
             if (e.RowIndex < 0) return;
             object valor = dgvProductos.Rows[e.RowIndex].Cells["StockActual"].Value;
             lblStockActual.Text = (valor != null && valor != DBNull.Value) ? valor.ToString() : "0";
+            MostrarFotoSeleccionGrilla(dgvProductos.Rows[e.RowIndex]);
+        }
+
+        private void dgvProductos_SelectionChanged(object? sender, EventArgs e)
+        {
+            if (dgvProductos.CurrentRow == null || dgvProductos.CurrentRow.IsNewRow)
+                return;
+            MostrarFotoSeleccionGrilla(dgvProductos.CurrentRow);
+        }
+
+        /// <summary>Solo preview al seleccionar fila; no toca campos ni foto pendiente de IA.</summary>
+        private void MostrarFotoSeleccionGrilla(DataGridViewRow row)
+        {
+            string? ruta = null;
+            if (row.DataGridView.Columns.Contains("RutaImagen"))
+                ruta = row.Cells["RutaImagen"].Value?.ToString();
+
+            // Fallback: producto_{id}.jpg en LocalAppData si la columna viene vacía.
+            if (string.IsNullOrWhiteSpace(ruta)
+                && row.DataGridView.Columns.Contains("Id")
+                && row.Cells["Id"].Value != null
+                && row.Cells["Id"].Value != DBNull.Value)
+            {
+                int id = Convert.ToInt32(row.Cells["Id"].Value);
+                if (id > 0)
+                    ruta = ProductoImagenStorage.RutaProducto(id);
+            }
+
+            MostrarFotoEnPreview(ruta);
+            if (lblFotoaqui != null)
+                lblFotoaqui.Text = string.IsNullOrWhiteSpace(
+                    ProductoImagenStorage.ResolverRutaExistente(ruta))
+                    ? "FOTO DEL PRODUCTO"
+                    : "FOTO DEL PRODUCTO";
         }
 
         private void dgvProductos_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-            DataGridViewRow row = dgvProductos.Rows[e.RowIndex];
+            CargarProductoDesdeGrilla(dgvProductos.Rows[e.RowIndex]);
+        }
 
+        private void CargarProductoDesdeGrilla(DataGridViewRow row)
+        {
             txtNombre.Text = row.Cells["Nombre"].Value?.ToString() ?? string.Empty;
             txtCompra.Text = row.Cells["PrecioCompra"].Value?.ToString() ?? string.Empty;
             txtVenta.Text = row.Cells["PrecioVenta"].Value?.ToString() ?? string.Empty;
             txtStock.Text = row.Cells["StockActual"].Value?.ToString() ?? "0";
             txtStockMinimo.Text = row.Cells["StockMinimo"].Value?.ToString() ?? string.Empty;
 
+            if (row.DataGridView.Columns.Contains("CodigoBarra"))
+                txtCodigo.Text = row.Cells["CodigoBarra"].Value?.ToString() ?? string.Empty;
+            else
+                txtCodigo.Clear();
+
             object categoriaId = row.Cells["IdCategoria"].Value;
             cmbCategoria.SelectedValue = (categoriaId != null && categoriaId != DBNull.Value) ? categoriaId : -1;
             lblStockActual.Text = txtStock.Text;
+
+            string? ruta = null;
+            if (row.DataGridView.Columns.Contains("RutaImagen"))
+                ruta = row.Cells["RutaImagen"].Value?.ToString();
+            _rutaImagenPendiente = null;
+            _jpegPendiente = null;
+            MostrarFotoEnPreview(ruta);
+            if (lblFotoaqui != null)
+                lblFotoaqui.Text = string.IsNullOrWhiteSpace(ruta) ? "FOTO DEL PRODUCTO" : "FOTO DEL PRODUCTO";
+        }
+
+        private void CargarProductoDesdeFila(DataRow row)
+        {
+            txtNombre.Text = row["Nombre"]?.ToString() ?? string.Empty;
+            txtCompra.Text = row["PrecioCompra"]?.ToString() ?? string.Empty;
+            txtVenta.Text = row["PrecioVenta"]?.ToString() ?? string.Empty;
+            txtStock.Text = row["StockActual"]?.ToString() ?? "0";
+            txtStockMinimo.Text = row["StockMinimo"]?.ToString() ?? string.Empty;
+            txtCodigo.Text = row.Table.Columns.Contains("CodigoBarra")
+                ? row["CodigoBarra"]?.ToString() ?? string.Empty
+                : string.Empty;
+
+            object categoriaId = row["IdCategoria"];
+            cmbCategoria.SelectedValue = (categoriaId != null && categoriaId != DBNull.Value) ? categoriaId : -1;
+            lblStockActual.Text = txtStock.Text;
+
+            string? ruta = row.Table.Columns.Contains("RutaImagen")
+                ? row["RutaImagen"]?.ToString()
+                : null;
+            _rutaImagenPendiente = null;
+            _jpegPendiente = null;
+            MostrarFotoEnPreview(ruta);
+        }
+
+        private void SeleccionarProductoEnGrilla(int productoId)
+        {
+            foreach (DataGridViewRow row in dgvProductos.Rows)
+            {
+                if (row.IsNewRow) continue;
+                object? idObj = row.Cells["Id"].Value;
+                if (idObj == null || idObj == DBNull.Value) continue;
+                if (Convert.ToInt32(idObj) != productoId) continue;
+
+                row.Selected = true;
+                dgvProductos.CurrentCell = row.Cells["Nombre"];
+                try { dgvProductos.FirstDisplayedScrollingRowIndex = row.Index; }
+                catch { /* fila fuera de rango visible */ }
+                return;
+            }
+        }
+
+        private void SeleccionarProductoEnCombo(int productoId)
+        {
+            try { cmbProducto.SelectedValue = productoId; }
+            catch { cmbProducto.SelectedIndex = -1; }
+        }
+
+        private void txtCodigo_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+                return;
+
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            ProcesarEscaneoCodigo();
+        }
+
+        /// <summary>
+        /// Lector NetumScan NS-A5 (HID): escribe en txtCodigo y envía Enter al final.
+        /// Si no existe el producto, conserva el código para registrarlo al guardar.
+        /// </summary>
+        private void ProcesarEscaneoCodigo()
+        {
+            if (!_intervaloEscanner.TryAcceptScan())
+                return;
+
+            if (!ProductoBarcodeNormalizer.TryNormalizeBarcode(txtCodigo.Text, out string? codigo))
+            {
+                txtCodigo.Clear();
+                txtCodigo.Focus();
+                return;
+            }
+
+            txtCodigo.Text = codigo;
+            DataRow? fila = productoBLL.BuscarPorCodigoBarra(codigo);
+            if (fila == null)
+            {
+                txtCodigo.Text = codigo;
+                txtCodigo.Focus();
+                return;
+            }
+
+            int id = Convert.ToInt32(fila["Id"]);
+            CargarProductoDesdeFila(fila);
+            SeleccionarProductoEnGrilla(id);
+            SeleccionarProductoEnCombo(id);
+            numCantidad.Focus();
+            numCantidad.Select(0, numCantidad.Text.Length);
         }
 
         private void dgvProductos_RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)
@@ -422,8 +578,10 @@ namespace UI.DISEÑO
             txtVenta.Clear();
             txtStock.Text = "0";
             txtStockMinimo.Clear();
+            txtCodigo.Clear();
             cmbCategoria.SelectedIndex = -1;
-            txtNombre.Focus();
+            LimpiarFotoPendiente();
+            txtCodigo.Focus();
         }
 
         private void RefrescarTodo()

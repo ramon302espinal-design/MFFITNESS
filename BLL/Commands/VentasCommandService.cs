@@ -1,5 +1,6 @@
 using CORE;
 using CORE.Commands;
+using BLL.Models;
 using System.Data;
 
 namespace BLL.Commands
@@ -28,12 +29,29 @@ namespace BLL.Commands
                     carrito,
                     fechaVencimientoDeuda,
                     conceptoDeuda);
+
+                NotificarEventosPostVentaProducto(operacion);
+
                 return CommandResult.Ok("Venta registrada correctamente.", operacion.VentaId);
             }
             catch (Exception ex)
             {
                 return CommandResult.Fail(ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Sincroniza historial, caja, deudas y dashboards que escuchan AppEventos.
+        /// </summary>
+        private static void NotificarEventosPostVentaProducto(VentaOperacionResult operacion)
+        {
+            AppEventos.PagoRegistrado();
+
+            if (operacion.CajaMovimientoId > 0)
+                AppEventos.CajaCambiada();
+
+            if (operacion.DeudaId > 0)
+                AppEventos.DeudaModificada();
         }
 
         private static string ResolveUsuario(string? usuario)

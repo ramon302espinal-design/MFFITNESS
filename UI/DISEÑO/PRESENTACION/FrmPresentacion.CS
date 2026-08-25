@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using CORE;
 using UI.Helpers;
@@ -19,6 +20,9 @@ namespace UI.DISEÑO
         private System.Windows.Forms.Timer? _timerStockCriticoDebounce;
         private readonly HashSet<int> _stockCriticoPendiente = new();
         private readonly object _stockCriticoSync = new();
+        private readonly StringBuilder _bufferEscannerInicio = new();
+        private DateTime _ultimaTeclaEscannerInicio = DateTime.MinValue;
+        private readonly PosScannerIntervalGate _intervaloEscannerInicio = new();
         private volatile bool _whatsappAutomatizacionEnCurso;
         private readonly DeudaBLL deudaNotificacionBLL = new DeudaBLL();
         // KPI de deudas: instancia propia; la de notificaciones corre en hilo aparte.
@@ -77,6 +81,8 @@ namespace UI.DISEÑO
                 // 6️⃣ Deudas en vivo: cualquier cobro o nueva deuda refresca las tarjetas.
                 AppEventos.OnPagoRegistrado += RefrescarKpiDeudas;
                 AppEventos.OnDeudaModificada += RefrescarKpiDeudas;
+
+                ConfigurarCapturaEscannerInicio();
 
                 string? advertenciaWhatsApp = TwilioSettings.ObtenerAdvertenciaConfiguracion();
                 if (!string.IsNullOrWhiteSpace(advertenciaWhatsApp))
@@ -542,21 +548,75 @@ namespace UI.DISEÑO
 
         private void btnPagar_Click(object sender, EventArgs e)
         {
-            // 1️⃣ Mantener tu lógica de evitar múltiples instancias
+            AbrirVentanaProductosPos(null);
+        }
+
+        private void ConfigurarCapturaEscannerInicio()
+        {
+            KeyPreview = true;
+            KeyDown -= FrmPresentacion_CapturaEscannerKeyDown;
+            KeyDown += FrmPresentacion_CapturaEscannerKeyDown;
+        }
+
+        private bool DebeCapturarEscannerInicio()
+        {
+            if (!Visible || !Enabled)
+                return false;
+
+            if (ActiveControl is TextBox)
+                return false;
+
+            foreach (Form frm in Application.OpenForms)
+            {
+                if (frm == this || frm.IsDisposed)
+                    continue;
+                if (frm.Modal && frm.Visible)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private void FrmPresentacion_CapturaEscannerKeyDown(object? sender, KeyEventArgs e)
+        {
+            PosScannerCaptureHelper.HandleKeyDown(
+                e,
+                _bufferEscannerInicio,
+                ref _ultimaTeclaEscannerInicio,
+                DebeCapturarEscannerInicio,
+                raw =>
+                {
+                    if (!ProductoBarcodeNormalizer.TryNormalizeBarcode(raw, out string? codigo))
+                        return;
+                    if (!_intervaloEscannerInicio.TryAcceptScan())
+                        return;
+                    AbrirVentanaProductosPos(codigo);
+                });
+        }
+
+        /// <summary>
+        /// Abre Pagar → pestaña PRODUCTOS. Si hay EAN, lo agrega al carrito al abrir.
+        /// </summary>
+        private void AbrirVentanaProductosPos(string? codigoBarra)
+        {
             foreach (Form form in Application.OpenForms)
             {
-                if (form is FrmPagos)
+                if (form is FrmPagos pagos)
                 {
-                    form.Focus();
+                    pagos.Focus();
+                    if (!string.IsNullOrWhiteSpace(codigoBarra))
+                        pagos.ProcesarEscaneoDesdeExterno(codigoBarra);
+                    else
+                        pagos.ActivarTabProductosPublico();
                     return;
                 }
             }
 
-            // 2️⃣ Abrir como cuadro de diálogo para pausar la ejecución aquí
             FrmPagos pago = new FrmPagos(this);
-            pago.ShowDialog();
+            if (!string.IsNullOrWhiteSpace(codigoBarra))
+                pago.EstablecerEscaneoInicial(codigoBarra);
 
-            // 🔥 3️⃣ ACTUALIZACIÓN CORE: Al cerrar la ventana, refrescamos los labels
+            pago.ShowDialog();
             CargarDashboard();
         }
 

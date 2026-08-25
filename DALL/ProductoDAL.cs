@@ -23,13 +23,59 @@ namespace DL
             return count > 0;
         }
 
-        public int Agregar(string nombre, int categoriaId, decimal compra, decimal venta, int stockInicial, int stockMinimo, bool activo)
+        public bool ExisteCodigoBarra(string codigoBarra, int? excluirId = null)
+        {
+            string query = @"SELECT COUNT(*)
+                             FROM Productos
+                             WHERE CodigoBarra = @CodigoBarra
+                               AND Activo = 1
+                               AND (@ExcluirId IS NULL OR Id <> @ExcluirId)";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@CodigoBarra", codigoBarra),
+                new SqlParameter("@ExcluirId", (object?)excluirId ?? DBNull.Value)
+            };
+
+            return Convert.ToInt32(db.ExecuteScalar(query, parametros)) > 0;
+        }
+
+        /// <summary>Busca producto activo por código exacto. Null si no existe.</summary>
+        public DataRow? BuscarPorCodigoBarra(string codigoBarra)
+        {
+            string query = @"SELECT TOP 1
+                                P.Id,
+                                P.Nombre,
+                                P.IdCategoria,
+                                C.Nombre AS Categoria,
+                                P.PrecioCompra,
+                                P.PrecioVenta,
+                                P.StockActual,
+                                P.StockMinimo,
+                                P.CodigoBarra,
+                                P.RutaImagen,
+                                P.Activo
+                             FROM Productos P
+                             INNER JOIN Categorias C ON P.IdCategoria = C.Id
+                             WHERE P.Activo = 1
+                               AND P.CodigoBarra = @CodigoBarra";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@CodigoBarra", codigoBarra)
+            };
+
+            DataTable table = db.ExecuteQuery(query, parametros);
+            return table.Rows.Count == 0 ? null : table.Rows[0];
+        }
+
+        public int Agregar(string nombre, int categoriaId, decimal compra, decimal venta, int stockInicial, int stockMinimo, bool activo, string? codigoBarra = null, string? rutaImagen = null)
         {
             string query = @"INSERT INTO Productos
-                            (Nombre, IdCategoria, PrecioCompra, PrecioVenta, StockActual, StockMinimo, Activo)
+                            (Nombre, IdCategoria, PrecioCompra, PrecioVenta, StockActual, StockMinimo, Activo, CodigoBarra, RutaImagen)
                             OUTPUT INSERTED.Id
                             VALUES
-                            (@Nombre, @IdCategoria, @Compra, @Venta, @StockActual, @StockMinimo, @Activo)";
+                            (@Nombre, @IdCategoria, @Compra, @Venta, @StockActual, @StockMinimo, @Activo, @CodigoBarra, @RutaImagen)";
 
             SqlParameter[] parametros =
             {
@@ -39,13 +85,15 @@ namespace DL
                 new SqlParameter("@Venta", venta),
                 new SqlParameter("@StockActual", stockInicial),
                 new SqlParameter("@StockMinimo", stockMinimo),
-                new SqlParameter("@Activo", activo)
+                new SqlParameter("@Activo", activo),
+                new SqlParameter("@CodigoBarra", (object?)codigoBarra ?? DBNull.Value),
+                new SqlParameter("@RutaImagen", (object?)rutaImagen ?? DBNull.Value)
             };
 
             return Convert.ToInt32(db.ExecuteScalar(query, parametros));
         }
 
-        public void Editar(int id, string nombre, int categoriaId, decimal compra, decimal venta, int stockMinimo, bool activo)
+        public void Editar(int id, string nombre, int categoriaId, decimal compra, decimal venta, int stockMinimo, bool activo, string? codigoBarra = null, string? rutaImagen = null)
         {
             string query = @"UPDATE Productos SET
                             Nombre = @Nombre,
@@ -53,7 +101,9 @@ namespace DL
                             PrecioCompra = @Compra,
                             PrecioVenta = @Venta,
                             StockMinimo = @StockMinimo,
-                            Activo = @Activo
+                            Activo = @Activo,
+                            CodigoBarra = @CodigoBarra,
+                            RutaImagen = COALESCE(@RutaImagen, RutaImagen)
                             WHERE Id = @Id";
 
             SqlParameter[] parametros =
@@ -64,9 +114,22 @@ namespace DL
                 new SqlParameter("@Compra", compra),
                 new SqlParameter("@Venta", venta),
                 new SqlParameter("@StockMinimo", stockMinimo),
-                new SqlParameter("@Activo", activo)
+                new SqlParameter("@Activo", activo),
+                new SqlParameter("@CodigoBarra", (object?)codigoBarra ?? DBNull.Value),
+                new SqlParameter("@RutaImagen", (object?)rutaImagen ?? DBNull.Value)
             };
 
+            db.ExecuteNonQuery(query, parametros);
+        }
+
+        public void ActualizarRutaImagen(int id, string? rutaImagen)
+        {
+            string query = @"UPDATE Productos SET RutaImagen = @RutaImagen WHERE Id = @Id";
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Id", id),
+                new SqlParameter("@RutaImagen", (object?)rutaImagen ?? DBNull.Value)
+            };
             db.ExecuteNonQuery(query, parametros);
         }
 
@@ -81,6 +144,8 @@ namespace DL
                                 P.PrecioVenta,
                                 P.StockActual,
                                 P.StockMinimo,
+                                P.CodigoBarra,
+                                P.RutaImagen,
                                 P.Activo
                              FROM Productos P
                              INNER JOIN Categorias C ON P.IdCategoria = C.Id

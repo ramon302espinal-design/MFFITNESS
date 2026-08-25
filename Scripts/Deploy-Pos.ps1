@@ -5,8 +5,8 @@
 .DESCRIPTION
   1) Publish-Pos → %LocalAppData%\Programs\MFFITNESS
      (fuera de OneDrive: seguro para OTA / file replace)
-  2) Acceso directo en Escritorio: MFFITNESS.lnk → UI.exe
-  3) Acceso directo en Menú Inicio
+  2) appsettings.Local.json + Start-MFFITNESS.cmd → [MF CYBER DB]
+  3) Acceso directo Escritorio/Inicio → Start-MFFITNESS.cmd
   4) Opcional: limpia carpeta antigua en Escritorio\MFFITNESS (anti-patrón)
 
 .EXAMPLE
@@ -60,6 +60,27 @@ $exe = Join-Path $InstallDir 'UI.exe'
 $ico = Join-Path $InstallDir $icoRel
 if (!(Test-Path $exe)) { throw "Falta UI.exe tras publish" }
 
+# Garantiza Production en el layout instalado (también con -SkipPublish).
+$localSettings = Join-Path $InstallDir 'appsettings.Local.json'
+@'
+{
+  "Database": {
+    "DefaultEnvironment": "Production"
+  }
+}
+'@ | Set-Content -Path $localSettings -Encoding UTF8
+Write-Host "BD instalada: [MF CYBER DB] (appsettings.Local.json → Production)" -ForegroundColor Green
+
+# Launcher: fuerza env Production (funciona aunque falte Local / AppConfig antiguo).
+$launcher = Join-Path $InstallDir 'Start-MFFITNESS.cmd'
+@'
+@echo off
+set MFFITNESS_ENVIRONMENT=Production
+set DOTNET_ENVIRONMENT=Production
+start "" /D "%~dp0" "%~dp0UI.exe"
+'@ | Set-Content -Path $launcher -Encoding ASCII
+Write-Host "Launcher: $launcher" -ForegroundColor Green
+
 function New-AppShortcut {
     param(
         [string] $LinkPath,
@@ -79,15 +100,14 @@ function New-AppShortcut {
     $s.Save()
 }
 
-# Escritorio: SOLO acceso directo (nunca la carpeta completa en OneDrive).
+# Escritorio / Inicio → launcher (Production), no UI.exe directo.
 $deskLnk = Join-Path $desk 'MFFITNESS.lnk'
-New-AppShortcut -LinkPath $deskLnk -Target $exe -WorkDir $InstallDir -IconPath $ico -Description 'MFFITNESS POS'
+New-AppShortcut -LinkPath $deskLnk -Target $launcher -WorkDir $InstallDir -IconPath $ico -Description 'MFFITNESS POS ([MF CYBER DB])'
 Write-Host "Acceso directo Escritorio: $deskLnk" -ForegroundColor Green
 
-# Menú Inicio
 New-Item -ItemType Directory -Force -Path $startMenu | Out-Null
 $startLnk = Join-Path $startMenu 'MFFITNESS.lnk'
-New-AppShortcut -LinkPath $startLnk -Target $exe -WorkDir $InstallDir -IconPath $ico -Description 'MFFITNESS POS'
+New-AppShortcut -LinkPath $startLnk -Target $launcher -WorkDir $InstallDir -IconPath $ico -Description 'MFFITNESS POS ([MF CYBER DB])'
 Write-Host "Acceso directo Inicio:     $startLnk" -ForegroundColor Green
 
 # Limpiar anti-patrón: app completa en Escritorio/OneDrive

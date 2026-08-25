@@ -903,8 +903,6 @@ namespace UI
                 return;
             }
 
-            AppEventos.PagoRegistrado();
-            AppEventos.DeudaModificada();
             CargarProductosInventario();
             MostrarExitoYLimpiar(NombreProductoCredito, pagoInicio, saldo, esProducto: true);
         }

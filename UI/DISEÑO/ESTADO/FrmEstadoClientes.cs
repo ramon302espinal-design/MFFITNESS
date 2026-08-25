@@ -27,6 +27,8 @@ namespace UI.DISEÑO
         private readonly MensajeAutomaticoBLL mensajeBLL = new MensajeAutomaticoBLL();
         private readonly BindingSource _bsEstado = new BindingSource();
         private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
+        private ContextMenuStrip? _menuEstado;
+        private ToolStripMenuItem? _mnuAjustarFechaFin;
 
         // ===============================
         // CONTROL
@@ -104,6 +106,8 @@ namespace UI.DISEÑO
             AppEventos.OnDeudaModificada += OnDatosEstadoCambiaron;
 
             CargarEstado();
+
+            ConfigurarMenuContextualEstado();
 
             timerActualizacion.Interval = 30000;
             timerActualizacion.Tick -= TimerActualizacion_Tick;
@@ -451,6 +455,99 @@ namespace UI.DISEÑO
                 return;
 
             AbrirGestionDeudasCliente(clienteId);
+        }
+
+        private void ConfigurarMenuContextualEstado()
+        {
+            if (_menuEstado != null)
+                return;
+
+            _menuEstado = new ContextMenuStrip();
+            _mnuAjustarFechaFin = new ToolStripMenuItem("Modificar fecha de vencimiento…");
+            _mnuAjustarFechaFin.Click += mnuAjustarFechaFin_Click;
+            _menuEstado.Items.Add(_mnuAjustarFechaFin);
+            dgvEstado.ContextMenuStrip = _menuEstado;
+        }
+
+        private void dgvEstado_CellMouseDown(object? sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || e.RowIndex < 0 || dgvEstado.Columns.Count == 0)
+                return;
+
+            dgvEstado.ClearSelection();
+            dgvEstado.Rows[e.RowIndex].Selected = true;
+            int col = e.ColumnIndex >= 0 ? e.ColumnIndex : 0;
+            if (col >= dgvEstado.Columns.Count)
+                col = 0;
+            if (dgvEstado.Rows[e.RowIndex].Cells[col].Visible)
+                dgvEstado.CurrentCell = dgvEstado.Rows[e.RowIndex].Cells[col];
+            else
+            {
+                foreach (DataGridViewCell cell in dgvEstado.Rows[e.RowIndex].Cells)
+                {
+                    if (cell.Visible && cell.OwningColumn.Visible)
+                    {
+                        dgvEstado.CurrentCell = cell;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void mnuAjustarFechaFin_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (!TryObtenerClienteDeFila(dgvEstado.CurrentRow, out int clienteId))
+                {
+                    MessageBox.Show(this, "Selecciona un cliente.", "Aviso",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                string estado = ObtenerValorCelda(dgvEstado.CurrentRow!, "Estado");
+                if (!estado.Equals("ACTIVO", StringComparison.OrdinalIgnoreCase)
+                    && !estado.Equals("VENCIDO", StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(this,
+                        "Solo se puede ajustar la fecha de vencimiento en miembros ACTIVO o VENCIDO.\n" +
+                        "Estado actual: " + estado + ".",
+                        "Ajuste de fecha",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                string nombre = ObtenerValorCelda(dgvEstado.CurrentRow!, "Nombre");
+                DateTime fechaActual = DateTime.Today;
+                var celdaFin = ObtenerCelda(dgvEstado.CurrentRow!, "FechaFin");
+                if (celdaFin?.Value != null && celdaFin.Value != DBNull.Value)
+                    fechaActual = Convert.ToDateTime(celdaFin.Value).Date;
+
+                using var dlg = new FrmAjustarFechaVencimiento(nombre, fechaActual);
+                if (dlg.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                var (anterior, nueva) = membresiaBLL.AjustarFechaFinMembresia(
+                    clienteId, dlg.FechaNueva, Sesion.Usuario);
+
+                MessageBox.Show(this,
+                    $"Vencimiento actualizado: {anterior:dd/MM/yyyy} → {nueva:dd/MM/yyyy}.",
+                    "Éxito",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                CargarEstado();
+                _presentacion?.CargarDashboard();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "No se pudo modificar la fecha: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
 
         private static bool TryObtenerClienteDeFila(DataGridViewRow? fila, out int clienteId)

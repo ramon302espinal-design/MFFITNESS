@@ -32,6 +32,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="OpenCvSharp4" Version="4.10.0.20240616" />
+		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20240616" />
+		<PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20240616" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- SSOT de conexión: mismos appsettings que CORE (se copian al output de UI). -->
 		<None Include="..\CORE\appsettings.json" Link="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -130,6 +136,12 @@
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\FrmProductos.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\FrmProductos.Vision.cs">
+			<DependentUpon>FrmProductos.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\INVENTARIO Y REPORTE\FrmCapturaProductoCamara.cs">
 			<SubType>Form</SubType>
 		</Compile>
 		<Compile Update="DISEÑO\HISTORIAL\FrmHistorialVentas.cs">

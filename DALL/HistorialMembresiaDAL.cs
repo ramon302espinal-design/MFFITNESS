@@ -8,6 +8,27 @@ namespace DL
     {
         private readonly DBHelper db = new DBHelper();
 
+        /// <summary>Último TipoMovimiento del cliente (por Id), o null si no hay historial.</summary>
+        public string? ObtenerUltimoTipoMovimiento(int clienteId)
+        {
+            string query = @"
+                SELECT TOP 1 h.TipoMovimiento
+                FROM HistorialMembresias h
+                WHERE h.ClienteId = @ClienteId
+                ORDER BY h.Id DESC";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@ClienteId", clienteId)
+            };
+
+            object? result = db.ExecuteScalar(query, parametros);
+            if (result == null || result == DBNull.Value)
+                return null;
+
+            return result.ToString();
+        }
+
         public void Insertar(int clienteId, string tipo, int? planId, decimal? monto, string usuario, string nota)
         {
             // Agregamos Fecha con GETDATE() para que el cálculo del vencimiento funcione

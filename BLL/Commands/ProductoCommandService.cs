@@ -12,13 +12,15 @@ namespace BLL.Commands
             decimal venta,
             int stockInicial,
             int stockMinimo,
-            bool activo)
+            bool activo,
+            string? codigoBarra = null,
+            string? rutaImagen = null)
         {
             try
             {
                 var bll = new ProductoBLL();
                 int id = bll.AgregarProductoConId(
-                    nombre.Trim(), categoriaId, compra, venta, stockInicial, stockMinimo, activo);
+                    nombre.Trim(), categoriaId, compra, venta, stockInicial, stockMinimo, activo, codigoBarra, rutaImagen);
                 return CommandResult.Ok("Producto guardado correctamente.", id);
             }
             catch (Exception ex)
@@ -34,12 +36,14 @@ namespace BLL.Commands
             decimal compra,
             decimal venta,
             int stockMinimo,
-            bool activo)
+            bool activo,
+            string? codigoBarra = null,
+            string? rutaImagen = null)
         {
             try
             {
                 var bll = new ProductoBLL();
-                bll.EditarProducto(id, nombre.Trim(), categoriaId, compra, venta, stockMinimo, activo);
+                bll.EditarProducto(id, nombre.Trim(), categoriaId, compra, venta, stockMinimo, activo, codigoBarra, rutaImagen);
                 return CommandResult.Ok("Producto actualizado correctamente.");
             }
             catch (Exception ex)

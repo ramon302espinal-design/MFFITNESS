@@ -143,6 +143,67 @@ namespace BLL
             return nuevaFechaFin;
         }
 
+        /// <summary>
+        /// Ajuste administrativo de FechaFin (sin cobro). Actualiza Activa e inserta
+        /// historial AJUSTE_FECHA para que Estado/avisos/dashboard sigan el SSOT.
+        /// Solo ACTIVO/VENCIDO (no CONGELADO ni DESACTIVADO).
+        /// </summary>
+        public (DateTime FechaAnterior, DateTime FechaNueva) AjustarFechaFinMembresia(
+            int clienteId,
+            DateTime nuevaFechaFin,
+            string? usuario = null)
+        {
+            if (clienteId <= 0)
+                throw new Exception("Cliente no válido.");
+
+            if (string.IsNullOrWhiteSpace(usuario))
+                usuario = string.IsNullOrWhiteSpace(Sesion.Usuario) ? "ADMIN" : Sesion.Usuario;
+
+            var congelacion = new CongelacionDAL().ObtenerActiva(clienteId);
+            if (congelacion != null)
+                throw new Exception("No se puede ajustar la fecha mientras el miembro está CONGELADO. Actívelo primero.");
+
+            var historialDAL = new HistorialMembresiaDAL();
+            string? ultimoTipo = historialDAL.ObtenerUltimoTipoMovimiento(clienteId);
+            if (string.Equals(ultimoTipo, "SALIDA", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("No se puede ajustar la fecha de un miembro DESACTIVADO. Renueve o reactive el plan.");
+
+            System.Data.DataRow? membresia = dal.ObtenerUltimaMembresia(clienteId)
+                ?? throw new Exception("El cliente no tiene membresía registrada.");
+
+            if (membresia["FechaInicio"] == null || membresia["FechaInicio"] == DBNull.Value)
+                throw new Exception("La membresía no tiene fecha de inicio.");
+
+            DateTime fechaInicio = Convert.ToDateTime(membresia["FechaInicio"]).Date;
+            DateTime fechaAnterior = membresia["FechaFin"] == null || membresia["FechaFin"] == DBNull.Value
+                ? fechaInicio
+                : Convert.ToDateTime(membresia["FechaFin"]).Date;
+
+            DateTime fechaNueva = nuevaFechaFin.Date;
+            if (fechaNueva < fechaInicio)
+                throw new Exception($"La fecha de vencimiento no puede ser anterior al inicio ({fechaInicio:dd/MM/yyyy}).");
+
+            if (fechaNueva == fechaAnterior)
+                throw new Exception("La fecha de vencimiento no cambió.");
+
+            int membresiaId = Convert.ToInt32(membresia["Id"]);
+            int? planId = membresia["PlanId"] == null || membresia["PlanId"] == DBNull.Value
+                ? null
+                : Convert.ToInt32(membresia["PlanId"]);
+
+            bool activa = fechaNueva >= DateTime.Today;
+            dal.ActualizarFechaFinMembresia(membresiaId, fechaNueva, activa);
+
+            historialDAL.Insertar(
+                clienteId,
+                "AJUSTE_FECHA",
+                planId,
+                null,
+                usuario,
+                $"Vencimiento: {fechaAnterior:dd/MM/yyyy} -> {fechaNueva:dd/MM/yyyy}");
+
+            return (fechaAnterior, fechaNueva);
+        }
 
         // ===============================
         // CREAR MEMBRESÍA

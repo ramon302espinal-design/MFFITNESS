@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
@@ -9,7 +10,8 @@ namespace CORE
     /// <summary>
     /// Configuración centralizada de la app.
     /// Connection strings: appsettings*.json + variables de entorno (sin hardcode en DAL).
-    /// Entorno por defecto: Development (MF_CYBER_DB_DEV) por seguridad.
+    /// Prioridad de entorno: variables → appsettings.Local/DefaultEnvironment → Development.
+    /// El POS instalado escribe appsettings.Local.json con Production (Deploy/Publish Release).
     /// </summary>
     public static class AppConfig
     {
@@ -38,6 +40,24 @@ namespace CORE
             {
                 string? valor = System.Configuration.ConfigurationManager.AppSettings["ModoPrueba"];
                 return valor != null && valor.Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        /// <summary>
+        /// Carga Ollama:BaseUrl / VisionModel / TimeoutSeconds desde appsettings.
+        /// Seguro llamar múltiples veces; no toca la BD.
+        /// </summary>
+        public static void LoadOllamaOptions()
+        {
+            try
+            {
+                string env = DetectEnvironment();
+                IConfigurationRoot config = BuildConfiguration(env);
+                Ollama.OllamaOptions.ApplyFromConfiguration(config);
+            }
+            catch
+            {
+                // Mantener defaults (llava:7b local).
             }
         }
 
@@ -116,8 +136,9 @@ namespace CORE
         }
 
         /// <summary>
-        /// Orden: MFFITNESS_ENVIRONMENT → DOTNET_ENVIRONMENT → ASPNETCORE_ENVIRONMENT → NODE_ENV.
-        /// Sin valor → Development (seguro).
+        /// 1) MFFITNESS_ENVIRONMENT / DOTNET_ENVIRONMENT / ASPNETCORE_ENVIRONMENT / NODE_ENV
+        /// 2) Database:DefaultEnvironment en appsettings.Local.json luego appsettings.json
+        /// 3) Development (seguro al desarrollar sin perfil)
         /// </summary>
         private static string DetectEnvironment()
         {
@@ -127,9 +148,18 @@ namespace CORE
                 ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
                 ?? Environment.GetEnvironmentVariable("NODE_ENV");
 
-            if (string.IsNullOrWhiteSpace(raw))
-                return "Development";
+            if (!string.IsNullOrWhiteSpace(raw))
+                return NormalizeEnvironmentName(raw);
 
+            string? fromFiles = TryReadDefaultEnvironmentFromAppsettingsFiles();
+            if (!string.IsNullOrWhiteSpace(fromFiles))
+                return fromFiles;
+
+            return "Development";
+        }
+
+        private static string NormalizeEnvironmentName(string raw)
+        {
             raw = raw.Trim();
 
             if (raw.Equals("prod", StringComparison.OrdinalIgnoreCase)
@@ -140,8 +170,41 @@ namespace CORE
                 || raw.Equals("development", StringComparison.OrdinalIgnoreCase))
                 return "Development";
 
-            // Perfil personalizado (p. ej. Staging): se busca Database:ConnectionStrings:{raw}
             return raw;
+        }
+
+        /// <summary>
+        /// Lee DefaultEnvironment sin construir IConfiguration completa
+        /// (evita dependencia circular env ↔ config).
+        /// </summary>
+        private static string? TryReadDefaultEnvironmentFromAppsettingsFiles()
+        {
+            string basePath = AppContext.BaseDirectory;
+            foreach (string fileName in new[] { "appsettings.Local.json", "appsettings.json" })
+            {
+                string path = Path.Combine(basePath, fileName);
+                if (!File.Exists(path))
+                    continue;
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                    if (!doc.RootElement.TryGetProperty("Database", out JsonElement database))
+                        continue;
+                    if (!database.TryGetProperty("DefaultEnvironment", out JsonElement defEnv))
+                        continue;
+
+                    string? value = defEnv.GetString();
+                    if (!string.IsNullOrWhiteSpace(value))
+                        return NormalizeEnvironmentName(value);
+                }
+                catch
+                {
+                    // Archivo corrupto / parcial: seguir con el siguiente.
+                }
+            }
+
+            return null;
         }
 
         private static IConfigurationRoot BuildConfiguration(string env)

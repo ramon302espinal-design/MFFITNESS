@@ -138,6 +138,32 @@ if (!(Test-Path $icoOut)) {
 $rootUm = Join-Path $OutputDir 'UpdateManager.exe'
 if (Test-Path $rootUm) { Remove-Item -Force $rootUm }
 
+# POS instalado / Release → siempre [MF CYBER DB] vía appsettings.Local.json.
+# Desarrollo en VS sigue con perfil "UI (Development)" (MFFITNESS_ENVIRONMENT=Development).
+$localSettings = Join-Path $OutputDir 'appsettings.Local.json'
+if ($Configuration -eq 'Release') {
+    @'
+{
+  "Database": {
+    "DefaultEnvironment": "Production"
+  }
+}
+'@ | Set-Content -Path $localSettings -Encoding UTF8
+    Write-Host "appsettings.Local.json → DefaultEnvironment=Production" -ForegroundColor Green
+
+    $launcher = Join-Path $OutputDir 'Start-MFFITNESS.cmd'
+    @'
+@echo off
+set MFFITNESS_ENVIRONMENT=Production
+set DOTNET_ENVIRONMENT=Production
+start "" /D "%~dp0" "%~dp0UI.exe"
+'@ | Set-Content -Path $launcher -Encoding ASCII
+    Write-Host "Start-MFFITNESS.cmd → fuerza Production" -ForegroundColor Green
+}
+elseif (Test-Path $localSettings) {
+    Remove-Item -Force $localSettings
+}
+
 $migCount = @(Get-ChildItem $migOut -Filter '*.sql' -ErrorAction SilentlyContinue).Count
 $totalMb = [math]::Round(((Get-ChildItem $OutputDir -Recurse -File | Measure-Object -Sum Length).Sum / 1MB), 1)
 
