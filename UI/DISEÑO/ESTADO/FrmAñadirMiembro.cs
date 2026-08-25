@@ -46,8 +46,7 @@ namespace UI.DISEÑO.ESTADO
 
             cbmTipoPlanAñadir.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbMiembro.DropDownStyle = ComboBoxStyle.DropDownList;
-            dtFechaInicio.Format = DateTimePickerFormat.Short;
-            dtFechaInicio.Value = DateTime.Today;
+            ConfigurarFechaIngresoLibre();
 
             _lblVence.AutoSize = false;
             _lblVence.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
@@ -61,6 +60,25 @@ namespace UI.DISEÑO.ESTADO
             Load += FrmAñadirMiembro_Load;
         }
 
+        /// <summary>
+        /// Permite cualquier fecha de ingreso (pasada o futura).
+        /// El vencimiento se calcula con la regla de negocio (ej. 10/08 → 15/09).
+        /// </summary>
+        private void ConfigurarFechaIngresoLibre()
+        {
+            dtFechaInicio.Format = DateTimePickerFormat.Short;
+            dtFechaInicio.ShowCheckBox = false;
+            // Rango amplio: integración de miembros ya pagados con fechas históricas.
+            dtFechaInicio.MinDate = new DateTime(2000, 1, 1);
+            dtFechaInicio.MaxDate = new DateTime(2100, 12, 31);
+            DateTime hoy = DateTime.Today;
+            if (hoy < dtFechaInicio.MinDate)
+                hoy = dtFechaInicio.MinDate;
+            if (hoy > dtFechaInicio.MaxDate)
+                hoy = dtFechaInicio.MaxDate;
+            dtFechaInicio.Value = hoy;
+        }
+
         private void FrmAñadirMiembro_Load(object? sender, EventArgs e)
         {
             if (ThemeHost.IsDesignTime())
@@ -68,6 +86,8 @@ namespace UI.DISEÑO.ESTADO
 
             try
             {
+                // Reaplicar tras ThemeHost (por si el tema tocó el picker).
+                ConfigurarFechaIngresoLibre();
                 CargarPlanes();
                 CargarMiembros();
                 ActualizarVistaVencimiento();

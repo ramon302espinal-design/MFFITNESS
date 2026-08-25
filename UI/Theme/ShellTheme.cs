@@ -234,7 +234,7 @@ namespace UI.Theme
 
         /// <summary>
         /// Asigna el icono de la app al formulario si el archivo existe (sin lanzar excepciones).
-        /// Busca Resources\mf.ico junto al exe (salida de build) y variantes de desarrollo.
+        /// Busca Resources\IMG_1722.ico junto al exe (salida de build) y variantes de desarrollo.
         /// </summary>
         public static void TryApplyFormIcon(Form form)
         {
@@ -244,10 +244,10 @@ namespace UI.Theme
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var paths = new[]
             {
-                Path.Combine(baseDir, "Resources", "mf.ico"),
-                Path.Combine(baseDir, "mf.ico"),
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "Resources", "mf.ico")),
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "mf.ico"))
+                Path.Combine(baseDir, "Resources", "IMG_1722.ico"),
+                Path.Combine(baseDir, "IMG_1722.ico"),
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "Resources", "IMG_1722.ico")),
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "IMG_1722.ico"))
             };
 
             foreach (string path in paths)

@@ -62,6 +62,19 @@ namespace UI.DISEÑO.Controles
             SetValorMedico(lblCirugiasValor, "—", alerta: false);
         }
 
+        /// <summary>
+        /// Actualiza el contador junto a "Eliminar de la app". No afecta ficha ni botones.
+        /// </summary>
+        public void ActualizarTotalMiembros(int total)
+        {
+            if (total < 0)
+                total = 0;
+
+            lblTotalMiembros.Text = total == 1
+                ? "1 MIEMBRO REGISTRADO"
+                : $"{total} MIEMBROS REGISTRADOS";
+        }
+
         public void Mostrar(
             int id,
             string nombre,

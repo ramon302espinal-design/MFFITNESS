@@ -8,7 +8,7 @@
     UpdateManager\UpdateManager.exe   (runtime aislado)
     *.dll (sin .pdb en Release)
     Database/Migrations/*.sql
-    Resources/mf.ico
+    Resources/IMG_1722.ico
 
   Para instalación en esta PC usa Deploy-Pos.ps1 (LocalAppData + acceso directo).
 
@@ -117,21 +117,21 @@ foreach ($path in $required) {
     }
 }
 
-$icoOut = Join-Path $OutputDir 'Resources\mf.ico'
+$icoOut = Join-Path $OutputDir 'Resources\IMG_1722.ico'
 if (!(Test-Path $icoOut)) {
     foreach ($candidate in @(
-            (Join-Path $RepoRoot 'UI\Resources\mf.ico'),
-            (Join-Path $RepoRoot 'mf.ico')
+            (Join-Path $RepoRoot 'UI\Resources\IMG_1722.ico'),
+            (Join-Path $RepoRoot 'IMG_1722.ico')
         )) {
         if (Test-Path $candidate) {
             New-Item -ItemType Directory -Force -Path (Split-Path $icoOut) | Out-Null
             Copy-Item $candidate $icoOut -Force
-            Write-Host "Icono copiado a Resources\mf.ico" -ForegroundColor Yellow
+            Write-Host "Icono copiado a Resources\IMG_1722.ico" -ForegroundColor Yellow
             break
         }
     }
     if (!(Test-Path $icoOut)) {
-        Write-Host "ADVERTENCIA: no se encontró mf.ico." -ForegroundColor Yellow
+        Write-Host "ADVERTENCIA: no se encontró IMG_1722.ico." -ForegroundColor Yellow
     }
 }
 

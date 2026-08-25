@@ -42,6 +42,7 @@ namespace UI.DISEÑO
             lblBuscar = new Label();
             txtBuscar = new TextBox();
             panelAcciones = new Panel();
+            btnAñadirMiembro = new Button();
             btnRenovar = new Button();
             btnDesactivar = new Button();
             btnCongelar = new Button();
@@ -75,7 +76,6 @@ namespace UI.DISEÑO
             lblCTotal = new Label();
             lblMTotal = new Label();
             label4 = new Label();
-            btnAñadirMiembro = new Button();
             panelNav.SuspendLayout();
             panelBusqueda.SuspendLayout();
             panelAcciones.SuspendLayout();
@@ -247,6 +247,18 @@ namespace UI.DISEÑO
             panelAcciones.TabIndex = 3;
             panelAcciones.Tag = "classic";
             // 
+            // btnAñadirMiembro
+            // 
+            btnAñadirMiembro.Anchor = AnchorStyles.None;
+            btnAñadirMiembro.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnAñadirMiembro.Location = new Point(528, 10);
+            btnAñadirMiembro.Name = "btnAñadirMiembro";
+            btnAñadirMiembro.Size = new Size(178, 42);
+            btnAñadirMiembro.TabIndex = 3;
+            btnAñadirMiembro.Text = "AÑADIR MIEMBRO";
+            btnAñadirMiembro.UseVisualStyleBackColor = true;
+            btnAñadirMiembro.Click += btnAñadirMiembro_Click;
+            // 
             // btnRenovar
             // 
             btnRenovar.Anchor = AnchorStyles.None;
@@ -324,7 +336,7 @@ namespace UI.DISEÑO
             // 
             // panel2
             // 
-            panel2.BackColor = Color.Gold;
+            panel2.BackColor = Color.Blue;
             panel2.Controls.Add(lblCMensualidad);
             panel2.Controls.Add(lblMMensualidad);
             panel2.Controls.Add(labelStock);
@@ -334,13 +346,14 @@ namespace UI.DISEÑO
             panel2.Name = "panel2";
             panel2.Size = new Size(249, 140);
             panel2.TabIndex = 64;
+            panel2.Tag = "classic";
             // 
             // lblCMensualidad
             // 
             lblCMensualidad.AutoSize = true;
-            lblCMensualidad.BackColor = Color.Transparent;
+            lblCMensualidad.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblCMensualidad.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCMensualidad.ForeColor = SystemColors.HotTrack;
+            lblCMensualidad.ForeColor = Color.White;
             lblCMensualidad.Location = new Point(2, 36);
             lblCMensualidad.Name = "lblCMensualidad";
             lblCMensualidad.Size = new Size(38, 45);
@@ -350,9 +363,9 @@ namespace UI.DISEÑO
             // lblMMensualidad
             // 
             lblMMensualidad.AutoSize = true;
-            lblMMensualidad.BackColor = Color.Transparent;
+            lblMMensualidad.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblMMensualidad.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMMensualidad.ForeColor = SystemColors.HotTrack;
+            lblMMensualidad.ForeColor = Color.White;
             lblMMensualidad.Location = new Point(1, 81);
             lblMMensualidad.Name = "lblMMensualidad";
             lblMMensualidad.Size = new Size(38, 45);
@@ -362,8 +375,9 @@ namespace UI.DISEÑO
             // labelStock
             // 
             labelStock.AutoSize = true;
+            labelStock.BackColor = Color.FromArgb(0, 0, 0, 0);
             labelStock.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            labelStock.ForeColor = Color.Black;
+            labelStock.ForeColor = Color.White;
             labelStock.Location = new Point(25, 3);
             labelStock.Name = "labelStock";
             labelStock.Size = new Size(196, 35);
@@ -372,7 +386,7 @@ namespace UI.DISEÑO
             // 
             // panel1
             // 
-            panel1.BackColor = Color.Gold;
+            panel1.BackColor = Color.Blue;
             panel1.Controls.Add(lblCPremium);
             panel1.Controls.Add(lblMPremium);
             panel1.Controls.Add(label3);
@@ -382,13 +396,14 @@ namespace UI.DISEÑO
             panel1.Name = "panel1";
             panel1.Size = new Size(249, 140);
             panel1.TabIndex = 65;
+            panel1.Tag = "classic";
             // 
             // lblCPremium
             // 
             lblCPremium.AutoSize = true;
-            lblCPremium.BackColor = Color.Transparent;
+            lblCPremium.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblCPremium.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCPremium.ForeColor = SystemColors.HotTrack;
+            lblCPremium.ForeColor = Color.White;
             lblCPremium.Location = new Point(2, 36);
             lblCPremium.Name = "lblCPremium";
             lblCPremium.Size = new Size(38, 45);
@@ -398,9 +413,9 @@ namespace UI.DISEÑO
             // lblMPremium
             // 
             lblMPremium.AutoSize = true;
-            lblMPremium.BackColor = Color.Transparent;
+            lblMPremium.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblMPremium.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMPremium.ForeColor = SystemColors.HotTrack;
+            lblMPremium.ForeColor = Color.White;
             lblMPremium.Location = new Point(1, 81);
             lblMPremium.Name = "lblMPremium";
             lblMPremium.Size = new Size(38, 45);
@@ -410,8 +425,9 @@ namespace UI.DISEÑO
             // label3
             // 
             label3.AutoSize = true;
+            label3.BackColor = Color.FromArgb(0, 0, 0, 0);
             label3.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label3.ForeColor = Color.Black;
+            label3.ForeColor = Color.White;
             label3.Location = new Point(55, 4);
             label3.Name = "label3";
             label3.Size = new Size(133, 35);
@@ -420,7 +436,7 @@ namespace UI.DISEÑO
             // 
             // panel3
             // 
-            panel3.BackColor = Color.Gold;
+            panel3.BackColor = Color.Blue;
             panel3.Controls.Add(lblCPro);
             panel3.Controls.Add(lblMPro);
             panel3.Controls.Add(label6);
@@ -430,13 +446,14 @@ namespace UI.DISEÑO
             panel3.Name = "panel3";
             panel3.Size = new Size(249, 140);
             panel3.TabIndex = 67;
+            panel3.Tag = "classic";
             // 
             // lblCPro
             // 
             lblCPro.AutoSize = true;
-            lblCPro.BackColor = Color.Transparent;
+            lblCPro.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblCPro.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCPro.ForeColor = SystemColors.HotTrack;
+            lblCPro.ForeColor = Color.White;
             lblCPro.Location = new Point(2, 36);
             lblCPro.Name = "lblCPro";
             lblCPro.Size = new Size(38, 45);
@@ -446,9 +463,9 @@ namespace UI.DISEÑO
             // lblMPro
             // 
             lblMPro.AutoSize = true;
-            lblMPro.BackColor = Color.Transparent;
+            lblMPro.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblMPro.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMPro.ForeColor = SystemColors.HotTrack;
+            lblMPro.ForeColor = Color.White;
             lblMPro.Location = new Point(1, 81);
             lblMPro.Name = "lblMPro";
             lblMPro.Size = new Size(38, 45);
@@ -458,8 +475,9 @@ namespace UI.DISEÑO
             // label6
             // 
             label6.AutoSize = true;
+            label6.BackColor = Color.FromArgb(0, 0, 0, 0);
             label6.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label6.ForeColor = Color.Black;
+            label6.ForeColor = Color.White;
             label6.Location = new Point(85, 5);
             label6.Name = "label6";
             label6.Size = new Size(65, 35);
@@ -468,7 +486,7 @@ namespace UI.DISEÑO
             // 
             // panel4
             // 
-            panel4.BackColor = Color.Gold;
+            panel4.BackColor = Color.Blue;
             panel4.Controls.Add(lblC3x);
             panel4.Controls.Add(lblM3x);
             panel4.Controls.Add(label9);
@@ -478,13 +496,14 @@ namespace UI.DISEÑO
             panel4.Name = "panel4";
             panel4.Size = new Size(249, 140);
             panel4.TabIndex = 66;
+            panel4.Tag = "classic";
             // 
             // lblC3x
             // 
             lblC3x.AutoSize = true;
-            lblC3x.BackColor = Color.Transparent;
+            lblC3x.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblC3x.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblC3x.ForeColor = SystemColors.HotTrack;
+            lblC3x.ForeColor = Color.White;
             lblC3x.Location = new Point(2, 36);
             lblC3x.Name = "lblC3x";
             lblC3x.Size = new Size(38, 45);
@@ -494,9 +513,9 @@ namespace UI.DISEÑO
             // lblM3x
             // 
             lblM3x.AutoSize = true;
-            lblM3x.BackColor = Color.Transparent;
+            lblM3x.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblM3x.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblM3x.ForeColor = SystemColors.HotTrack;
+            lblM3x.ForeColor = Color.White;
             lblM3x.Location = new Point(1, 81);
             lblM3x.Name = "lblM3x";
             lblM3x.Size = new Size(38, 45);
@@ -506,8 +525,9 @@ namespace UI.DISEÑO
             // label9
             // 
             label9.AutoSize = true;
+            label9.BackColor = Color.FromArgb(0, 0, 0, 0);
             label9.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label9.ForeColor = Color.Black;
+            label9.ForeColor = Color.White;
             label9.Location = new Point(94, 3);
             label9.Name = "label9";
             label9.Size = new Size(43, 35);
@@ -516,7 +536,7 @@ namespace UI.DISEÑO
             // 
             // panel5
             // 
-            panel5.BackColor = Color.Gold;
+            panel5.BackColor = Color.Blue;
             panel5.Controls.Add(label10);
             panel5.Controls.Add(lbl);
             panel5.Controls.Add(label12);
@@ -526,13 +546,15 @@ namespace UI.DISEÑO
             panel5.Name = "panel5";
             panel5.Size = new Size(278, 140);
             panel5.TabIndex = 68;
+            panel5.Tag = "classic";
             // 
             // label10
             // 
             label10.AutoSize = true;
-            label10.BackColor = Color.Transparent;
+            label10.BackColor = Color.FromArgb(0, 0, 0, 0);
+            label10.FlatStyle = FlatStyle.Flat;
             label10.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            label10.ForeColor = SystemColors.HotTrack;
+            label10.ForeColor = Color.White;
             label10.Location = new Point(2, 36);
             label10.Name = "label10";
             label10.Size = new Size(38, 45);
@@ -542,9 +564,9 @@ namespace UI.DISEÑO
             // lbl
             // 
             lbl.AutoSize = true;
-            lbl.BackColor = Color.Transparent;
+            lbl.BackColor = Color.FromArgb(0, 0, 0, 0);
             lbl.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lbl.ForeColor = SystemColors.HotTrack;
+            lbl.ForeColor = Color.White;
             lbl.Location = new Point(1, 81);
             lbl.Name = "lbl";
             lbl.Size = new Size(38, 45);
@@ -554,8 +576,9 @@ namespace UI.DISEÑO
             // label12
             // 
             label12.AutoSize = true;
+            label12.BackColor = Color.FromArgb(0, 0, 0, 0);
             label12.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label12.ForeColor = Color.Black;
+            label12.ForeColor = Color.White;
             label12.Location = new Point(25, 5);
             label12.Name = "label12";
             label12.Size = new Size(236, 35);
@@ -564,7 +587,7 @@ namespace UI.DISEÑO
             // 
             // panel6
             // 
-            panel6.BackColor = Color.Gold;
+            panel6.BackColor = Color.Blue;
             panel6.Controls.Add(label13);
             panel6.Controls.Add(label14);
             panel6.Controls.Add(label15);
@@ -574,13 +597,14 @@ namespace UI.DISEÑO
             panel6.Name = "panel6";
             panel6.Size = new Size(278, 140);
             panel6.TabIndex = 69;
+            panel6.Tag = "classic";
             // 
             // label13
             // 
             label13.AutoSize = true;
-            label13.BackColor = Color.Transparent;
+            label13.BackColor = Color.FromArgb(0, 0, 0, 0);
             label13.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            label13.ForeColor = SystemColors.HotTrack;
+            label13.ForeColor = Color.White;
             label13.Location = new Point(2, 36);
             label13.Name = "label13";
             label13.Size = new Size(38, 45);
@@ -590,9 +614,9 @@ namespace UI.DISEÑO
             // label14
             // 
             label14.AutoSize = true;
-            label14.BackColor = Color.Transparent;
+            label14.BackColor = Color.FromArgb(0, 0, 0, 0);
             label14.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            label14.ForeColor = SystemColors.HotTrack;
+            label14.ForeColor = Color.White;
             label14.Location = new Point(1, 81);
             label14.Name = "label14";
             label14.Size = new Size(38, 45);
@@ -602,8 +626,9 @@ namespace UI.DISEÑO
             // label15
             // 
             label15.AutoSize = true;
+            label15.BackColor = Color.FromArgb(0, 0, 0, 0);
             label15.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label15.ForeColor = Color.Black;
+            label15.ForeColor = Color.White;
             label15.Location = new Point(21, 5);
             label15.Name = "label15";
             label15.Size = new Size(234, 35);
@@ -612,7 +637,7 @@ namespace UI.DISEÑO
             // 
             // panel7
             // 
-            panel7.BackColor = Color.Gold;
+            panel7.BackColor = Color.Blue;
             panel7.Controls.Add(lblCTotal);
             panel7.Controls.Add(lblMTotal);
             panel7.Controls.Add(label4);
@@ -622,13 +647,14 @@ namespace UI.DISEÑO
             panel7.Name = "panel7";
             panel7.Size = new Size(278, 140);
             panel7.TabIndex = 69;
+            panel7.Tag = "classic";
             // 
             // lblCTotal
             // 
             lblCTotal.AutoSize = true;
-            lblCTotal.BackColor = Color.Transparent;
+            lblCTotal.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblCTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCTotal.ForeColor = SystemColors.HotTrack;
+            lblCTotal.ForeColor = Color.White;
             lblCTotal.Location = new Point(2, 36);
             lblCTotal.Name = "lblCTotal";
             lblCTotal.Size = new Size(38, 45);
@@ -638,9 +664,9 @@ namespace UI.DISEÑO
             // lblMTotal
             // 
             lblMTotal.AutoSize = true;
-            lblMTotal.BackColor = Color.Transparent;
+            lblMTotal.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblMTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMTotal.ForeColor = SystemColors.HotTrack;
+            lblMTotal.ForeColor = Color.White;
             lblMTotal.Location = new Point(1, 81);
             lblMTotal.Name = "lblMTotal";
             lblMTotal.Size = new Size(38, 45);
@@ -650,26 +676,14 @@ namespace UI.DISEÑO
             // label4
             // 
             label4.AutoSize = true;
+            label4.BackColor = Color.FromArgb(0, 0, 0, 0);
             label4.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label4.ForeColor = Color.Black;
+            label4.ForeColor = Color.White;
             label4.Location = new Point(25, 5);
             label4.Name = "label4";
             label4.Size = new Size(91, 35);
             label4.TabIndex = 60;
             label4.Text = "TOTAL";
-            // 
-            // btnAñadirMiembro
-            // 
-            btnAñadirMiembro.Anchor = AnchorStyles.None;
-            btnAñadirMiembro.Enabled = true;
-            btnAñadirMiembro.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnAñadirMiembro.Location = new Point(528, 10);
-            btnAñadirMiembro.Name = "btnAñadirMiembro";
-            btnAñadirMiembro.Size = new Size(178, 42);
-            btnAñadirMiembro.TabIndex = 3;
-            btnAñadirMiembro.Text = "AÑADIR MIEMBRO";
-            btnAñadirMiembro.UseVisualStyleBackColor = true;
-            btnAñadirMiembro.Click += btnAñadirMiembro_Click;
             // 
             // FrmEstadoClientes
             // 

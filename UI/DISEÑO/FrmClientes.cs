@@ -311,6 +311,7 @@ namespace UI.DISEÑO
 
             _bsClientes.DataSource = service.ObtenerClientes();
             AplicarFiltroBusqueda();
+            ActualizarTotalMiembrosRegistrados();
 
             if (dgvClientes.Columns.Contains("Sexo"))
                 dgvClientes.Columns["Sexo"].Visible = false;
@@ -323,6 +324,19 @@ namespace UI.DISEÑO
 
             dgvClientes.ClearSelection();
             LimpiarFormularioEdicion();
+        }
+
+        private void ActualizarTotalMiembrosRegistrados()
+        {
+            int total = 0;
+            if (_bsClientes.DataSource is System.Data.DataTable dt)
+                total = dt.Rows.Count;
+            else if (_bsClientes.DataSource is System.Data.DataView dv)
+                total = dv.Table?.Rows.Count ?? 0;
+            else if (_bsClientes.List != null)
+                total = _bsClientes.List.Count;
+
+            ucFichaResumen.ActualizarTotalMiembros(total);
         }
 
         private void AplicarFiltroBusqueda()

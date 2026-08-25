@@ -47,7 +47,10 @@
             // 
             // dtFechaInicio
             // 
+            dtFechaInicio.Format = DateTimePickerFormat.Short;
             dtFechaInicio.Location = new Point(172, 172);
+            dtFechaInicio.MinDate = new DateTime(2000, 1, 1);
+            dtFechaInicio.MaxDate = new DateTime(2100, 12, 31);
             dtFechaInicio.Name = "dtFechaInicio";
             dtFechaInicio.Size = new Size(307, 27);
             dtFechaInicio.TabIndex = 1;

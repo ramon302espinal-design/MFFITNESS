@@ -13,7 +13,7 @@
 		<AssemblyName>UI</AssemblyName>
 
 		<!-- Icono embebido en el .exe (Explorador / acceso directo). -->
-		<ApplicationIcon>Resources\mf.ico</ApplicationIcon>
+		<ApplicationIcon>Resources\IMG_1722.ico</ApplicationIcon>
 
 		<!-- Metadatos comerciales (Propiedades del archivo en Windows). -->
 		<AssemblyTitle>MFFITNESS</AssemblyTitle>
@@ -51,8 +51,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- Copia mf.ico a output\Resources\ para carga dinámica segura en formularios. -->
-		<None Update="Resources\mf.ico">
+		<!-- Copia IMG_1722.ico a output\Resources\ para carga dinámica segura en formularios. -->
+		<None Update="Resources\IMG_1722.ico">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Resources\mf_logo.png">

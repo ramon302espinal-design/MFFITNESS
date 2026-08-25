@@ -42,7 +42,7 @@ $InstallDir = [System.IO.Path]::GetFullPath($InstallDir)
 $publishScript = Join-Path $PSScriptRoot 'Publish-Pos.ps1'
 $desk = [Environment]::GetFolderPath('Desktop')
 $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-$icoRel = 'Resources\mf.ico'
+$icoRel = 'Resources\IMG_1722.ico'
 
 Write-Host "=== MFFITNESS Deploy-Pos ===" -ForegroundColor Cyan
 Write-Host "Install: $InstallDir"

@@ -16,6 +16,7 @@ namespace UI.DISEÑO.Controles
         private void InitializeComponent()
         {
             panelAcciones = new Panel();
+            lblTotalMiembros = new Label();
             btnEliminarMiembro = new Button();
             btnEditarInformacion = new Button();
             grpDatosGenerales = new GroupBox();
@@ -72,6 +73,7 @@ namespace UI.DISEÑO.Controles
             // panelAcciones
             // 
             panelAcciones.BackColor = Color.White;
+            panelAcciones.Controls.Add(lblTotalMiembros);
             panelAcciones.Controls.Add(btnEliminarMiembro);
             panelAcciones.Controls.Add(btnEditarInformacion);
             panelAcciones.Dock = DockStyle.Top;
@@ -108,6 +110,17 @@ namespace UI.DISEÑO.Controles
             btnEliminarMiembro.TabIndex = 1;
             btnEliminarMiembro.Text = "Eliminar de la app";
             btnEliminarMiembro.UseVisualStyleBackColor = false;
+            // 
+            // lblTotalMiembros
+            // 
+            lblTotalMiembros.AutoSize = true;
+            lblTotalMiembros.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblTotalMiembros.ForeColor = Color.FromArgb(15, 23, 42);
+            lblTotalMiembros.Location = new Point(464, 14);
+            lblTotalMiembros.Name = "lblTotalMiembros";
+            lblTotalMiembros.Size = new Size(236, 25);
+            lblTotalMiembros.TabIndex = 2;
+            lblTotalMiembros.Text = "0 MIEMBROS REGISTRADOS";
             // 
             // grpDatosGenerales
             // 
@@ -674,6 +687,7 @@ namespace UI.DISEÑO.Controles
         private Panel panelAcciones;
         private Button btnEditarInformacion;
         private Button btnEliminarMiembro;
+        private Label lblTotalMiembros;
         private GroupBox grpDatosGenerales;
         private Label lblCapId;
         private Label lblIdValor;
