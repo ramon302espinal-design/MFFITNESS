@@ -90,7 +90,7 @@ namespace DL
                 CASE
                     WHEN h.TipoMovimiento IN ('SALIDA', 'BAJA_VENCIDO') THEN NULL
                     WHEN mem.FechaFin IS NOT NULL THEN CAST(mem.FechaFin AS DATE)
-                    WHEN h.PlanId IS NOT NULL OR h.TipoMovimiento IN ('PAGO', 'RENOVACION') THEN
+                    WHEN h.PlanId IS NOT NULL OR h.TipoMovimiento IN ('PAGO', 'RENOVACION', 'ALTA_EXISTENTE', 'AJUSTE_FECHA') THEN
                         CASE
                             WHEN DAY(h.Fecha) <= 19 THEN
                                 DATEFROMPARTS(

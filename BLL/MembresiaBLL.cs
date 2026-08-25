@@ -205,6 +205,67 @@ namespace BLL
             return (fechaAnterior, fechaNueva);
         }
 
+        /// <summary>
+        /// Integra un miembro que ya pagó fuera de la app: crea membresía + historial
+        /// sin movimiento de caja ni pago. FechaFin según regla de negocio desde fechaInicio.
+        /// </summary>
+        public MembresiaOperacionResult RegistrarMiembroYaPagado(
+            int clienteId,
+            int planId,
+            DateTime fechaInicio,
+            string? usuario = null)
+        {
+            if (clienteId <= 0)
+                throw new Exception("Seleccione un miembro válido.");
+            if (planId <= 0)
+                throw new Exception("Seleccione un plan válido.");
+
+            if (string.IsNullOrWhiteSpace(usuario))
+                usuario = string.IsNullOrWhiteSpace(Sesion.Usuario) ? "ADMIN" : Sesion.Usuario;
+
+            string estado = clienteDAL.ObtenerEstadoMembresia(clienteId);
+            if (string.Equals(estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("El miembro ya está ACTIVO. No se puede volver a integrar.");
+            if (string.Equals(estado, "CONGELADO", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("El miembro está CONGELADO. Actívelo primero o use el flujo de congelación.");
+
+            var plan = planDAL.ObtenerPlan(planId)
+                ?? throw new Exception("Plan no encontrado.");
+
+            DateTime inicio = fechaInicio.Date;
+            DateTime fin = MembresiaHelper.CalcularFechaVencimiento(inicio);
+            if (fin < inicio)
+                throw new Exception("La fecha de vencimiento calculada no es válida.");
+
+            // Precio de catálogo solo para KPI/historial de plan; NO se registra en caja.
+            int membresiaId = dal.RegistrarMembresiaConId(
+                clienteId,
+                planId,
+                plan.Precio,
+                inicio,
+                fin,
+                usuario,
+                "Integración");
+
+            new CongelacionDAL().CerrarActiva(clienteId, DateTime.Today);
+
+            new HistorialMembresiaDAL().Insertar(
+                clienteId,
+                "ALTA_EXISTENTE",
+                planId,
+                null,
+                usuario,
+                $"Integración sin cobro. Plan {plan.Nombre}. Vence {fin:dd/MM/yyyy}.");
+
+            return new MembresiaOperacionResult
+            {
+                MembresiaId = membresiaId,
+                PagoId = 0,
+                CajaMovimientoId = 0,
+                FechaFinMembresia = fin
+            };
+        }
+
         // ===============================
         // CREAR MEMBRESÍA
         // ===============================

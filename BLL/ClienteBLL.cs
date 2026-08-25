@@ -17,6 +17,12 @@ namespace BLL
             return clienteDAL.ListarClientes();
         }
 
+        /// <summary>Clientes elegibles para alta sin cobro (excluye ACTIVO).</summary>
+        public DataTable ObtenerClientesNoActivos()
+        {
+            return clienteDAL.ListarClientesNoActivos();
+        }
+
         public int AgregarConId(string nombre, DateTime fechaNacimiento,
                             string direccion, string telefono, string? sexo = null)
         {

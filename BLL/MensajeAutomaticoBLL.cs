@@ -383,6 +383,20 @@ namespace BLL
             });
         }
 
+        /// <summary>Aviso de integración de miembro ya pagado. Sin monto.</summary>
+        public bool EnviarMensajeAltaMiembroExistente(
+            int clienteId,
+            string nombrePlan,
+            DateTime fechaVencimiento,
+            int? membresiaId = null)
+        {
+            return EnviarMensajeTemplado(clienteId, "ALTA_MIEMBRO_EXISTENTE", new Dictionary<string, string>
+            {
+                ["PLAN"] = string.IsNullOrWhiteSpace(nombrePlan) ? "membresía" : nombrePlan.Trim(),
+                ["FECHA_VENCE"] = fechaVencimiento.ToString("dd/MM/yyyy")
+            }, membresiaId);
+        }
+
         /// <summary>Aviso de membresía cobrada con oferta/descuento.</summary>
         public bool EnviarMensajeOfertaMembresia(
             int clienteId,
@@ -990,6 +1004,7 @@ namespace BLL
             "CONGELACION_MEMBRESIA" => "Membresia congelada",
             "DESCONGELACION_MEMBRESIA" => "Membresia reactivada",
             "OFERTA_MEMBRESIA" => "Oferta de membresia aplicada",
+            "ALTA_MIEMBRO_EXISTENTE" => "Actualizacion de membresia registrada",
             _ => "Actualizacion de cuenta"
         };
 

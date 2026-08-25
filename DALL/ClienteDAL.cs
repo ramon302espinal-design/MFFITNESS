@@ -41,6 +41,25 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
             return db.ExecuteQuery(query);
         }
 
+        /// <summary>
+        /// Clientes del catálogo excepto los que ya están ACTIVO (SSOT Estado).
+        /// Usado para integrar miembros ya pagados fuera de la app.
+        /// </summary>
+        public DataTable ListarClientesNoActivos()
+        {
+            EnsureSexoColumn();
+            new CongelacionDAL().EnsureSchema();
+
+            string query = $@"
+                SELECT c.ID AS Id, c.Nombre
+                FROM dbo.Clientes c
+                {MembresiaEstadoSql.OuterApplyUltimaMembresia}
+                WHERE ({MembresiaEstadoSql.CasoEstado}) <> 'ACTIVO'
+                ORDER BY c.Nombre";
+
+            return db.ExecuteQuery(query);
+        }
+
         public int InsertarCliente(string nombre, DateTime fechaNacimiento,
                                      string direccion, string telefono, string? sexo = null)
         {

@@ -679,6 +679,28 @@ namespace UI.DISEÑO
         // ===============================
         // RENOVAR CLIENTE
         // ===============================
+        private void btnAñadirMiembro_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using var frm = new UI.DISEÑO.ESTADO.FrmAñadirMiembro();
+                frm.ShowDialog(this);
+                if (frm.CambioRealizado)
+                {
+                    CargarEstado();
+                    _presentacion?.CargarDashboard();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "Error al abrir Añadir miembro: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
         private void btnRenovar_Click(object sender, EventArgs e)
         {
             try

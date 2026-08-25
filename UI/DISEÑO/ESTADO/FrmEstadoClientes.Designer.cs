@@ -75,6 +75,7 @@ namespace UI.DISEÑO
             lblCTotal = new Label();
             lblMTotal = new Label();
             label4 = new Label();
+            btnAñadirMiembro = new Button();
             panelNav.SuspendLayout();
             panelBusqueda.SuspendLayout();
             panelAcciones.SuspendLayout();
@@ -234,6 +235,7 @@ namespace UI.DISEÑO
             // 
             // panelAcciones
             // 
+            panelAcciones.Controls.Add(btnAñadirMiembro);
             panelAcciones.Controls.Add(btnRenovar);
             panelAcciones.Controls.Add(btnDesactivar);
             panelAcciones.Controls.Add(btnCongelar);
@@ -656,6 +658,19 @@ namespace UI.DISEÑO
             label4.TabIndex = 60;
             label4.Text = "TOTAL";
             // 
+            // btnAñadirMiembro
+            // 
+            btnAñadirMiembro.Anchor = AnchorStyles.None;
+            btnAñadirMiembro.Enabled = true;
+            btnAñadirMiembro.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnAñadirMiembro.Location = new Point(528, 10);
+            btnAñadirMiembro.Name = "btnAñadirMiembro";
+            btnAñadirMiembro.Size = new Size(178, 42);
+            btnAñadirMiembro.TabIndex = 3;
+            btnAñadirMiembro.Text = "AÑADIR MIEMBRO";
+            btnAñadirMiembro.UseVisualStyleBackColor = true;
+            btnAñadirMiembro.Click += btnAñadirMiembro_Click;
+            // 
             // FrmEstadoClientes
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
@@ -748,5 +763,6 @@ namespace UI.DISEÑO
         private Label lblCTotal;
         private Label lblMTotal;
         private Label label4;
+        private Button btnAñadirMiembro;
     }
 }
