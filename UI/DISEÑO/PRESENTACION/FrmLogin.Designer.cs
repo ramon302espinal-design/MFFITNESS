@@ -151,7 +151,7 @@
             lblVersion.Name = "lblVersion";
             lblVersion.Size = new Size(114, 20);
             lblVersion.TabIndex = 6;
-            lblVersion.Text = "MFFITNESS POS";
+            lblVersion.Text = "VERSION 1.1.10";
             lblVersion.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // lblUsuario

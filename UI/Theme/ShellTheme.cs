@@ -213,14 +213,36 @@ namespace UI.Theme
 
         public static Image? LoadLogo()
         {
-            var paths = new[]
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var icoPaths = new[]
             {
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "mf_logo.png"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mf_logo.png"),
-                Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Resources", "mf_logo.png"))
+                Path.Combine(baseDir, "Resources", "IMG_1722.ico"),
+                Path.Combine(baseDir, "IMG_1722.ico"),
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "Resources", "IMG_1722.ico")),
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "IMG_1722.ico"))
             };
 
-            foreach (var path in paths)
+            foreach (string path in icoPaths)
+            {
+                if (!File.Exists(path))
+                    continue;
+
+                try
+                {
+                    using var icon = new Icon(path);
+                    return icon.ToBitmap();
+                }
+                catch { /* ignore */ }
+            }
+
+            var pngPaths = new[]
+            {
+                Path.Combine(baseDir, "Resources", "mf_logo.png"),
+                Path.Combine(baseDir, "mf_logo.png"),
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "Resources", "mf_logo.png"))
+            };
+
+            foreach (var path in pngPaths)
             {
                 if (File.Exists(path))
                 {

@@ -90,7 +90,7 @@ namespace UI.DISEÑO
         {
             this.AcceptButton = btnIniciar;
             this.ActiveControl = comboUsuarios;
-            lblVersion.Text = $"Versión {AppVersion.SemanticVersion}  ·  Build {AppVersion.Build}";
+            lblVersion.Text = $"VERSION {AppVersion.SemanticVersion}";
             lblVersion.TextAlign = ContentAlignment.MiddleCenter;
             chkMostrarContraseña.Checked = false;
             ActualizarVisibilidadContraseña();
