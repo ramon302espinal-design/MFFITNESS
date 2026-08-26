@@ -43,7 +43,10 @@ namespace UI.DISEÑO
             {
                 lblMF.Text = "";
                 lblFitness.Text = "";
+                var previous = picLoginLogo.Image;
+                picLoginLogo.SizeMode = PictureBoxSizeMode.Zoom;
                 picLoginLogo.Image = logo;
+                previous?.Dispose();
             }
 
             ThemeApplier.StyleTextBox(txtContraseña);

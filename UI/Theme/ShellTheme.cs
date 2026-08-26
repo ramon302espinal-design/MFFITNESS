@@ -229,8 +229,11 @@ namespace UI.Theme
 
                 try
                 {
-                    using var icon = new Icon(path);
-                    return icon.ToBitmap();
+                    // new Icon(path) carga 32x32 por defecto → pixelado en Zoom.
+                    // Extraemos el frame más grande del .ico (p. ej. 256x256 PNG).
+                    Image? best = ExtractLargestIconImage(path);
+                    if (best != null)
+                        return best;
                 }
                 catch { /* ignore */ }
             }
@@ -252,6 +255,77 @@ namespace UI.Theme
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Lee el directorio del .ico y decodifica la imagen de mayor resolución
+        /// (PNG embebido o bitmap). Evita el 32×32 por defecto de System.Drawing.Icon.
+        /// </summary>
+        private static Image? ExtractLargestIconImage(string icoPath)
+        {
+            byte[] data = File.ReadAllBytes(icoPath);
+            if (data.Length < 6)
+                return null;
+
+            ushort type = BitConverter.ToUInt16(data, 2);
+            ushort count = BitConverter.ToUInt16(data, 4);
+            if (type != 1 || count == 0)
+                return null;
+
+            int bestArea = -1;
+            int bestOffset = 0;
+            int bestSize = 0;
+            int bestW = 0;
+            int bestH = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                int entry = 6 + (i * 16);
+                if (entry + 16 > data.Length)
+                    break;
+
+                int w = data[entry] == 0 ? 256 : data[entry];
+                int h = data[entry + 1] == 0 ? 256 : data[entry + 1];
+                int size = BitConverter.ToInt32(data, entry + 8);
+                int offset = BitConverter.ToInt32(data, entry + 12);
+                int area = w * h;
+
+                if (area <= bestArea || size <= 0 || offset < 0 || offset + size > data.Length)
+                    continue;
+
+                bestArea = area;
+                bestOffset = offset;
+                bestSize = size;
+                bestW = w;
+                bestH = h;
+            }
+
+            if (bestArea <= 0)
+                return null;
+
+            // Vista+ ICO: payload PNG (firma 89 50 4E 47).
+            if (bestSize >= 8
+                && data[bestOffset] == 0x89
+                && data[bestOffset + 1] == 0x50
+                && data[bestOffset + 2] == 0x4E
+                && data[bestOffset + 3] == 0x47)
+            {
+                using var ms = new MemoryStream(data, bestOffset, bestSize, writable: false);
+                using var decoded = Image.FromStream(ms);
+                return new Bitmap(decoded);
+            }
+
+            // Fallback GDI: pedir el tamaño del mejor entry (puede bajar a 128).
+            try
+            {
+                using var icon = new Icon(icoPath, bestW, bestH);
+                return icon.ToBitmap();
+            }
+            catch
+            {
+                using var icon = new Icon(icoPath);
+                return icon.ToBitmap();
+            }
         }
 
         /// <summary>

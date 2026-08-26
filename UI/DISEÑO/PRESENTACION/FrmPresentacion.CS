@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using CORE;
+using CORE.Update;
 using UI.Helpers;
 using UI.Theme;
 
@@ -520,15 +521,33 @@ namespace UI.DISEÑO
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // Alt+F4 / X: misma regla — no se cierra el programa con caja abierta.
+            // OTA / UpdateManager: salir completo sin validar caja.
+            if (UpdateExitSignal.ForceExitRequested
+                || e.CloseReason == CloseReason.ApplicationExitCall
+                || e.CloseReason == CloseReason.WindowsShutDown
+                || e.CloseReason == CloseReason.TaskManagerClosing)
+            {
+                base.OnFormClosing(e);
+                return;
+            }
+
+            // Alt+F4 / X / CloseMainWindow (OTA): no dejar FrmLogin oculto vivo.
             if (e.CloseReason == CloseReason.UserClosing
                 && Sesion.Activa
-                && Visible
-                && new CajaBLL().ObtenerEstadoCaja())
+                && Visible)
             {
+                if (new CajaBLL().ObtenerEstadoCaja())
+                {
+                    e.Cancel = true;
+                    if (PuedeSalirTrasValidarCaja())
+                        RealizarSalidaALogin();
+                    return;
+                }
+
+                // Caja cerrada: salir de toda la aplicación (Login oculto no debe mantener UI.exe).
                 e.Cancel = true;
-                if (PuedeSalirTrasValidarCaja())
-                    RealizarSalidaALogin();
+                Sesion.CerrarSesion();
+                Application.Exit();
                 return;
             }
 

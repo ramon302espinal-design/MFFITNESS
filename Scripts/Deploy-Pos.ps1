@@ -93,7 +93,7 @@ function New-AppShortcut {
     $s = $w.CreateShortcut($LinkPath)
     $s.TargetPath = $Target
     $s.WorkingDirectory = $WorkDir
-    if (Test-Path $IconPath) {
+    if ($IconPath -and (Test-Path $IconPath)) {
         $s.IconLocation = "$IconPath,0"
     }
     $s.Description = $Description
@@ -101,13 +101,15 @@ function New-AppShortcut {
 }
 
 # Escritorio / Inicio → launcher (Production), no UI.exe directo.
+# Icono: UI.exe embebido (IMG_1722) para que el Escritorio refleje el icono del despliegue.
 $deskLnk = Join-Path $desk 'MFFITNESS.lnk'
-New-AppShortcut -LinkPath $deskLnk -Target $launcher -WorkDir $InstallDir -IconPath $ico -Description 'MFFITNESS POS ([MF CYBER DB])'
-Write-Host "Acceso directo Escritorio: $deskLnk" -ForegroundColor Green
+$iconForShortcut = if (Test-Path $exe) { $exe } elseif (Test-Path $ico) { $ico } else { $null }
+New-AppShortcut -LinkPath $deskLnk -Target $launcher -WorkDir $InstallDir -IconPath $iconForShortcut -Description 'MFFITNESS POS ([MF CYBER DB])'
+Write-Host "Acceso directo Escritorio: $deskLnk (icono: $iconForShortcut)" -ForegroundColor Green
 
 New-Item -ItemType Directory -Force -Path $startMenu | Out-Null
 $startLnk = Join-Path $startMenu 'MFFITNESS.lnk'
-New-AppShortcut -LinkPath $startLnk -Target $launcher -WorkDir $InstallDir -IconPath $ico -Description 'MFFITNESS POS ([MF CYBER DB])'
+New-AppShortcut -LinkPath $startLnk -Target $launcher -WorkDir $InstallDir -IconPath $iconForShortcut -Description 'MFFITNESS POS ([MF CYBER DB])'
 Write-Host "Acceso directo Inicio:     $startLnk" -ForegroundColor Green
 
 # Limpiar anti-patrón: app completa en Escritorio/OneDrive

@@ -151,7 +151,7 @@
             lblVersion.Name = "lblVersion";
             lblVersion.Size = new Size(114, 20);
             lblVersion.TabIndex = 6;
-            lblVersion.Text = "VERSION 1.1.10";
+            lblVersion.Text = "VERSION 1.1.12";
             lblVersion.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // lblUsuario

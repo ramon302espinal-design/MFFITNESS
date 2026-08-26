@@ -43,6 +43,32 @@ namespace UI.DISEÑO
             picProductoPos = new PictureBox();
             tabProductos = new TabControl();
             tabPago = new TabPage();
+            pnlPausarVentas = new Panel();
+            btnCerrarPnlPausa = new Button();
+            lblAsignarPausa = new Label();
+            cmbClientePausarVenta = new ComboBox();
+            lblMiembrosPausados = new Label();
+            cmbMiembroPausados = new ComboBox();
+            lblNombrePausaVenta = new Label();
+            dgvPausaVentas = new DataGridView();
+            lblTotalPausaTitulo = new Label();
+            lblTotalPausaVenta = new Label();
+            btnDespausar = new Button();
+            panelFinanciamientoProducto = new Panel();
+            lblConceptoProductoFin = new Label();
+            txtProducto = new TextBox();
+            lblMiembroDebe = new Label();
+            cbmMiembroDebe = new ComboBox();
+            lblPagoInicioProducto = new Label();
+            txtPagoInicioProducto = new TextBox();
+            lblSaldoProductoTitulo = new Label();
+            lblSaldoRestanteProducto = new Label();
+            lblFechaVenceProducto = new Label();
+            dtpVenceDeudaProducto = new DateTimePicker();
+            btnGuardarDeudaProducto = new Button();
+            btnCerrarFinProducto = new Button();
+            chkPausarVenta = new CheckBox();
+            btnFinanciamiento = new Button();
             btnLimpiarCarrito = new Button();
             lblTotal = new Label();
             label6 = new Label();
@@ -74,9 +100,13 @@ namespace UI.DISEÑO
             btnNavCaja = new Button();
             btnNavEstado = new Button();
             btnNavDeudas = new Button();
+            label4 = new Label();
             ((System.ComponentModel.ISupportInitialize)picProductoPos).BeginInit();
             tabProductos.SuspendLayout();
             tabPago.SuspendLayout();
+            pnlPausarVentas.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvPausaVentas).BeginInit();
+            panelFinanciamientoProducto.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCarrito).BeginInit();
             tabMembresia.SuspendLayout();
             pnlOferta.SuspendLayout();
@@ -169,20 +199,20 @@ namespace UI.DISEÑO
             // lblBuscarProducto
             // 
             lblBuscarProducto.AutoSize = true;
-            lblBuscarProducto.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            lblBuscarProducto.Location = new Point(766, 289);
+            lblBuscarProducto.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            lblBuscarProducto.Location = new Point(251, 419);
             lblBuscarProducto.Name = "lblBuscarProducto";
-            lblBuscarProducto.Size = new Size(101, 28);
+            lblBuscarProducto.Size = new Size(148, 41);
             lblBuscarProducto.TabIndex = 28;
             lblBuscarProducto.Text = "Escanear:";
             // 
             // txtBuscarProducto
             // 
             txtBuscarProducto.Font = new Font("Segoe UI", 12F);
-            txtBuscarProducto.Location = new Point(846, 287);
+            txtBuscarProducto.Location = new Point(743, 426);
             txtBuscarProducto.Name = "txtBuscarProducto";
             txtBuscarProducto.PlaceholderText = "Escanear EAN (lector siempre activo en PRODUCTOS)";
-            txtBuscarProducto.Size = new Size(275, 34);
+            txtBuscarProducto.Size = new Size(376, 34);
             txtBuscarProducto.TabIndex = 29;
             txtBuscarProducto.TextChanged += txtBuscarProducto_TextChanged;
             txtBuscarProducto.KeyDown += txtBuscarProducto_KeyDown;
@@ -193,7 +223,7 @@ namespace UI.DISEÑO
             lstProductosPos.FormattingEnabled = true;
             lstProductosPos.IntegralHeight = false;
             lstProductosPos.ItemHeight = 28;
-            lstProductosPos.Location = new Point(781, 327);
+            lstProductosPos.Location = new Point(779, 478);
             lstProductosPos.Name = "lstProductosPos";
             lstProductosPos.Size = new Size(340, 355);
             lstProductosPos.TabIndex = 31;
@@ -208,7 +238,7 @@ namespace UI.DISEÑO
             lblFotoProductoPos.AutoSize = true;
             lblFotoProductoPos.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblFotoProductoPos.ForeColor = Color.FromArgb(45, 55, 72);
-            lblFotoProductoPos.Location = new Point(1401, 294);
+            lblFotoProductoPos.Location = new Point(1382, 172);
             lblFotoProductoPos.Name = "lblFotoProductoPos";
             lblFotoProductoPos.Size = new Size(150, 23);
             lblFotoProductoPos.TabIndex = 41;
@@ -218,9 +248,9 @@ namespace UI.DISEÑO
             // 
             picProductoPos.BackColor = Color.FromArgb(241, 245, 249);
             picProductoPos.BorderStyle = BorderStyle.FixedSingle;
-            picProductoPos.Location = new Point(1240, 327);
+            picProductoPos.Location = new Point(1554, 18);
             picProductoPos.Name = "picProductoPos";
-            picProductoPos.Size = new Size(390, 355);
+            picProductoPos.Size = new Size(342, 355);
             picProductoPos.SizeMode = PictureBoxSizeMode.Zoom;
             picProductoPos.TabIndex = 42;
             picProductoPos.TabStop = false;
@@ -234,12 +264,17 @@ namespace UI.DISEÑO
             tabProductos.Location = new Point(0, 52);
             tabProductos.Name = "tabProductos";
             tabProductos.SelectedIndex = 0;
-            tabProductos.Size = new Size(1739, 807);
+            tabProductos.Size = new Size(1924, 928);
             tabProductos.TabIndex = 33;
             tabProductos.SelectedIndexChanged += tabProductos_SelectedIndexChanged;
             // 
             // tabPago
             // 
+            tabPago.Controls.Add(label4);
+            tabPago.Controls.Add(pnlPausarVentas);
+            tabPago.Controls.Add(panelFinanciamientoProducto);
+            tabPago.Controls.Add(chkPausarVenta);
+            tabPago.Controls.Add(btnFinanciamiento);
             tabPago.Controls.Add(btnLimpiarCarrito);
             tabPago.Controls.Add(lblTotal);
             tabPago.Controls.Add(label6);
@@ -253,15 +288,322 @@ namespace UI.DISEÑO
             tabPago.Location = new Point(4, 37);
             tabPago.Name = "tabPago";
             tabPago.Padding = new Padding(3);
-            tabPago.Size = new Size(1731, 766);
+            tabPago.Size = new Size(1916, 887);
             tabPago.TabIndex = 0;
             tabPago.Text = "PRODUCTOS";
             tabPago.UseVisualStyleBackColor = true;
             // 
+            // pnlPausarVentas
+            // 
+            pnlPausarVentas.BackColor = Color.FromArgb(255, 251, 235);
+            pnlPausarVentas.BorderStyle = BorderStyle.FixedSingle;
+            pnlPausarVentas.Controls.Add(btnCerrarPnlPausa);
+            pnlPausarVentas.Controls.Add(lblAsignarPausa);
+            pnlPausarVentas.Controls.Add(cmbClientePausarVenta);
+            pnlPausarVentas.Controls.Add(lblMiembrosPausados);
+            pnlPausarVentas.Controls.Add(cmbMiembroPausados);
+            pnlPausarVentas.Controls.Add(lblNombrePausaVenta);
+            pnlPausarVentas.Controls.Add(dgvPausaVentas);
+            pnlPausarVentas.Controls.Add(lblTotalPausaTitulo);
+            pnlPausarVentas.Controls.Add(lblTotalPausaVenta);
+            pnlPausarVentas.Controls.Add(btnDespausar);
+            pnlPausarVentas.Location = new Point(25, 6);
+            pnlPausarVentas.Name = "pnlPausarVentas";
+            pnlPausarVentas.Size = new Size(990, 398);
+            pnlPausarVentas.TabIndex = 52;
+            pnlPausarVentas.Visible = false;
+            // 
+            // btnCerrarPnlPausa
+            // 
+            btnCerrarPnlPausa.FlatAppearance.BorderSize = 0;
+            btnCerrarPnlPausa.FlatStyle = FlatStyle.Flat;
+            btnCerrarPnlPausa.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            btnCerrarPnlPausa.ForeColor = Color.FromArgb(185, 28, 28);
+            btnCerrarPnlPausa.Location = new Point(945, 2);
+            btnCerrarPnlPausa.Name = "btnCerrarPnlPausa";
+            btnCerrarPnlPausa.Size = new Size(40, 32);
+            btnCerrarPnlPausa.TabIndex = 0;
+            btnCerrarPnlPausa.Text = "X";
+            btnCerrarPnlPausa.UseVisualStyleBackColor = true;
+            btnCerrarPnlPausa.Click += btnCerrarPnlPausa_Click;
+            // 
+            // lblAsignarPausa
+            // 
+            lblAsignarPausa.AutoSize = true;
+            lblAsignarPausa.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblAsignarPausa.Location = new Point(12, 12);
+            lblAsignarPausa.Name = "lblAsignarPausa";
+            lblAsignarPausa.Size = new Size(159, 23);
+            lblAsignarPausa.TabIndex = 1;
+            lblAsignarPausa.Text = "Miembro (asignar)";
+            // 
+            // cmbClientePausarVenta
+            // 
+            cmbClientePausarVenta.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbClientePausarVenta.Font = new Font("Segoe UI", 10F);
+            cmbClientePausarVenta.FormattingEnabled = true;
+            cmbClientePausarVenta.Location = new Point(12, 38);
+            cmbClientePausarVenta.Name = "cmbClientePausarVenta";
+            cmbClientePausarVenta.Size = new Size(450, 31);
+            cmbClientePausarVenta.TabIndex = 2;
+            cmbClientePausarVenta.SelectedIndexChanged += cmbClientePausarVenta_SelectedIndexChanged;
+            cmbClientePausarVenta.MouseDown += cmbClientePausarVenta_MouseDown;
+            // 
+            // lblMiembrosPausados
+            // 
+            lblMiembrosPausados.AutoSize = true;
+            lblMiembrosPausados.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblMiembrosPausados.Location = new Point(12, 78);
+            lblMiembrosPausados.Name = "lblMiembrosPausados";
+            lblMiembrosPausados.Size = new Size(166, 23);
+            lblMiembrosPausados.TabIndex = 3;
+            lblMiembrosPausados.Text = "Miembros en pausa";
+            // 
+            // cmbMiembroPausados
+            // 
+            cmbMiembroPausados.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbMiembroPausados.Font = new Font("Segoe UI", 10F);
+            cmbMiembroPausados.FormattingEnabled = true;
+            cmbMiembroPausados.Location = new Point(12, 104);
+            cmbMiembroPausados.Name = "cmbMiembroPausados";
+            cmbMiembroPausados.Size = new Size(450, 31);
+            cmbMiembroPausados.TabIndex = 4;
+            cmbMiembroPausados.SelectedIndexChanged += cmbMiembroPausados_SelectedIndexChanged;
+            // 
+            // lblNombrePausaVenta
+            // 
+            lblNombrePausaVenta.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblNombrePausaVenta.ForeColor = Color.FromArgb(30, 64, 175);
+            lblNombrePausaVenta.Location = new Point(617, 154);
+            lblNombrePausaVenta.Name = "lblNombrePausaVenta";
+            lblNombrePausaVenta.Size = new Size(368, 28);
+            lblNombrePausaVenta.TabIndex = 5;
+            lblNombrePausaVenta.Text = "(sin selección)";
+            // 
+            // dgvPausaVentas
+            // 
+            dgvPausaVentas.AllowUserToAddRows = false;
+            dgvPausaVentas.AllowUserToDeleteRows = false;
+            dgvPausaVentas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvPausaVentas.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvPausaVentas.Location = new Point(12, 144);
+            dgvPausaVentas.Name = "dgvPausaVentas";
+            dgvPausaVentas.ReadOnly = true;
+            dgvPausaVentas.RowHeadersWidth = 51;
+            dgvPausaVentas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvPausaVentas.Size = new Size(599, 240);
+            dgvPausaVentas.TabIndex = 6;
+            // 
+            // lblTotalPausaTitulo
+            // 
+            lblTotalPausaTitulo.AutoSize = true;
+            lblTotalPausaTitulo.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblTotalPausaTitulo.Location = new Point(625, 352);
+            lblTotalPausaTitulo.Name = "lblTotalPausaTitulo";
+            lblTotalPausaTitulo.Size = new Size(72, 28);
+            lblTotalPausaTitulo.TabIndex = 7;
+            lblTotalPausaTitulo.Text = "TOTAL";
+            // 
+            // lblTotalPausaVenta
+            // 
+            lblTotalPausaVenta.AutoSize = true;
+            lblTotalPausaVenta.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            lblTotalPausaVenta.ForeColor = Color.FromArgb(180, 83, 9);
+            lblTotalPausaVenta.Location = new Point(696, 348);
+            lblTotalPausaVenta.Name = "lblTotalPausaVenta";
+            lblTotalPausaVenta.Size = new Size(77, 32);
+            lblTotalPausaVenta.TabIndex = 8;
+            lblTotalPausaVenta.Text = "$0.00";
+            // 
+            // btnDespausar
+            // 
+            btnDespausar.BackColor = Color.FromArgb(22, 163, 74);
+            btnDespausar.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            btnDespausar.ForeColor = Color.White;
+            btnDespausar.Location = new Point(616, 186);
+            btnDespausar.Name = "btnDespausar";
+            btnDespausar.Size = new Size(220, 40);
+            btnDespausar.TabIndex = 9;
+            btnDespausar.Text = "DESPAUSAR";
+            btnDespausar.UseVisualStyleBackColor = false;
+            btnDespausar.Click += btnDespausar_Click;
+            // 
+            // panelFinanciamientoProducto
+            // 
+            panelFinanciamientoProducto.BackColor = Color.FromArgb(240, 248, 255);
+            panelFinanciamientoProducto.BorderStyle = BorderStyle.FixedSingle;
+            panelFinanciamientoProducto.Controls.Add(lblConceptoProductoFin);
+            panelFinanciamientoProducto.Controls.Add(txtProducto);
+            panelFinanciamientoProducto.Controls.Add(lblMiembroDebe);
+            panelFinanciamientoProducto.Controls.Add(cbmMiembroDebe);
+            panelFinanciamientoProducto.Controls.Add(lblPagoInicioProducto);
+            panelFinanciamientoProducto.Controls.Add(txtPagoInicioProducto);
+            panelFinanciamientoProducto.Controls.Add(lblSaldoProductoTitulo);
+            panelFinanciamientoProducto.Controls.Add(lblSaldoRestanteProducto);
+            panelFinanciamientoProducto.Controls.Add(lblFechaVenceProducto);
+            panelFinanciamientoProducto.Controls.Add(dtpVenceDeudaProducto);
+            panelFinanciamientoProducto.Controls.Add(btnGuardarDeudaProducto);
+            panelFinanciamientoProducto.Controls.Add(btnCerrarFinProducto);
+            panelFinanciamientoProducto.Location = new Point(1129, 478);
+            panelFinanciamientoProducto.Name = "panelFinanciamientoProducto";
+            panelFinanciamientoProducto.Size = new Size(680, 355);
+            panelFinanciamientoProducto.TabIndex = 42;
+            panelFinanciamientoProducto.Visible = false;
+            // 
+            // lblConceptoProductoFin
+            // 
+            lblConceptoProductoFin.AutoSize = true;
+            lblConceptoProductoFin.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblConceptoProductoFin.Location = new Point(12, 5);
+            lblConceptoProductoFin.Name = "lblConceptoProductoFin";
+            lblConceptoProductoFin.Size = new Size(86, 23);
+            lblConceptoProductoFin.TabIndex = 0;
+            lblConceptoProductoFin.Text = "Concepto";
+            // 
+            // txtProducto
+            // 
+            txtProducto.Font = new Font("Segoe UI", 10F);
+            txtProducto.Location = new Point(12, 36);
+            txtProducto.Multiline = true;
+            txtProducto.Name = "txtProducto";
+            txtProducto.Size = new Size(656, 122);
+            txtProducto.TabIndex = 1;
+            // 
+            // lblMiembroDebe
+            // 
+            lblMiembroDebe.AutoSize = true;
+            lblMiembroDebe.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblMiembroDebe.Location = new Point(12, 161);
+            lblMiembroDebe.Name = "lblMiembroDebe";
+            lblMiembroDebe.Size = new Size(147, 23);
+            lblMiembroDebe.TabIndex = 2;
+            lblMiembroDebe.Text = "Miembro deudor";
+            // 
+            // cbmMiembroDebe
+            // 
+            cbmMiembroDebe.DropDownStyle = ComboBoxStyle.DropDown;
+            cbmMiembroDebe.Font = new Font("Segoe UI", 10F);
+            cbmMiembroDebe.FormattingEnabled = true;
+            cbmMiembroDebe.Location = new Point(12, 187);
+            cbmMiembroDebe.Name = "cbmMiembroDebe";
+            cbmMiembroDebe.Size = new Size(390, 31);
+            cbmMiembroDebe.TabIndex = 3;
+            // 
+            // lblPagoInicioProducto
+            // 
+            lblPagoInicioProducto.AutoSize = true;
+            lblPagoInicioProducto.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblPagoInicioProducto.Location = new Point(12, 231);
+            lblPagoInicioProducto.Name = "lblPagoInicioProducto";
+            lblPagoInicioProducto.Size = new Size(102, 23);
+            lblPagoInicioProducto.TabIndex = 4;
+            lblPagoInicioProducto.Text = "Pago inicial";
+            // 
+            // txtPagoInicioProducto
+            // 
+            txtPagoInicioProducto.Font = new Font("Segoe UI", 12F);
+            txtPagoInicioProducto.Location = new Point(160, 227);
+            txtPagoInicioProducto.Name = "txtPagoInicioProducto";
+            txtPagoInicioProducto.Size = new Size(140, 34);
+            txtPagoInicioProducto.TabIndex = 5;
+            txtPagoInicioProducto.Text = "0";
+            txtPagoInicioProducto.TextAlign = HorizontalAlignment.Right;
+            txtPagoInicioProducto.TextChanged += txtPagoInicioProducto_TextChanged;
+            txtPagoInicioProducto.KeyPress += txtPagoInicioProducto_KeyPress;
+            // 
+            // lblSaldoProductoTitulo
+            // 
+            lblSaldoProductoTitulo.AutoSize = true;
+            lblSaldoProductoTitulo.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblSaldoProductoTitulo.Location = new Point(12, 275);
+            lblSaldoProductoTitulo.Name = "lblSaldoProductoTitulo";
+            lblSaldoProductoTitulo.Size = new Size(141, 23);
+            lblSaldoProductoTitulo.TabIndex = 6;
+            lblSaldoProductoTitulo.Text = "Saldo pendiente";
+            // 
+            // lblSaldoRestanteProducto
+            // 
+            lblSaldoRestanteProducto.AutoSize = true;
+            lblSaldoRestanteProducto.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            lblSaldoRestanteProducto.ForeColor = Color.FromArgb(244, 67, 54);
+            lblSaldoRestanteProducto.Location = new Point(160, 269);
+            lblSaldoRestanteProducto.Name = "lblSaldoRestanteProducto";
+            lblSaldoRestanteProducto.Size = new Size(77, 32);
+            lblSaldoRestanteProducto.TabIndex = 7;
+            lblSaldoRestanteProducto.Text = "$0.00";
+            // 
+            // lblFechaVenceProducto
+            // 
+            lblFechaVenceProducto.AutoSize = true;
+            lblFechaVenceProducto.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblFechaVenceProducto.Location = new Point(12, 317);
+            lblFechaVenceProducto.Name = "lblFechaVenceProducto";
+            lblFechaVenceProducto.Size = new Size(153, 23);
+            lblFechaVenceProducto.TabIndex = 8;
+            lblFechaVenceProducto.Text = "Fecha límite pago";
+            // 
+            // dtpVenceDeudaProducto
+            // 
+            dtpVenceDeudaProducto.Font = new Font("Segoe UI", 10F);
+            dtpVenceDeudaProducto.Format = DateTimePickerFormat.Short;
+            dtpVenceDeudaProducto.Location = new Point(190, 313);
+            dtpVenceDeudaProducto.Name = "dtpVenceDeudaProducto";
+            dtpVenceDeudaProducto.Size = new Size(160, 30);
+            dtpVenceDeudaProducto.TabIndex = 9;
+            // 
+            // btnGuardarDeudaProducto
+            // 
+            btnGuardarDeudaProducto.BackColor = Color.FromArgb(22, 163, 74);
+            btnGuardarDeudaProducto.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            btnGuardarDeudaProducto.ForeColor = Color.White;
+            btnGuardarDeudaProducto.Location = new Point(448, 244);
+            btnGuardarDeudaProducto.Name = "btnGuardarDeudaProducto";
+            btnGuardarDeudaProducto.Size = new Size(220, 40);
+            btnGuardarDeudaProducto.TabIndex = 10;
+            btnGuardarDeudaProducto.Text = "GUARDAR DEUDA";
+            btnGuardarDeudaProducto.UseVisualStyleBackColor = false;
+            btnGuardarDeudaProducto.Click += btnGuardarDeudaProducto_Click;
+            // 
+            // btnCerrarFinProducto
+            // 
+            btnCerrarFinProducto.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnCerrarFinProducto.Location = new Point(487, 308);
+            btnCerrarFinProducto.Name = "btnCerrarFinProducto";
+            btnCerrarFinProducto.Size = new Size(152, 40);
+            btnCerrarFinProducto.TabIndex = 11;
+            btnCerrarFinProducto.Text = "CERRAR";
+            btnCerrarFinProducto.UseVisualStyleBackColor = true;
+            btnCerrarFinProducto.Click += btnCerrarFinProducto_Click;
+            // 
+            // chkPausarVenta
+            // 
+            chkPausarVenta.AutoSize = true;
+            chkPausarVenta.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            chkPausarVenta.Location = new Point(405, 431);
+            chkPausarVenta.Name = "chkPausarVenta";
+            chkPausarVenta.Size = new Size(108, 29);
+            chkPausarVenta.TabIndex = 51;
+            chkPausarVenta.Text = "PAUSAR";
+            chkPausarVenta.UseVisualStyleBackColor = true;
+            chkPausarVenta.CheckedChanged += chkPausarVenta_CheckedChanged;
+            // 
+            // btnFinanciamiento
+            // 
+            btnFinanciamiento.BackColor = Color.FromArgb(33, 150, 243);
+            btnFinanciamiento.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            btnFinanciamiento.ForeColor = Color.White;
+            btnFinanciamiento.Location = new Point(1127, 412);
+            btnFinanciamiento.Name = "btnFinanciamiento";
+            btnFinanciamiento.Size = new Size(220, 60);
+            btnFinanciamiento.TabIndex = 41;
+            btnFinanciamiento.Text = "FINANCIAR";
+            btnFinanciamiento.UseVisualStyleBackColor = false;
+            btnFinanciamiento.Click += btnFinanciamiento_Click;
+            // 
             // btnLimpiarCarrito
             // 
             btnLimpiarCarrito.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            btnLimpiarCarrito.Location = new Point(610, 708);
+            btnLimpiarCarrito.Location = new Point(618, 835);
             btnLimpiarCarrito.Name = "btnLimpiarCarrito";
             btnLimpiarCarrito.Size = new Size(150, 44);
             btnLimpiarCarrito.TabIndex = 40;
@@ -273,7 +615,7 @@ namespace UI.DISEÑO
             // 
             lblTotal.AutoSize = true;
             lblTotal.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            lblTotal.Location = new Point(137, 708);
+            lblTotal.Location = new Point(145, 836);
             lblTotal.Name = "lblTotal";
             lblTotal.Size = new Size(40, 46);
             lblTotal.TabIndex = 39;
@@ -283,7 +625,7 @@ namespace UI.DISEÑO
             // 
             label6.AutoSize = true;
             label6.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            label6.Location = new Point(17, 708);
+            label6.Location = new Point(25, 836);
             label6.Name = "label6";
             label6.Size = new Size(123, 46);
             label6.TabIndex = 38;
@@ -295,7 +637,7 @@ namespace UI.DISEÑO
             dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvCarrito.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvCarrito.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvCarrito.Location = new Point(17, 327);
+            dgvCarrito.Location = new Point(17, 478);
             dgvCarrito.Name = "dgvCarrito";
             dgvCarrito.RowHeadersWidth = 51;
             dgvCarrito.Size = new Size(751, 355);
@@ -308,7 +650,7 @@ namespace UI.DISEÑO
             btnPagarProductos.BackColor = Color.FromArgb(22, 163, 74);
             btnPagarProductos.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             btnPagarProductos.ForeColor = Color.White;
-            btnPagarProductos.Location = new Point(296, 258);
+            btnPagarProductos.Location = new Point(25, 409);
             btnPagarProductos.Name = "btnPagarProductos";
             btnPagarProductos.Size = new Size(220, 59);
             btnPagarProductos.TabIndex = 35;
@@ -331,7 +673,7 @@ namespace UI.DISEÑO
             tabMembresia.Location = new Point(4, 37);
             tabMembresia.Name = "tabMembresia";
             tabMembresia.Padding = new Padding(3);
-            tabMembresia.Size = new Size(1374, 766);
+            tabMembresia.Size = new Size(1916, 887);
             tabMembresia.TabIndex = 1;
             tabMembresia.Text = "MEMBRESIA";
             tabMembresia.UseVisualStyleBackColor = true;
@@ -542,7 +884,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1739, 52);
+            panelNav.Size = new Size(1924, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -615,11 +957,21 @@ namespace UI.DISEÑO
             btnNavDeudas.Text = "DEUDAS";
             btnNavDeudas.UseVisualStyleBackColor = true;
             // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            label4.Location = new Point(652, 432);
+            label4.Name = "label4";
+            label4.Size = new Size(89, 28);
+            label4.TabIndex = 10;
+            label4.Text = "BUSCAR";
+            // 
             // FrmPagos
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1739, 859);
+            ClientSize = new Size(1924, 980);
             Controls.Add(tabProductos);
             Controls.Add(panelNav);
             Name = "FrmPagos";
@@ -630,6 +982,11 @@ namespace UI.DISEÑO
             tabProductos.ResumeLayout(false);
             tabPago.ResumeLayout(false);
             tabPago.PerformLayout();
+            pnlPausarVentas.ResumeLayout(false);
+            pnlPausarVentas.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvPausaVentas).EndInit();
+            panelFinanciamientoProducto.ResumeLayout(false);
+            panelFinanciamientoProducto.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCarrito).EndInit();
             tabMembresia.ResumeLayout(false);
             tabMembresia.PerformLayout();
@@ -664,6 +1021,32 @@ namespace UI.DISEÑO
         private Label lblTotal;
         private Label label6;
         private Button btnLimpiarCarrito;
+        private Button btnFinanciamiento;
+        private CheckBox chkPausarVenta;
+        private Panel pnlPausarVentas;
+        private Button btnCerrarPnlPausa;
+        private Label lblAsignarPausa;
+        private ComboBox cmbClientePausarVenta;
+        private Label lblMiembrosPausados;
+        private ComboBox cmbMiembroPausados;
+        private Label lblNombrePausaVenta;
+        private DataGridView dgvPausaVentas;
+        private Label lblTotalPausaTitulo;
+        private Label lblTotalPausaVenta;
+        private Button btnDespausar;
+        private Panel panelFinanciamientoProducto;
+        private Label lblConceptoProductoFin;
+        private TextBox txtProducto;
+        private Label lblMiembroDebe;
+        private ComboBox cbmMiembroDebe;
+        private Label lblPagoInicioProducto;
+        private TextBox txtPagoInicioProducto;
+        private Label lblSaldoProductoTitulo;
+        private Label lblSaldoRestanteProducto;
+        private Label lblFechaVenceProducto;
+        private DateTimePicker dtpVenceDeudaProducto;
+        private Button btnGuardarDeudaProducto;
+        private Button btnCerrarFinProducto;
         private Panel panelNav;
         private Button btnNavDeudas;
         private Button btnNavEstado;
@@ -690,5 +1073,6 @@ namespace UI.DISEÑO
         private Label lblTotalPagar;
         private Label lblMotivoOferta;
         private TextBox txtMotivo;
+        private Label label4;
     }
 }

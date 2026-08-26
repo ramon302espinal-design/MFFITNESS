@@ -49,6 +49,8 @@ namespace UI.DISEÑO
             numCantidad = new NumericUpDown();
             btnEntrada = new Button();
             dgvMovimientos = new DataGridView();
+            lblBuscarProductos = new Label();
+            txtBuscarProductos = new TextBox();
             dgvProductos = new DataGridView();
             btnEditar = new Button();
             btnEliminar = new Button();
@@ -111,6 +113,8 @@ namespace UI.DISEÑO
             tabProductos.Controls.Add(numCantidad);
             tabProductos.Controls.Add(btnEntrada);
             tabProductos.Controls.Add(dgvMovimientos);
+            tabProductos.Controls.Add(lblBuscarProductos);
+            tabProductos.Controls.Add(txtBuscarProductos);
             tabProductos.Controls.Add(dgvProductos);
             tabProductos.Controls.Add(btnEditar);
             tabProductos.Controls.Add(btnEliminar);
@@ -279,7 +283,7 @@ namespace UI.DISEÑO
             // 
             label8.AutoSize = true;
             label8.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label8.Location = new Point(682, 27);
+            label8.Location = new Point(427, 30);
             label8.Name = "label8";
             label8.Size = new Size(340, 35);
             label8.TabIndex = 48;
@@ -365,6 +369,27 @@ namespace UI.DISEÑO
             dgvMovimientos.CellFormatting += dgvMovimientos_CellFormatting;
             dgvMovimientos.RowPrePaint += dgvMovimientos_RowPrePaint;
             // 
+            // lblBuscarProductos
+            // 
+            lblBuscarProductos.AutoSize = true;
+            lblBuscarProductos.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            lblBuscarProductos.Location = new Point(773, 30);
+            lblBuscarProductos.Name = "lblBuscarProductos";
+            lblBuscarProductos.Size = new Size(92, 35);
+            lblBuscarProductos.TabIndex = 53;
+            lblBuscarProductos.Text = "Buscar";
+            // 
+            // txtBuscarProductos
+            // 
+            txtBuscarProductos.Font = new Font("Segoe UI", 11F);
+            txtBuscarProductos.Location = new Point(873, 33);
+            txtBuscarProductos.Name = "txtBuscarProductos";
+            txtBuscarProductos.PlaceholderText = "Nombre, categoría o código…";
+            txtBuscarProductos.Size = new Size(494, 32);
+            txtBuscarProductos.TabIndex = 54;
+            txtBuscarProductos.TextChanged += txtBuscarProductos_TextChanged;
+            txtBuscarProductos.KeyDown += txtBuscarProductos_KeyDown;
+            // 
             // dgvProductos
             // 
             dgvProductos.AllowUserToAddRows = false;
@@ -378,8 +403,8 @@ namespace UI.DISEÑO
             dgvProductos.TabIndex = 27;
             dgvProductos.CellClick += dgvProductos_CellClick;
             dgvProductos.CellDoubleClick += dgvProductos_CellDoubleClick;
-            dgvProductos.SelectionChanged += dgvProductos_SelectionChanged;
             dgvProductos.RowPrePaint += dgvProductos_RowPrePaint;
+            dgvProductos.SelectionChanged += dgvProductos_SelectionChanged;
             // 
             // btnEditar
             // 
@@ -741,6 +766,8 @@ namespace UI.DISEÑO
         private NumericUpDown numCantidad;
         private Button btnEntrada;
         private DataGridView dgvMovimientos;
+        private Label lblBuscarProductos;
+        private TextBox txtBuscarProductos;
         private DataGridView dgvProductos;
         private Button btnEditar;
         private Button btnEliminar;

@@ -18,11 +18,13 @@ namespace UI.DISEÑO
         private readonly StockBLL stockBLL = new StockBLL();
         private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
         private readonly PosScannerIntervalGate _intervaloEscanner = new();
+        private readonly BindingSource _bsProductosInventario = new();
 
         public FrmProductos()
         {
             InitializeComponent();
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloInventario);
+            dgvProductos.DataSource = _bsProductosInventario;
             dgvProductos.DataBindingComplete += (_, _) => ActualizarKpisInventario();
         }
 
@@ -103,7 +105,72 @@ namespace UI.DISEÑO
 
         private void CargarProductos()
         {
-            dgvProductos.DataSource = productoBLL.ObtenerProductos();
+            string? filtroPrevio = null;
+            try { filtroPrevio = _bsProductosInventario.Filter; }
+            catch { /* ignore */ }
+
+            DataTable dt = productoBLL.ObtenerProductos();
+            _bsProductosInventario.DataSource = dt;
+
+            // Reaplicar búsqueda viva tras refresco (guardar/editar/eliminar).
+            if (!string.IsNullOrWhiteSpace(txtBuscarProductos?.Text))
+                AplicarFiltroBusquedaProductos();
+            else if (!string.IsNullOrEmpty(filtroPrevio))
+            {
+                try { _bsProductosInventario.RemoveFilter(); }
+                catch { /* ignore */ }
+            }
+
+            ActualizarKpisInventario();
+        }
+
+        private void txtBuscarProductos_TextChanged(object? sender, EventArgs e)
+        {
+            AplicarFiltroBusquedaProductos();
+        }
+
+        private void txtBuscarProductos_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+                return;
+
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+
+            if (dgvProductos.Rows.Count == 0)
+                return;
+
+            dgvProductos.ClearSelection();
+            dgvProductos.Rows[0].Selected = true;
+            if (dgvProductos.Columns.Contains("Nombre") && dgvProductos.Rows[0].Cells["Nombre"].Visible)
+                dgvProductos.CurrentCell = dgvProductos.Rows[0].Cells["Nombre"];
+            dgvProductos.Focus();
+        }
+
+        /// <summary>
+        /// Filtro inteligente en vivo: nombre, categoría, código de barras, precios/stock.
+        /// No toca stock, combos de movimiento ni CRUD.
+        /// </summary>
+        private void AplicarFiltroBusquedaProductos()
+        {
+            if (_bsProductosInventario.DataSource == null)
+                return;
+
+            string termino = txtBuscarProductos?.Text?.Trim() ?? string.Empty;
+
+            try
+            {
+                _bsProductosInventario.Filter = string.IsNullOrEmpty(termino)
+                    ? null
+                    : BusquedaGridHelper.ConstruirFiltroProductosPos(termino);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Filtro inventario productos: {ex.Message}");
+                try { _bsProductosInventario.RemoveFilter(); }
+                catch { /* ignore */ }
+            }
+
             ActualizarKpisInventario();
         }
 

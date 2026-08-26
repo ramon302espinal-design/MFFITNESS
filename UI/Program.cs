@@ -91,7 +91,57 @@ namespace UI
                 System.Diagnostics.Debug.WriteLine($"Reporte automatico: {ex.Message}");
             }
 
+            StartUpdateExitWatcher();
             Application.Run(new FrmLogin());
+        }
+
+        /// <summary>
+        /// UpdateManager puede pedir salida total vía EventWaitHandle (OTA).
+        /// Cierra el proceso aunque FrmLogin esté oculto.
+        /// </summary>
+        private static void StartUpdateExitWatcher()
+        {
+            try
+            {
+                var thread = new Thread(() =>
+                {
+                    try
+                    {
+                        using var exitEvent = new EventWaitHandle(
+                            false,
+                            EventResetMode.AutoReset,
+                            UpdateExitSignal.EventName);
+
+                        while (true)
+                        {
+                            exitEvent.WaitOne();
+                            UpdateExitSignal.ForceExitRequested = true;
+                            try
+                            {
+                                if (Application.MessageLoop)
+                                    Application.Exit();
+                            }
+                            catch { /* ignore */ }
+
+                            try { Environment.Exit(0); }
+                            catch { /* ignore */ }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"UpdateExitWatcher: {ex.Message}");
+                    }
+                })
+                {
+                    IsBackground = true,
+                    Name = "MFFITNESS-UpdateExitWatcher"
+                };
+                thread.Start();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateExitWatcher start: {ex.Message}");
+            }
         }
 
         /// <summary>

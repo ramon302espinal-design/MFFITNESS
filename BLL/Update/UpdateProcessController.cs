@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using CORE.Update;
 
 namespace BLL.Update
 {
     /// <summary>
     /// Control de procesos del POS. Cierre graceful sin Kill() automático (FASE 9).
+    /// Matching por ruta completa del UI.exe instalado (no cualquier UI.exe del sistema).
     /// </summary>
     public interface IUpdateProcessController
     {
@@ -16,54 +18,42 @@ namespace BLL.Update
     {
         public bool IsProcessRunning(string executablePath)
         {
-            string processName = Path.GetFileNameWithoutExtension(executablePath);
-            return Process.GetProcessesByName(processName).Any(p =>
+            foreach (Process process in EnumerateMatchingProcesses(executablePath))
             {
-                try
-                {
-                    return string.Equals(
-                        Path.GetFileName(p.MainModule?.FileName ?? string.Empty),
-                        Path.GetFileName(executablePath),
-                        StringComparison.OrdinalIgnoreCase);
-                }
-                catch
-                {
-                    return true;
-                }
-                finally
-                {
-                    p.Dispose();
-                }
-            });
+                process.Dispose();
+                return true;
+            }
+
+            return false;
         }
 
         public bool RequestGracefulClose(string executablePath)
         {
-            string processName = Path.GetFileNameWithoutExtension(executablePath);
             bool requested = false;
 
-            foreach (Process process in Process.GetProcessesByName(processName))
+            // Señal OTA: la UI escucha y hace Application.Exit / Environment.Exit.
+            try
+            {
+                if (EventWaitHandle.TryOpenExisting(UpdateExitSignal.EventName, out EventWaitHandle? exitEvent))
+                {
+                    using (exitEvent)
+                    {
+                        exitEvent.Set();
+                        requested = true;
+                    }
+                }
+            }
+            catch
+            {
+                // Fail soft: continuar con CloseMainWindow.
+            }
+
+            foreach (Process process in EnumerateMatchingProcesses(executablePath))
             {
                 try
                 {
-                    if (!string.Equals(
-                            Path.GetFileName(process.MainModule?.FileName ?? string.Empty),
-                            Path.GetFileName(executablePath),
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    if (process.MainWindowHandle != IntPtr.Zero)
-                    {
-                        process.CloseMainWindow();
+                    if (process.CloseMainWindow())
                         requested = true;
-                    }
-                    else
-                    {
-                        // Sin ventana principal: intentar cierre estándar (no Kill).
-                        requested = process.CloseMainWindow() || requested;
-                    }
                 }
                 catch
                 {
@@ -90,6 +80,46 @@ namespace BLL.Update
             }
 
             return !IsProcessRunning(executablePath);
+        }
+
+        private static IEnumerable<Process> EnumerateMatchingProcesses(string executablePath)
+        {
+            string processName = Path.GetFileNameWithoutExtension(executablePath);
+            string targetFull;
+            try
+            {
+                targetFull = Path.GetFullPath(executablePath);
+            }
+            catch
+            {
+                yield break;
+            }
+
+            foreach (Process process in Process.GetProcessesByName(processName))
+            {
+                bool match = false;
+                try
+                {
+                    string? modulePath = process.MainModule?.FileName;
+                    if (!string.IsNullOrWhiteSpace(modulePath))
+                    {
+                        match = string.Equals(
+                            Path.GetFullPath(modulePath),
+                            targetFull,
+                            StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+                catch
+                {
+                    // Sin acceso a MainModule: no asumir match (evita cerrar otro UI.exe).
+                    match = false;
+                }
+
+                if (match)
+                    yield return process;
+                else
+                    process.Dispose();
+            }
         }
     }
 

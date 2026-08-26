@@ -9,8 +9,8 @@ namespace CORE
     {
         /// <summary>
         /// Calcula la fecha de vencimiento de una membresía según las reglas del negocio:
-        /// - Pago del 1 al 19: Vence el 15 del mes siguiente
-        /// - Pago del 20 en adelante: Vence el último día del mes siguiente
+        /// - Pago del 7 al 19: Vence el 15 del mes siguiente
+        /// - Pago del 20 al 6 (cruza mes): Vence el último día del mes siguiente
         /// </summary>
         /// <param name="fechaPago">Fecha en que se realizó el pago</param>
         /// <returns>Fecha de vencimiento calculada</returns>
@@ -20,24 +20,17 @@ namespace CORE
             int mesPago = fechaPago.Month;
             int anoPago = fechaPago.Year;
 
-            // Si pagan del 1 al 19 → Vence el 15 del mes siguiente
-            if (diaPago >= 1 && diaPago <= 19)
+            DateTime primerDiaMesSiguiente = new DateTime(anoPago, mesPago, 1).AddMonths(1);
+
+            // Del 7 al 19 → vence el 15 del mes siguiente
+            if (diaPago >= 7 && diaPago <= 19)
             {
-                DateTime primerDiaMesSiguiente = new DateTime(anoPago, mesPago, 1).AddMonths(1);
-                DateTime fechaVence = new DateTime(primerDiaMesSiguiente.Year, primerDiaMesSiguiente.Month, 15);
-                return fechaVence;
-            }
-            // Si pagan del 20 en adelante → Vence el último día del mes siguiente
-            else if (diaPago >= 20)
-            {
-                DateTime primerDiaMesSiguiente = new DateTime(anoPago, mesPago, 1).AddMonths(1);
-                int ultimoDiaDelMes = DateTime.DaysInMonth(primerDiaMesSiguiente.Year, primerDiaMesSiguiente.Month);
-                DateTime fechaVence = new DateTime(primerDiaMesSiguiente.Year, primerDiaMesSiguiente.Month, ultimoDiaDelMes);
-                return fechaVence;
+                return new DateTime(primerDiaMesSiguiente.Year, primerDiaMesSiguiente.Month, 15);
             }
 
-            // Fallback (no debería llegar aquí, pero por seguridad)
-            return DateTime.Now.AddMonths(1);
+            // Del 20 al 6 (20…fin de mes y 1…6) → último día del mes siguiente
+            int ultimoDiaDelMes = DateTime.DaysInMonth(primerDiaMesSiguiente.Year, primerDiaMesSiguiente.Month);
+            return new DateTime(primerDiaMesSiguiente.Year, primerDiaMesSiguiente.Month, ultimoDiaDelMes);
         }
 
         /// <summary>

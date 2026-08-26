@@ -216,6 +216,9 @@ namespace UI.DISEÑO
                 // CRÍTICO: no mostrar diálogo modal aquí.
                 // UpdateManager ya está en marcha y espera el cierre de UI.exe (UiCloseTimeout).
                 // Un MessageBox bloqueaba el Exit y provocaba "UI no terminó dentro del timeout".
+                // También: Application.Exit cierra Login oculto; Environment.Exit es cinturón.
+                UpdateExitSignal.ForceExitRequested = true;
+                try { Application.Exit(); } catch { /* ignore */ }
                 Environment.Exit(0);
             }
             catch (Exception ex)

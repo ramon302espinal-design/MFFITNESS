@@ -92,7 +92,7 @@ namespace DL
                     WHEN mem.FechaFin IS NOT NULL THEN CAST(mem.FechaFin AS DATE)
                     WHEN h.PlanId IS NOT NULL OR h.TipoMovimiento IN ('PAGO', 'RENOVACION', 'ALTA_EXISTENTE', 'AJUSTE_FECHA') THEN
                         CASE
-                            WHEN DAY(h.Fecha) <= 19 THEN
+                            WHEN DAY(h.Fecha) BETWEEN 7 AND 19 THEN
                                 DATEFROMPARTS(
                                     YEAR(DATEADD(MONTH, 1, h.Fecha)),
                                     MONTH(DATEADD(MONTH, 1, h.Fecha)),
