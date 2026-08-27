@@ -37,3 +37,14 @@ secrets/
 # Artefactos de publish / update package (locales)
 **/artifacts/
 **/updates/requests/
+
+# Facturas auto (mantener estructura)
+FacturaGastos/**/*.*
+!FacturaGastos/**/.gitkeep
+!FacturaGastos/README.txt
+FacturaGastosDev/**/*.*
+!FacturaGastosDev/**/.gitkeep
+!FacturaGastosDev/README.txt
+**/_hashes_ok.txt
+**/_auto.log
+

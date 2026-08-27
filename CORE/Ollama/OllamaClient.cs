@@ -92,20 +92,37 @@ namespace CORE.Ollama
             return has;
         }
 
-        public async Task<string> GenerateWithImagesAsync(
+        public Task<string> GenerateWithImagesAsync(
             string model,
             string prompt,
             IReadOnlyList<string> imagesBase64,
             bool jsonFormat = true,
             int? numPredict = null,
-            CancellationToken ct = default)
+            CancellationToken ct = default) =>
+            GenerateCoreAsync(model, prompt, imagesBase64, jsonFormat, numPredict, ct);
+
+        /// <summary>Generación solo texto (reparación / validación JSON de factura).</summary>
+        public Task<string> GenerateTextAsync(
+            string model,
+            string prompt,
+            bool jsonFormat = true,
+            int? numPredict = null,
+            CancellationToken ct = default) =>
+            GenerateCoreAsync(model, prompt, imagesBase64: null, jsonFormat, numPredict, ct);
+
+        private async Task<string> GenerateCoreAsync(
+            string model,
+            string prompt,
+            IReadOnlyList<string>? imagesBase64,
+            bool jsonFormat,
+            int? numPredict,
+            CancellationToken ct)
         {
             int predict = numPredict ?? 360;
             var body = new Dictionary<string, object?>
             {
                 ["model"] = model,
                 ["prompt"] = prompt,
-                ["images"] = imagesBase64,
                 ["stream"] = false,
                 ["options"] = new Dictionary<string, object?>
                 {
@@ -115,6 +132,8 @@ namespace CORE.Ollama
                     ["repeat_penalty"] = 1.05
                 }
             };
+            if (imagesBase64 is { Count: > 0 })
+                body["images"] = imagesBase64;
             if (jsonFormat)
                 body["format"] = "json";
 

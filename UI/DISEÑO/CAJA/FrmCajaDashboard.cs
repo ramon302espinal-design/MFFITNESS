@@ -4,6 +4,7 @@ using DL;
 using System;
 using System.Windows.Forms;
 using UI.Helpers;
+using UI.Services;
 using UI.Theme;
 
 namespace UI.DISEÑO
@@ -28,6 +29,7 @@ namespace UI.DISEÑO
             AppEventos.OnCajaCambiada -= RefrescarEstadoCaja;
             AppEventos.OnPagoRegistrado -= ActualizarIngresosYBalance;
             AppEventos.OnDeudaModificada -= ActualizarIngresosYBalance;
+            // NO detener FacturaGastosAppHost aquí: la IA sigue en Presentación.
             base.OnFormClosed(e);
         }
         private void RefrescarEstadoCaja()
@@ -36,6 +38,7 @@ namespace UI.DISEÑO
             ActualizarEstadoCaja(cajaAbierta);
             // Apertura/cierre: refresco completo (incluye inicial y gastos).
             ActualizarDashboard();
+            FacturaGastosAppHost.NotifyCajaState(cajaAbierta);
         }
        
         private void ActualizarEstadoCaja(bool cajaAbierta)
@@ -75,6 +78,7 @@ namespace UI.DISEÑO
             AppEventos.OnDeudaModificada += ActualizarIngresosYBalance;
 
             ActualizarDashboard();
+            FacturaGastosAppHost.NotifyCajaState(cajaAbierta);
         }
 
         // ================================
@@ -161,6 +165,7 @@ namespace UI.DISEÑO
                 ActualizarEstadoCaja(true);
                 ActualizarDashboard();
                 AppEventos.CajaCambiada();
+                FacturaGastosAppHost.NotifyCajaState(true);
             }
             catch (Exception ex)
             {
@@ -231,6 +236,7 @@ namespace UI.DISEÑO
                 ActualizarEstadoCaja(false);
                 ActualizarDashboard();
                 AppEventos.CajaCambiada();
+                FacturaGastosAppHost.NotifyCajaState(false);
             }
             catch (Exception ex)
             {

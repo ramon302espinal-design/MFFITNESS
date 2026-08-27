@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using CORE;
 using CORE.Update;
 using UI.Helpers;
+using UI.Services;
 using UI.Theme;
 
 namespace UI.DISEÑO
@@ -78,6 +79,23 @@ namespace UI.DISEÑO
 
                 // 5️⃣ WhatsApp: recordatorios de deuda y membresías
                 IniciarAutomatizacionWhatsApp();
+
+                // 5️⃣b Facturas → egreso automático (AppHost: no se cancela al salir de Caja)
+                try
+                {
+                    FacturaGastosAppHost.Start(this);
+                    AppEventos.OnCajaCambiada -= OnCajaCambiadaFacturaAuto;
+                    AppEventos.OnCajaCambiada += OnCajaCambiadaFacturaAuto;
+                    try
+                    {
+                        FacturaGastosAppHost.NotifyCajaState(new CajaBLL().ObtenerEstadoCaja());
+                    }
+                    catch { /* ignore */ }
+                }
+                catch (Exception exFactura)
+                {
+                    System.Diagnostics.Debug.WriteLine("FacturaGastosAppHost: " + exFactura.Message);
+                }
 
                 // 6️⃣ Deudas en vivo: cualquier cobro o nueva deuda refresca las tarjetas.
                 AppEventos.OnPagoRegistrado += RefrescarKpiDeudas;
@@ -193,7 +211,22 @@ namespace UI.DISEÑO
                 _timerStockCriticoDebounce = null;
             }
 
+            AppEventos.OnCajaCambiada -= OnCajaCambiadaFacturaAuto;
+            try { FacturaGastosAppHost.Stop(); } catch { /* ignore */ }
+
             base.OnFormClosed(e);
+        }
+
+        private void OnCajaCambiadaFacturaAuto()
+        {
+            try
+            {
+                FacturaGastosAppHost.NotifyCajaState(new CajaBLL().ObtenerEstadoCaja());
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         private void IniciarAvisosStockPeriodicos()

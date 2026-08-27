@@ -10,7 +10,15 @@
   "Ollama": {
     "BaseUrl": "http://127.0.0.1:11434",
     "VisionModel": "qwen2.5vl:7b",
+    "VisionFallbackModel": "gemma3:4b",
+    "TextRepairModel": "qwen2.5-coder:7b",
+    "TextValidateModel": "llama3.1:8b",
+    "TextReasonModel": "deepseek-r1:7b",
     "TimeoutSeconds": 120,
-    "VisionMaxSide": 1024
+    "VisionMaxSide": 1024,
+    "FacturaGastos": {
+      "Enabled": true,
+      "FolderName": "FacturaGastosDev"
+    }
   }
 }

@@ -83,16 +83,11 @@ namespace BLL.Services
             await EnsureOllamaReadyAsync(ct).ConfigureAwait(false);
 
             const string prompt =
-                "OCR de factura/recibo de gasto (República Dominicana). Reglas estrictas:\n" +
-                "1) comercio = título comercial / razón social del establecimiento.\n" +
-                "2) lineas = cada producto/servicio visible: descripcion, cantidad, precio unitario, subtotal de esa línea.\n" +
-                "3) concepto = texto multilínea listo para caja: primera línea = comercio; " +
-                "luego cada ítem como '- desc xCANT @ PRECIO = SUBTOTAL'. Incluye lo legible; máx ~15 ítems.\n" +
-                "4) monto = ÚNICAMENTE el TOTAL / TOTAL A PAGAR / TOTAL GENERAL (con ITBIS si aplica). " +
-                "NUNCA uses subtotal de una línea, ni ITBIS solo, ni propina sola si hay total mayor.\n" +
-                "5) Si no lees con confianza: concepto=\"\", lineas=[], monto=0.\n" +
-                "JSON únicamente: " +
-                "{\"comercio\":\"...\",\"lineas\":[{\"descripcion\":\"...\",\"cantidad\":1,\"precio\":0,\"subtotal\":0}]," +
+                "OCR de factura/recibo de gasto (República Dominicana). Prioridad:\n" +
+                "A) Título comercial  B) descripción/cantidad/precio/subtotal por línea  C) TOTAL A PAGAR.\n" +
+                "concepto = SOLO descripción (comercio + líneas). NO incluyas el total en concepto.\n" +
+                "monto = ÚNICAMENTE el TOTAL A PAGAR.\n" +
+                "JSON: {\"comercio\":\"...\",\"lineas\":[{\"descripcion\":\"...\",\"cantidad\":1,\"precio\":0,\"subtotal\":0}]," +
                 "\"concepto\":\"...\",\"monto\":0}";
 
             string b64 = Convert.ToBase64String(imageBytes);

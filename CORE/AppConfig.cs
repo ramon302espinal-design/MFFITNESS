@@ -22,6 +22,12 @@ namespace CORE
         /// <summary>Development | Production (u otro nombre de perfil en appsettings).</summary>
         public static string EnvironmentName => Resolve().EnvironmentName;
 
+        /// <summary>
+        /// Entorno sin abrir BD (útil para rutas Ollama/FacturaGastos).
+        /// Misma prioridad que Resolve: env vars → appsettings.Local/DefaultEnvironment → Development.
+        /// </summary>
+        public static string PeekEnvironment() => DetectEnvironment();
+
         /// <summary>Nombre de la base (Initial Catalog / Database).</summary>
         public static string DatabaseName => Resolve().DatabaseName;
 
