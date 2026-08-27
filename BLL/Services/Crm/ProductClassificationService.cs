@@ -13,9 +13,12 @@ namespace BLL.Services.Crm
         public ProductClassificationReport GetReport(
             ProfitPeriodKind periodKind = ProfitPeriodKind.ThisMonth,
             DateTime? asOf = null,
-            ProductClassificationThresholds? thresholds = null)
+            ProductClassificationThresholds? thresholds = null,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
-            ProductPerformanceReport perf = _performance.GetReport(periodKind, asOf);
+            ProductPerformanceReport perf = _performance.GetReport(
+                periodKind, asOf, customFrom, customToExclusive);
             ProductTrendReport trendReport = _trends.GetTrends(periodKind, asOf);
             var trendById = trendReport.Rows.ToDictionary(t => t.ProductId);
 

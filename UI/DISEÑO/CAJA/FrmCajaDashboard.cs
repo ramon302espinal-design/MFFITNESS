@@ -49,6 +49,8 @@ namespace UI.DISEÑO
                 lblEstadoCaja.ForeColor = Color.Green;
                 btnAbrirCaja.Enabled = false;   // 🔥 bloquea abrir
                 btnCerrarCaja.Enabled = true;
+                btnRegistrarIngreso.Enabled = true;
+                btnRegistrarGasto.Enabled = true;
             }
             else
             {
@@ -56,6 +58,8 @@ namespace UI.DISEÑO
                 lblEstadoCaja.ForeColor = Color.Red;
                 btnAbrirCaja.Enabled = true;    // 🔥 permite abrir
                 btnCerrarCaja.Enabled = false;  // 🔥 bloquea cerrar
+                btnRegistrarIngreso.Enabled = false;
+                btnRegistrarGasto.Enabled = false;
             }
         }
 
@@ -236,12 +240,35 @@ namespace UI.DISEÑO
         }
 
         // ================================
+        // REGISTRAR INGRESO (manual → DetalleCaja INGRESO)
+        // ================================
+        private void btnRegistrarIngreso_Click(object sender, EventArgs e)
+        {
+            if (!cajaBLL.ObtenerEstadoCaja())
+            {
+                MessageBox.Show("Abra la caja antes de registrar un ingreso.");
+                return;
+            }
+
+            using var frm = new FrmRegistrarGasto(esIngreso: true);
+            frm.ShowDialog(this);
+            // AppEventos.CajaCambiada refresca paneles/movimientos; refuerzo local.
+            ActualizarDashboard();
+        }
+
+        // ================================
         // REGISTRAR GASTO
         // ================================
         private void btnRegistrarGasto_Click(object sender, EventArgs e)
         {
-            FrmRegistrarGasto frm = new FrmRegistrarGasto();
-            frm.ShowDialog();
+            if (!cajaBLL.ObtenerEstadoCaja())
+            {
+                MessageBox.Show("Abra la caja antes de registrar un gasto.");
+                return;
+            }
+
+            using var frm = new FrmRegistrarGasto(esIngreso: false);
+            frm.ShowDialog(this);
             // Gasto real: sí actualiza panelGastos (y el resto).
             ActualizarDashboard();
         }

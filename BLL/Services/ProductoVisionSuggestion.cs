@@ -10,6 +10,19 @@ namespace BLL.Services
         public decimal? PrecioCompraEstimado { get; set; }
         public decimal? PrecioVentaEstimado { get; set; }
         public string? RawResponse { get; set; }
+        public string? CodigoBarra { get; set; }
+
+        public static string? TryParseCodigoBarra(string? jsonOrText)
+        {
+            ProductoVisionSuggestion? s = TryParse(jsonOrText);
+            if (s == null)
+                return null;
+
+            if (!string.IsNullOrWhiteSpace(s.CodigoBarra))
+                return s.CodigoBarra;
+
+            return null;
+        }
 
         public static ProductoVisionSuggestion? TryParse(string? jsonOrText)
         {
@@ -31,6 +44,7 @@ namespace BLL.Services
                 s.Nombre = CleanNombreEmpaque(ReadString(root, "nombre", "name", "producto", "product"));
                 s.Categoria = ReadString(root, "categoria", "category", "categoriaSugerida");
                 s.Descripcion = ReadString(root, "descripcion", "description");
+                s.CodigoBarra = CleanCodigoBarra(ReadString(root, "codigoBarra", "codigo", "barcode", "ean", "upc"));
                 s.PrecioCompraEstimado = ReadDecimal(root, "precioCompra", "precioCompraEstimado", "cost");
                 s.PrecioVentaEstimado = ReadDecimal(root, "precioVenta", "precioVentaEstimado", "price");
                 return s;
@@ -45,14 +59,34 @@ namespace BLL.Services
             }
         }
 
-        /// <summary>Normaliza espacios; no altera el significado del texto leído.</summary>
+        /// <summary>Normaliza espacios y quita ruido típico de empaque (conteos, QR).</summary>
         private static string? CleanNombreEmpaque(string? nombre)
         {
             if (string.IsNullOrWhiteSpace(nombre))
                 return null;
 
             string cleaned = System.Text.RegularExpressions.Regex.Replace(nombre.Trim(), @"\s+", " ");
+            cleaned = System.Text.RegularExpressions.Regex.Replace(
+                cleaned,
+                @"\b\d+\s*(bars?|unidades?|uds?|pcs?|pack)\b",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            cleaned = System.Text.RegularExpressions.Regex.Replace(
+                cleaned,
+                @"\b(box\s*tops?|qr(\s*code)?)\b",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s{2,}", " ").Trim(' ', '-', ',');
             return cleaned.Length == 0 ? null : cleaned;
+        }
+
+        private static string? CleanCodigoBarra(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return null;
+
+            string digits = new string(raw.Where(char.IsDigit).ToArray());
+            return digits.Length >= 4 ? digits : raw.Trim();
         }
 
         private static string? ReadString(JsonElement root, params string[] names)

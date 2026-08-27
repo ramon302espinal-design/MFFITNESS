@@ -70,12 +70,18 @@ namespace UI.Helpers
         public static SalesDashboardReport? TryLoadDashboard(
             out string? error,
             ProfitPeriodKind periodKind = ProfitPeriodKind.ThisMonth,
-            int topLists = 5)
+            int topLists = 5,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
             error = null;
             try
             {
-                return new SalesDashboardService().GetReport(periodKind, topLists: topLists);
+                return new SalesDashboardService().GetReport(
+                    periodKind,
+                    topLists: topLists,
+                    customFrom: customFrom,
+                    customToExclusive: customToExclusive);
             }
             catch (Exception ex)
             {

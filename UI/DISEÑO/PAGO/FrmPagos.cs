@@ -3,8 +3,10 @@ using BLL.Commands;
 using BLL.Models;
 using DTO;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -42,9 +44,6 @@ namespace UI.DISEÑO
         private string? _codigoBarraInicial;
         private bool _suppressPausaUi;
         private int? _pausaVistaId;
-        private DataTable? _clientesMiembroDebe;
-        private bool _suppressMiembroDebeUi;
-        private bool _miembroDebeInteligenteCableado;
 
         // ===============================
         // CONSTRUCTORES
@@ -230,6 +229,16 @@ namespace UI.DISEÑO
             if (txtBuscarProducto != null && txtBuscarProducto.Focused)
                 return false;
 
+            // Panel financiamiento abierto: permitir escribir en txtMiembroDebe / listMiembros.
+            if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
+                return false;
+
+            if (txtMiembroDebe != null && txtMiembroDebe.Focused)
+                return false;
+
+            if (listMiembros != null && listMiembros.Focused)
+                return false;
+
             if (cmbCliente.DroppedDown)
                 return false;
 
@@ -274,9 +283,15 @@ namespace UI.DISEÑO
             if (txtBuscarProducto == null || txtBuscarProducto.IsDisposed)
                 return;
 
+            // No robar foco mientras se busca el miembro deudor.
+            if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
+                return;
+
             BeginInvoke(new Action(() =>
             {
                 if (txtBuscarProducto.IsDisposed)
+                    return;
+                if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
                     return;
                 txtBuscarProducto.Focus();
                 txtBuscarProducto.SelectAll();
@@ -291,7 +306,7 @@ namespace UI.DISEÑO
         private void CargarClientes()
         {
             ClienteBLL clienteBLLLocal = new ClienteBLL();
-            DataTable dt = clienteBLLLocal.ObtenerClientes();
+            DataTable dt = clienteBLLLocal.ObtenerClientesParaPos();
 
             // ValueMember ANTES del DataSource; columna real = "Id" (no "ID").
             cmbCliente.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -300,9 +315,8 @@ namespace UI.DISEÑO
             cmbCliente.DataSource = dt;
             cmbCliente.SelectedIndex = -1;
 
-            // Copia independiente: dos combos no pueden compartir el mismo CurrencyManager.
-            if (cbmMiembroDebe != null)
-                ConfigurarCbmMiembroDebeInteligente(dt);
+            // Copia independiente del catálogo para búsqueda TextBox + ListBox (no ComboBox).
+            CargarCatalogoMiembrosDebe(dt);
 
             if (cmbClientePausarVenta != null)
             {
@@ -319,220 +333,6 @@ namespace UI.DISEÑO
                 {
                     _suppressPausaUi = false;
                 }
-            }
-        }
-
-        /// <summary>
-        /// Opción A: al tipear inicial (nombre o apellido), solo coincidencias A→Z arriba.
-        /// </summary>
-        private void ConfigurarCbmMiembroDebeInteligente(DataTable fuenteClientes)
-        {
-            _clientesMiembroDebe = fuenteClientes.Copy();
-
-            _suppressMiembroDebeUi = true;
-            try
-            {
-                cbmMiembroDebe.DropDownStyle = ComboBoxStyle.DropDown;
-                cbmMiembroDebe.AutoCompleteMode = AutoCompleteMode.None;
-                cbmMiembroDebe.AutoCompleteSource = AutoCompleteSource.None;
-                cbmMiembroDebe.DisplayMember = "Nombre";
-                cbmMiembroDebe.ValueMember = "Id";
-                EnlazarCbmMiembroDebe(_clientesMiembroDebe.Copy());
-                cbmMiembroDebe.SelectedIndex = -1;
-                cbmMiembroDebe.Text = string.Empty;
-            }
-            finally
-            {
-                _suppressMiembroDebeUi = false;
-            }
-
-            if (_miembroDebeInteligenteCableado)
-                return;
-
-            cbmMiembroDebe.TextUpdate += cbmMiembroDebe_TextUpdate;
-            cbmMiembroDebe.KeyDown += cbmMiembroDebe_KeyDown;
-            cbmMiembroDebe.Leave += cbmMiembroDebe_Leave;
-            _miembroDebeInteligenteCableado = true;
-        }
-
-        private void EnlazarCbmMiembroDebe(DataTable vista)
-        {
-            cbmMiembroDebe.DisplayMember = "Nombre";
-            cbmMiembroDebe.ValueMember = "Id";
-            cbmMiembroDebe.DataSource = vista;
-        }
-
-        private void cbmMiembroDebe_TextUpdate(object? sender, EventArgs e)
-        {
-            if (_suppressMiembroDebeUi || _clientesMiembroDebe == null)
-                return;
-
-            FiltrarCbmMiembroDebe(cbmMiembroDebe.Text);
-        }
-
-        private void cbmMiembroDebe_KeyDown(object? sender, KeyEventArgs e)
-        {
-            if (e.KeyCode != Keys.Enter)
-                return;
-
-            if (cbmMiembroDebe.DroppedDown && cbmMiembroDebe.Items.Count > 0)
-            {
-                if (cbmMiembroDebe.SelectedIndex < 0)
-                    cbmMiembroDebe.SelectedIndex = 0;
-                cbmMiembroDebe.DroppedDown = false;
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
-        }
-
-        private void cbmMiembroDebe_Leave(object? sender, EventArgs e)
-        {
-            if (_suppressMiembroDebeUi || _clientesMiembroDebe == null)
-                return;
-
-            // Si ya hay ítem válido, no tocar.
-            if (cbmMiembroDebe.SelectedItem is DataRowView)
-                return;
-
-            string texto = cbmMiembroDebe.Text.Trim();
-            if (string.IsNullOrEmpty(texto))
-            {
-                RestaurarListaCompletaMiembroDebe(limpiarTexto: true);
-                return;
-            }
-
-            // Una sola coincidencia o match exacto → seleccionar.
-            DataTable matches = ConstruirVistaMiembroDebe(texto);
-            if (matches.Rows.Count == 1)
-            {
-                SeleccionarMiembroDebePorId(Convert.ToInt32(matches.Rows[0]["Id"]));
-                return;
-            }
-
-            foreach (DataRow row in matches.Rows)
-            {
-                string nombre = row["Nombre"]?.ToString()?.Trim() ?? string.Empty;
-                if (nombre.Equals(texto, StringComparison.OrdinalIgnoreCase))
-                {
-                    SeleccionarMiembroDebePorId(Convert.ToInt32(row["Id"]));
-                    return;
-                }
-            }
-
-            // Texto libre sin selección: restaurar lista completa y limpiar para no guardar basura.
-            RestaurarListaCompletaMiembroDebe(limpiarTexto: true);
-        }
-
-        private void FiltrarCbmMiembroDebe(string texto)
-        {
-            if (_clientesMiembroDebe == null)
-                return;
-
-            string keep = texto ?? string.Empty;
-            int caret = cbmMiembroDebe.SelectionStart;
-            DataTable vista = ConstruirVistaMiembroDebe(keep);
-
-            _suppressMiembroDebeUi = true;
-            try
-            {
-                EnlazarCbmMiembroDebe(vista);
-                cbmMiembroDebe.DroppedDown = true;
-                Cursor.Current = Cursors.Default;
-                cbmMiembroDebe.Text = keep;
-                cbmMiembroDebe.SelectionStart = Math.Min(caret, keep.Length);
-                cbmMiembroDebe.SelectionLength = 0;
-            }
-            finally
-            {
-                _suppressMiembroDebeUi = false;
-            }
-        }
-
-        private DataTable ConstruirVistaMiembroDebe(string filtro)
-        {
-            if (_clientesMiembroDebe == null)
-                return new DataTable();
-
-            string q = (filtro ?? string.Empty).Trim();
-            if (string.IsNullOrEmpty(q))
-            {
-                DataView todos = _clientesMiembroDebe.DefaultView;
-                todos.Sort = "Nombre ASC";
-                return todos.ToTable();
-            }
-
-            DataTable vista = _clientesMiembroDebe.Clone();
-            foreach (DataRow row in _clientesMiembroDebe.Rows)
-            {
-                string nombre = row["Nombre"]?.ToString() ?? string.Empty;
-                if (CoincideInicialNombreOApellido(nombre, q))
-                    vista.ImportRow(row);
-            }
-
-            DataView dv = vista.DefaultView;
-            dv.Sort = "Nombre ASC";
-            return dv.ToTable();
-        }
-
-        /// <summary>
-        /// Coincide si el texto inicia el nombre completo o cualquier palabra (apellido incluido).
-        /// </summary>
-        private static bool CoincideInicialNombreOApellido(string nombreCompleto, string query)
-        {
-            if (string.IsNullOrWhiteSpace(nombreCompleto) || string.IsNullOrWhiteSpace(query))
-                return false;
-
-            if (nombreCompleto.StartsWith(query, StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            foreach (string parte in nombreCompleto.Split(
-                         new[] { ' ', '\t', '-', ',' },
-                         StringSplitOptions.RemoveEmptyEntries))
-            {
-                if (parte.StartsWith(query, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private void RestaurarListaCompletaMiembroDebe(bool limpiarTexto)
-        {
-            if (_clientesMiembroDebe == null)
-                return;
-
-            _suppressMiembroDebeUi = true;
-            try
-            {
-                EnlazarCbmMiembroDebe(ConstruirVistaMiembroDebe(string.Empty));
-                cbmMiembroDebe.SelectedIndex = -1;
-                if (limpiarTexto)
-                    cbmMiembroDebe.Text = string.Empty;
-            }
-            finally
-            {
-                _suppressMiembroDebeUi = false;
-            }
-        }
-
-        private void SeleccionarMiembroDebePorId(int clienteId)
-        {
-            if (_clientesMiembroDebe == null || clienteId <= 0)
-                return;
-
-            _suppressMiembroDebeUi = true;
-            try
-            {
-                EnlazarCbmMiembroDebe(ConstruirVistaMiembroDebe(string.Empty));
-                cbmMiembroDebe.SelectedValue = clienteId;
-            }
-            catch
-            {
-                cbmMiembroDebe.SelectedIndex = -1;
-            }
-            finally
-            {
-                _suppressMiembroDebeUi = false;
             }
         }
 
@@ -723,6 +523,12 @@ namespace UI.DISEÑO
                 if (txtBuscarProducto != null && txtBuscarProducto.Focused)
                     return false;
 
+                // No cobrar con Enter mientras se busca el miembro deudor.
+                if (txtMiembroDebe != null && txtMiembroDebe.Focused)
+                    return false;
+                if (listMiembros != null && listMiembros.Focused)
+                    return false;
+
                 if (tabProductos.SelectedTab == tabPago)
                 {
                     if (btnPagarProductos.Enabled && btnPagarProductos.Visible)
@@ -822,9 +628,8 @@ namespace UI.DISEÑO
 
         private void txtBuscarProducto_TextChanged(object? sender, EventArgs e)
         {
-            if (ProductoBarcodeNormalizer.LooksLikeBarcodeInProgress(txtBuscarProducto?.Text))
-                return;
-
+            // Siempre filtrar lstProductosPos en vivo (nombre, Id, código, categoría…).
+            // El escáner sigue resolviendo con Enter → ProcesarEscaneoProductoPos.
             AplicarFiltroBusquedaProducto();
         }
 
@@ -838,14 +643,36 @@ namespace UI.DISEÑO
 
             ActivarTabProductos();
 
-            if (string.IsNullOrWhiteSpace(txtBuscarProducto?.Text))
+            string texto = txtBuscarProducto?.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(texto))
             {
                 if (carrito.Rows.Count > 0)
                     btnPagarProductos.PerformClick();
                 return;
             }
 
-            ProcesarEscaneoProductoPos();
+            // EAN / código interno completo → cobro por escáner (sin romper wedge).
+            if (ProductoBarcodeNormalizer.TryNormalizeBarcode(texto, out _))
+            {
+                ProcesarEscaneoProductoPos();
+                return;
+            }
+
+            // Búsqueda inteligente: 1 match → agregar; varios → enfocar el primero.
+            AplicarFiltroBusquedaProducto();
+            if (_bsProductos.Count == 1 && lstProductosPos.SelectedItem is DataRowView unico)
+            {
+                AjustarCantidadCarrito(unico.Row, 1);
+                LimpiarBusquedaPos();
+                return;
+            }
+
+            if (_bsProductos.Count > 0)
+            {
+                if (lstProductosPos.SelectedIndex < 0)
+                    lstProductosPos.SelectedIndex = 0;
+                lstProductosPos.Focus();
+            }
         }
 
         /// <summary>
@@ -902,9 +729,11 @@ namespace UI.DISEÑO
 
             try
             {
-                _bsProductos.Filter = string.IsNullOrEmpty(termino)
-                    ? null
+                string filtro = string.IsNullOrEmpty(termino)
+                    ? string.Empty
                     : BusquedaGridHelper.ConstruirFiltroProductosPos(termino);
+
+                _bsProductos.Filter = string.IsNullOrEmpty(filtro) ? null : filtro;
 
                 if (seleccionPrevia != null)
                 {
@@ -918,7 +747,8 @@ namespace UI.DISEÑO
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Filtro productos POS: {ex.Message}");
-                _bsProductos.RemoveFilter();
+                try { _bsProductos.RemoveFilter(); }
+                catch { /* ignore */ }
             }
         }
 
@@ -1413,270 +1243,6 @@ namespace UI.DISEÑO
             return false;
         }
 
-        // ===============================
-        // FINANCIAMIENTO PRODUCTO (carrito completo)
-        // ===============================
-
-        private void btnFinanciamiento_Click(object? sender, EventArgs e)
-        {
-            if (carrito.Rows.Count == 0)
-            {
-                MessageBox.Show(
-                    "El carrito está vacío. Agregue productos antes de financiar.",
-                    "Financiamiento",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return;
-            }
-
-            decimal total = ObtenerTotalCarrito();
-            if (total <= 0)
-            {
-                MessageBox.Show("El total del carrito debe ser mayor a cero.");
-                return;
-            }
-
-            panelFinanciamientoProducto.Visible = true;
-            panelFinanciamientoProducto.BringToFront();
-            RefrescarPanelFinanciamientoProducto();
-
-            // Prefill deudor si ya hay cliente en membresía.
-            if (TryObtenerClienteSeleccionado(out int clienteId, out _))
-                SeleccionarMiembroDebePorId(clienteId);
-        }
-
-        private void btnCerrarFinProducto_Click(object? sender, EventArgs e)
-        {
-            OcultarPanelFinanciamientoProducto();
-        }
-
-        private void OcultarPanelFinanciamientoProducto()
-        {
-            if (panelFinanciamientoProducto == null)
-                return;
-
-            panelFinanciamientoProducto.Visible = false;
-            txtProducto.Clear();
-            txtPagoInicioProducto.Text = "0";
-            lblSaldoRestanteProducto.Text = "$0.00";
-            RestaurarListaCompletaMiembroDebe(limpiarTexto: true);
-        }
-
-        private void RefrescarPanelFinanciamientoProducto()
-        {
-            if (txtProducto == null)
-                return;
-
-            txtProducto.Text = ConstruirConceptoDeudaCarrito();
-
-            if (string.IsNullOrWhiteSpace(txtPagoInicioProducto.Text))
-                txtPagoInicioProducto.Text = "0";
-
-            CalcularSaldoFinanciamientoProducto();
-        }
-
-        private string ConstruirConceptoDeudaCarrito()
-        {
-            var sb = new StringBuilder();
-            sb.Append("Venta a crédito");
-
-            int lineas = 0;
-            foreach (DataRow row in carrito.Rows)
-            {
-                if (row.RowState == DataRowState.Deleted)
-                    continue;
-
-                string nombre = row["Producto"]?.ToString() ?? "Producto";
-                int cant = Convert.ToInt32(row["Cantidad"]);
-                if (lineas == 0)
-                    sb.Append(": ");
-                else
-                    sb.Append(", ");
-
-                sb.Append(nombre);
-                if (cant > 1)
-                    sb.Append(" x").Append(cant);
-
-                lineas++;
-                if (lineas >= 4)
-                {
-                    sb.Append("…");
-                    break;
-                }
-            }
-
-            decimal total = ObtenerTotalCarrito();
-            sb.Append(" (RD$ ").Append(total.ToString("N2")).Append(')');
-            string concepto = sb.ToString();
-            return concepto.Length > 200 ? concepto.Substring(0, 200) : concepto;
-        }
-
-        private void txtPagoInicioProducto_KeyPress(object? sender, KeyPressEventArgs e)
-        {
-            if (!char.IsDigit(e.KeyChar) && e.KeyChar != '.' && !char.IsControl(e.KeyChar))
-                e.Handled = true;
-        }
-
-        private void txtPagoInicioProducto_TextChanged(object? sender, EventArgs e)
-        {
-            CalcularSaldoFinanciamientoProducto();
-        }
-
-        private void CalcularSaldoFinanciamientoProducto()
-        {
-            if (lblSaldoRestanteProducto == null)
-                return;
-
-            decimal total = ObtenerTotalCarrito();
-            decimal pagoInicio = decimal.TryParse(txtPagoInicioProducto?.Text, out decimal p) ? p : 0m;
-            if (pagoInicio < 0) pagoInicio = 0m;
-
-            decimal saldo = total - pagoInicio;
-            if (saldo < 0) saldo = 0m;
-
-            lblSaldoRestanteProducto.Text = $"${saldo:N2}";
-            if (dtpVenceDeudaProducto != null)
-                dtpVenceDeudaProducto.Enabled = saldo > 0;
-        }
-
-        private bool TryObtenerMiembroDeudor(out int clienteId, out string nombre)
-        {
-            clienteId = 0;
-            nombre = string.Empty;
-
-            if (cbmMiembroDebe?.SelectedItem is DataRowView row)
-            {
-                if (row["Id"] == null || row["Id"] == DBNull.Value)
-                    return false;
-
-                clienteId = Convert.ToInt32(row["Id"]);
-                nombre = row["Nombre"]?.ToString()?.Trim() ?? string.Empty;
-                return clienteId > 0;
-            }
-
-            if (cbmMiembroDebe?.SelectedValue != null
-                && cbmMiembroDebe.SelectedValue != DBNull.Value
-                && int.TryParse(cbmMiembroDebe.SelectedValue.ToString(), out int id)
-                && id > 0)
-            {
-                clienteId = id;
-                nombre = cbmMiembroDebe.Text.Trim();
-                return true;
-            }
-
-            return false;
-        }
-
-        private void btnGuardarDeudaProducto_Click(object? sender, EventArgs e)
-        {
-            try
-            {
-                if (carrito.Rows.Count == 0)
-                {
-                    MessageBox.Show("El carrito está vacío.");
-                    return;
-                }
-
-                decimal total = ObtenerTotalCarrito();
-                if (total <= 0)
-                {
-                    MessageBox.Show("El total del carrito debe ser mayor a cero.");
-                    return;
-                }
-
-                if (!TryObtenerMiembroDeudor(out int clienteId, out string nombreCliente))
-                {
-                    MessageBox.Show(
-                        "Seleccione el miembro deudor.",
-                        "Financiamiento producto",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    return;
-                }
-
-                decimal pagoInicio = decimal.TryParse(txtPagoInicioProducto.Text, out decimal p) ? p : -1m;
-                if (pagoInicio < 0 || pagoInicio > total)
-                {
-                    MessageBox.Show("Pago inicial inválido. Debe estar entre 0 y el total del carrito.");
-                    return;
-                }
-
-                pagoInicio = Math.Round(pagoInicio, 2, MidpointRounding.AwayFromZero);
-                decimal saldo = Math.Round(total - pagoInicio, 2, MidpointRounding.AwayFromZero);
-
-                // Crédito total (pago 0) o abono: si hay ingreso a caja, exige caja abierta.
-                if (pagoInicio > 0 && !VerificarCajaAbierta())
-                    return;
-
-                if (saldo > 0 && dtpVenceDeudaProducto.Value.Date < DateTime.Today)
-                {
-                    MessageBox.Show("La fecha límite de pago no puede ser anterior a hoy.");
-                    return;
-                }
-
-                // Aviso informativo (no bloquea) si ya tiene deuda de producto.
-                if (deudaBLL.TieneAvisoDeudaProducto(clienteId, out string avisoProducto))
-                {
-                    var cont = MessageBox.Show(
-                        avisoProducto + "\n\n¿Desea registrar otra deuda de producto de todos modos?",
-                        "Deuda de producto pendiente",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                    if (cont != DialogResult.Yes)
-                        return;
-                }
-
-                string concepto = string.IsNullOrWhiteSpace(txtProducto.Text)
-                    ? ConstruirConceptoDeudaCarrito()
-                    : txtProducto.Text.Trim();
-                if (concepto.Length > 200)
-                    concepto = concepto.Substring(0, 200);
-
-                DateTime? fechaVenc = saldo > 0
-                    ? dtpVenceDeudaProducto.Value.Date
-                    : null;
-
-                string metodo = pagoInicio > 0 ? "Efectivo" : "Credito";
-
-                var result = VentasCommandService.RegistrarVentaPOS(
-                    clienteId,
-                    total,
-                    pagoInicio,
-                    metodo,
-                    carrito,
-                    Sesion.Usuario,
-                    fechaVenc,
-                    concepto);
-
-                if (!result.Success)
-                {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                string resumen =
-                    $"Venta financiada registrada.\n\n" +
-                    $"Cliente: {nombreCliente}\n" +
-                    $"Total: ${total:N2}\n" +
-                    $"Pago inicial: ${pagoInicio:N2}\n" +
-                    $"Saldo pendiente: ${saldo:N2}\n" +
-                    (saldo > 0
-                        ? $"Vence: {dtpVenceDeudaProducto.Value:dd/MM/yyyy}\n"
-                        : string.Empty) +
-                    "\nQueda en Deudas, historial, caja (si hubo abono) y CRM/ventas.";
-
-                MessageBox.Show(resumen, "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                OcultarPanelFinanciamientoProducto();
-                FinalizarPosTrasVenta();
-                ProgramarRefrescoDashboard();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         private void btnPagarProductos_Click(object sender, EventArgs e)
         {
             try
@@ -1778,6 +1344,15 @@ namespace UI.DISEÑO
             {
                 txtMonto.Text = Convert.ToDecimal(row["Precio"]).ToString("0.00");
 
+                bool esParcial = EsPlanParcialSeleccionado();
+                if (esParcial && chkFinanciamiento.Checked)
+                    chkFinanciamiento.Checked = false;
+
+                // ATLETA/VISITA: no requieren miembro en combo.
+                cmbCliente.Enabled = !esParcial;
+                if (esParcial)
+                    cmbCliente.SelectedIndex = -1;
+
                 if (chkFinanciamiento.Checked)
                     CalcularSaldoFinanciamiento();
 
@@ -1785,6 +1360,7 @@ namespace UI.DISEÑO
             }
             else
             {
+                cmbCliente.Enabled = true;
                 ActualizarPanelOfertaPorPlan();
             }
         }
@@ -1796,21 +1372,38 @@ namespace UI.DISEÑO
 
             try
             {
-                if (!TryObtenerClienteSeleccionado(out int clienteId, out _) || cmbMembresia.SelectedValue == null)
+                if (cmbMembresia.SelectedValue == null)
                 {
-                    MessageBox.Show("Faltan datos de cliente o membresía.");
+                    MessageBox.Show("Seleccione un plan (membresía).");
                     return;
+                }
+
+                bool esParcial = EsPlanParcialSeleccionado();
+                int clienteId = 0;
+                if (!esParcial)
+                {
+                    if (!TryObtenerClienteSeleccionado(out clienteId, out _))
+                    {
+                        MessageBox.Show("Faltan datos de cliente o membresía.");
+                        return;
+                    }
                 }
 
                 if (!VerificarCajaAbierta()) return;
 
-                if (!ConfirmarPerfilCliente(clienteId)) return;
+                if (!esParcial)
+                {
+                    if (!ConfirmarPerfilCliente(clienteId)) return;
 
-                if (AvisoDeudaPendiente.BloqueaOperacionDePlan(this, clienteId, deudaBLL))
-                    return;
+                    if (AvisoDeudaPendiente.BloqueaOperacionDePlan(this, clienteId, deudaBLL))
+                        return;
+                }
 
-                // Con financiamiento u oferta: no forzar diálogo de renovación.
-                if (!chkFinanciamiento.Checked && !EsPlanOfertaSeleccionado() && IntentarRedirigirRenovacion(clienteId))
+                // Con financiamiento, oferta o acceso parcial: no forzar diálogo de renovación.
+                if (!chkFinanciamiento.Checked
+                    && !EsPlanOfertaSeleccionado()
+                    && !esParcial
+                    && IntentarRedirigirRenovacion(clienteId))
                     return;
 
                 int planId = Convert.ToInt32(cmbMembresia.SelectedValue);
@@ -1833,7 +1426,11 @@ namespace UI.DISEÑO
 
                 try
                 {
-                    if (EsPlanOfertaSeleccionado())
+                    if (esParcial)
+                    {
+                        CobrarPlanParcial(clienteId, planId, plan, usuario);
+                    }
+                    else if (EsPlanOfertaSeleccionado())
                     {
                         CobrarMembresiaConOferta(clienteId, planId, plan, fin, usuario);
                     }
@@ -1970,6 +1567,60 @@ namespace UI.DISEÑO
                     enviarWhatsAppFactura: false,
                     precioLista: plan.Precio);
             }
+        }
+
+        private void CobrarPlanParcial(
+            int clienteIdOpcional,
+            int planId,
+            PlanDTO plan,
+            string usuario)
+        {
+            if (!decimal.TryParse(txtMonto.Text, out decimal monto) || monto <= 0)
+            {
+                MessageBox.Show("Monto inválido.");
+                return;
+            }
+
+            if (Math.Abs(monto - plan.Precio) > 0.009m)
+            {
+                MessageBox.Show(
+                    $"ATLETA y VISITA se cobran al precio fijo del plan (RD$ {plan.Precio:N2}).",
+                    "Acceso parcial",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                txtMonto.Text = plan.Precio.ToString("0.00");
+                return;
+            }
+
+            string concepto = $"Plan {plan.Nombre}";
+            string metodoPago = "Efectivo";
+
+            // clienteId 0 → BLL usa VISITANTE (SISTEMA); no exige cmbCliente.
+            var result = MembresiaCommandService.RegistrarPlanParcial(
+                clienteIdOpcional,
+                planId,
+                monto,
+                metodoPago,
+                concepto,
+                usuario);
+
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message);
+                return;
+            }
+
+            LimpiarCampos();
+            MessageBox.Show(
+                $"{plan.Nombre} registrado.\n\n" +
+                $"Monto: RD$ {monto:N2}\n" +
+                "Sin miembro permanente · no activa Estado Clientes.",
+                "Acceso parcial",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            ProgramarRefrescoTrasPago();
+            CORE.AppEventos.CajaCambiada();
         }
 
         private void CobrarMembresiaCompleta(
@@ -2184,6 +1835,7 @@ namespace UI.DISEÑO
 
         private void LimpiarCampos()
         {
+            cmbCliente.Enabled = true;
             cmbCliente.SelectedIndex = -1;
             lstProductosPos.ClearSelected();
             if (txtBuscarProducto != null)
@@ -2310,6 +1962,17 @@ namespace UI.DISEÑO
                 {
                     MessageBox.Show(
                         "El plan OFERTA no admite financiamiento. Elija otro plan o quite el financiamiento.",
+                        "Financiamiento",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    chkFinanciamiento.Checked = false;
+                    return;
+                }
+
+                if (EsPlanParcialSeleccionado())
+                {
+                    MessageBox.Show(
+                        "ATLETA y VISITA no admiten financiamiento. Cobre el monto completo.",
                         "Financiamiento",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);

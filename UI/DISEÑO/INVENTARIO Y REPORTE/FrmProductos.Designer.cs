@@ -471,7 +471,7 @@ namespace UI.DISEÑO
             btnAgregarProductos.Name = "btnAgregarProductos";
             btnAgregarProductos.Size = new Size(230, 28);
             btnAgregarProductos.TabIndex = 22;
-            btnAgregarProductos.Text = "AGREGAR CON FOTO / ARCHIVO";
+            btnAgregarProductos.Text = "AGREGAR (2 FOTOS / IA)";
             btnAgregarProductos.UseVisualStyleBackColor = false;
             btnAgregarProductos.Click += btnAgregarProductos_Click;
             // 

@@ -262,7 +262,9 @@ namespace UI.DISEÑO
             DataView dv = planes.DefaultView;
             try
             {
-                dv.RowFilter = "Nombre <> 'PRODUCTO A CRÉDITO' AND Nombre <> 'M-A'";
+                dv.RowFilter =
+                    "Nombre <> 'PRODUCTO A CRÉDITO' AND Nombre <> 'M-A' " +
+                    "AND Nombre <> 'ATLETA' AND Nombre <> 'VISITA'";
                 DataTable filtrada = dv.ToTable();
                 return filtrada.Rows.Count > 0 ? filtrada : planes.Copy();
             }

@@ -26,12 +26,15 @@ namespace UI.Helpers
         public static ProfitSummary? TryLoadSummary(
             ProfitPeriodKind kind,
             out string? error,
-            DateTime? asOf = null)
+            DateTime? asOf = null,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
             try
             {
                 error = null;
-                return new ProfitAnalyticsService().GetForPeriod(kind, asOf);
+                return new ProfitAnalyticsService().GetForPeriod(
+                    kind, asOf, customFrom, customToExclusive);
             }
             catch (Exception ex)
             {
@@ -49,12 +52,22 @@ namespace UI.Helpers
         public static IReadOnlyList<ProfitGroupRow>? TryLoadByProduct(
             ProfitPeriodKind kind,
             out string? error,
-            int? top = 15)
+            int? top = 15,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
             try
             {
                 error = null;
-                return new ProfitAnalyticsService().GetByProduct(kind, top: top);
+                var svc = new ProfitAnalyticsService();
+                if (kind == ProfitPeriodKind.Custom)
+                {
+                    var range = ProfitAnalyticsService.ResolvePeriod(
+                        kind, null, customFrom, customToExclusive);
+                    return svc.GetByProduct(range.From, range.ToExclusive, top);
+                }
+
+                return svc.GetByProduct(kind, top: top);
             }
             catch (Exception ex)
             {

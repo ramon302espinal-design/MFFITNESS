@@ -32,20 +32,16 @@ namespace BLL
             if (string.IsNullOrEmpty(tipo))
                 throw new Exception("Debe seleccionar un tipo de reporte.");
 
-            switch (tipo)
+            string clave = tipo.Trim().ToUpperInvariant();
+            return clave switch
             {
-                case "CAJA":
-                    return reporteDAL.ObtenerCajaPorFecha(desde, hasta);
-
-                case "VENTAS":
-                    return reporteDAL.ObtenerVentasPorFecha(desde, hasta);
-
-                case "PAGOS":
-                    return reporteDAL.ObtenerPagosPorFecha(desde, hasta);
-
-                default:
-                    throw new Exception("Tipo de reporte inválido");
-            }
+                "CAJA" => reporteDAL.ObtenerCajaPorFecha(desde, hasta),
+                "VENTAS" => reporteDAL.ObtenerVentasPorFecha(desde, hasta),
+                "SUPLEMENTO" or "SUPLEMENTOS" => reporteDAL.ObtenerSuplementosPorFecha(desde, hasta),
+                "MEMBRESIA" or "MEMBRESÍA" => reporteDAL.ObtenerMembresiaPorFecha(desde, hasta),
+                "GASTO" or "GASTOS" => reporteDAL.ObtenerGastosPorFecha(desde, hasta),
+                _ => throw new Exception("Tipo de reporte inválido")
+            };
         }
 
         // ===============================
@@ -142,7 +138,7 @@ namespace BLL
         }
 
         /// <summary>
-        /// PDF de reportes de Caja/Ventas/Pagos con metadatos del rango y total final.
+        /// PDF de reportes de Caja / Membresía / Ventas / Gasto con metadatos del rango y total final.
         /// </summary>
         public void GenerarReportePdfDetallado(
             DataTable datos,

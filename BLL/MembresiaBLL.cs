@@ -470,6 +470,71 @@ namespace BLL
             }
         }
 
+        /// <summary>
+        /// ATLETA / VISITA: ingreso a caja + Pagos + historial, sin fila Membresias
+        /// y sin cambiar reglas de Estado (no usa TipoMovimiento PAGO).
+        /// </summary>
+        public MembresiaOperacionResult RegistrarPagoPlanParcial(
+            int clienteId,
+            int planId,
+            decimal? montoOverride,
+            string metodoPago,
+            string? concepto,
+            string usuario)
+        {
+            var plan = planDAL.ObtenerPlan(planId);
+            if (plan == null)
+                throw new Exception("Plan no encontrado.");
+
+            if (!PlanNombres.EsParcial(plan.Nombre))
+                throw new Exception("El plan seleccionado no es un acceso parcial (ATLETA/VISITA).");
+
+            // Sin cliente en combo: usa VISITANTE (SISTEMA) para Pagos/Historial/Caja (FK).
+            int clienteEfectivo = clienteId > 0
+                ? clienteId
+                : new ClienteBLL().ObtenerOCrearVisitanteSistema();
+
+            decimal monto = montoOverride ?? plan.Precio;
+            if (monto <= 0)
+                throw new Exception("El monto debe ser mayor a 0.");
+
+            DateTime ahora = DateTime.Now;
+            // Vencimiento del recibo = mismo día (no es vigencia de membresía).
+            DateTime finDia = ahora.Date.AddDays(1).AddTicks(-1);
+            string nombrePlan = plan.Nombre?.Trim() ?? PlanNombres.TipoHistorialParcial(plan.Nombre);
+            string conceptoPago = string.IsNullOrWhiteSpace(concepto)
+                ? $"Plan {nombrePlan}"
+                : concepto.Trim();
+
+            var pagoBLL = new PagoBLL();
+            var (pagoId, cajaMovId) = pagoBLL.RegistrarPagoConResultado(
+                clienteEfectivo,
+                ahora,
+                finDia,
+                monto,
+                metodoPago,
+                conceptoPago,
+                usuario);
+
+            string tipoHistorial = PlanNombres.TipoHistorialParcial(plan.Nombre);
+            string nota = conceptoPago.Length > 200 ? conceptoPago.Substring(0, 200) : conceptoPago;
+            new HistorialMembresiaDAL().Insertar(
+                clienteEfectivo,
+                tipoHistorial,
+                planId,
+                monto,
+                usuario,
+                nota);
+
+            return new MembresiaOperacionResult
+            {
+                MembresiaId = 0,
+                PagoId = pagoId,
+                CajaMovimientoId = cajaMovId,
+                FechaFinMembresia = finDia
+            };
+        }
+
         public void RevertirPagoMembresiaCompleta(MembresiaOperacionResult operacion, string usuario)
         {
             if (operacion.PagoId > 0)
@@ -498,6 +563,9 @@ namespace BLL
 
             var plan = planDAL.ObtenerPlan(planId);
             if (plan == null) throw new Exception("Plan no encontrado.");
+
+            if (PlanNombres.EsParcial(plan.Nombre))
+                throw new Exception("ATLETA y VISITA no admiten financiamiento; cobre el monto completo.");
 
             if (pagoInicial < 0 || pagoInicial > plan.Precio)
                 throw new Exception("Pago inicial inválido.");

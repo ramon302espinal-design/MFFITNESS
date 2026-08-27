@@ -75,6 +75,7 @@ namespace UI.DISEÑO
             CargarMovimientos();
             CargarMotivos();
             txtMotivoExtra.Enabled = false;
+            PrecalentarVisionIaEnSegundoPlano();
             BeginInvoke(new Action(() => txtCodigo.Focus()));
         }
 

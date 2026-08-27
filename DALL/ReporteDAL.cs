@@ -67,7 +67,7 @@ namespace DL
         }
 
         // ===============================
-        // 🔥 REPORTE CAJA POR FECHA
+        // 🔥 REPORTE CAJA POR FECHA (todo DetalleCaja)
         // ===============================
         public DataTable ObtenerCajaPorFecha(DateTime desde, DateTime hasta)
         {
@@ -169,64 +169,153 @@ WHERE dc.Fecha >= @Desde
 ORDER BY dc.Fecha DESC";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
-
-                cmd.Parameters.Add("@Desde", SqlDbType.DateTime).Value = desde;
-                cmd.Parameters.Add("@Hasta", SqlDbType.DateTime).Value = hasta;
+                cmd.Parameters.Add("@Desde", SqlDbType.DateTime).Value = desde.Date;
+                cmd.Parameters.Add("@Hasta", SqlDbType.DateTime).Value = hasta.Date;
 
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
-
                 return dt;
             }
         }
 
         // ===============================
-        // 🔥 REPORTE PAGOS
+        // MEMBRESÍA / PLANES (HistorialMembresias)
         // ===============================
-        public DataTable ObtenerPagosPorFecha(DateTime desde, DateTime hasta)
+        public DataTable ObtenerMembresiaPorFecha(DateTime desde, DateTime hasta)
         {
             using (SqlConnection conn = db.GetConnection())
             {
-                string query = @"SELECT FechaPago, ClienteId, Monto, MetodoPago, Concepto 
-                                 FROM Pagos
-                                 WHERE FechaPago BETWEEN @Desde AND @Hasta
-                                 ORDER BY FechaPago DESC";
+                string query = @"
+SELECT
+    h.Fecha,
+    c.Nombre AS Miembro,
+    ISNULL(p.Nombre, N'Sin plan') AS [Plan],
+    h.TipoMovimiento AS Tipo,
+    ISNULL(h.Monto, 0) AS Monto,
+    ISNULL(NULLIF(LTRIM(RTRIM(h.Usuario)), ''), N'—') AS Usuario,
+    ISNULL(h.Nota, N'') AS Concepto
+FROM HistorialMembresias h
+INNER JOIN Clientes c ON c.ID = h.ClienteId
+LEFT JOIN Planes p ON p.Id = h.PlanId
+WHERE h.Fecha >= @Desde
+  AND h.Fecha < DATEADD(DAY, 1, @Hasta)
+  AND (
+        h.PlanId IS NOT NULL
+     OR UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (
+            N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
+            N'AJUSTE_FECHA', N'CONGELACION', N'SALIDA', N'BAJA_VENCIDO',
+            N'ATLETA', N'VISITA', N'PARCIAL'
+        )
+  )
+ORDER BY h.Fecha DESC, h.Id DESC";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Desde", desde);
-                cmd.Parameters.AddWithValue("@Hasta", hasta);
+                cmd.Parameters.Add("@Desde", SqlDbType.DateTime).Value = desde.Date;
+                cmd.Parameters.Add("@Hasta", SqlDbType.DateTime).Value = hasta.Date;
 
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
-
                 return dt;
             }
         }
 
         // ===============================
-        // 🔥 REPORTE VENTAS
+        // GASTOS (EGRESO operativo, sin reversos)
+        // ===============================
+        public DataTable ObtenerGastosPorFecha(DateTime desde, DateTime hasta)
+        {
+            using (SqlConnection conn = db.GetConnection())
+            {
+                string query = @"
+SELECT
+    dc.Fecha,
+    N'GASTO' AS Tipo,
+    dc.Concepto,
+    dc.Monto,
+    ISNULL(NULLIF(LTRIM(RTRIM(dc.Usuario)), ''), N'—') AS Usuario
+FROM DetalleCaja dc
+WHERE dc.TipoMovimiento = N'EGRESO'
+  AND UPPER(LTRIM(RTRIM(ISNULL(dc.MetodoPago, N'')))) <> N'REVERSO'
+  AND UPPER(LTRIM(RTRIM(ISNULL(dc.Concepto, N'')))) NOT LIKE N'REVERSO%'
+  AND dc.Fecha >= @Desde
+  AND dc.Fecha < DATEADD(DAY, 1, @Hasta)
+ORDER BY dc.Fecha DESC, dc.Id DESC";
+
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.Add("@Desde", SqlDbType.DateTime).Value = desde.Date;
+                cmd.Parameters.Add("@Hasta", SqlDbType.DateTime).Value = hasta.Date;
+
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        // ===============================
+        // VENTAS: productos vendidos (inventario / DetalleVentas)
         // ===============================
         public DataTable ObtenerVentasPorFecha(DateTime desde, DateTime hasta)
+            => ObtenerDetalleVentasPorFecha(desde, hasta, soloSuplemento: false);
+
+        // ===============================
+        // SUPLEMENTO: mismas columnas base + Categoria y filtro %SUPLEMENTO%
+        // ===============================
+        public DataTable ObtenerSuplementosPorFecha(DateTime desde, DateTime hasta)
+            => ObtenerDetalleVentasPorFecha(desde, hasta, soloSuplemento: true);
+
+        /// <summary>
+        /// Núcleo compartido Ventas/Suplemento. Conserva esquemas distintos:
+        /// Ventas sin columna Categoria; Suplemento con Categoria + filtro.
+        /// </summary>
+        private DataTable ObtenerDetalleVentasPorFecha(
+            DateTime desde,
+            DateTime hasta,
+            bool soloSuplemento)
         {
-            using (SqlConnection conn = db.GetConnection())
-            {
-                string query = @"SELECT Fecha, ClienteId, Total, MetodoPago 
-                                 FROM Ventas
-                                 WHERE Fecha BETWEEN @Desde AND @Hasta
-                                 ORDER BY Fecha DESC";
+            string columnaCategoria = soloSuplemento
+                ? "    ISNULL(cat.Nombre, N'Suplemento') AS Categoria,\r\n"
+                : string.Empty;
 
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Desde", desde);
-                cmd.Parameters.AddWithValue("@Hasta", hasta);
+            string joinCategoria = soloSuplemento
+                ? "INNER JOIN Categorias cat ON cat.Id = pr.IdCategoria\r\n"
+                : string.Empty;
 
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
-                da.Fill(dt);
+            string filtroCategoria = soloSuplemento
+                ? "  AND UPPER(LTRIM(RTRIM(ISNULL(cat.Nombre, N'')))) LIKE N'%SUPLEMENTO%'\r\n"
+                : string.Empty;
 
-                return dt;
-            }
+            string query = $@"
+SELECT
+    v.Fecha,
+    v.Id AS VentaId,
+    ISNULL(c.Nombre, N'Mostrador') AS Cliente,
+{columnaCategoria}    ISNULL(NULLIF(LTRIM(RTRIM(pr.CodigoBarra)), N''), N'—') AS Codigo,
+    pr.Nombre AS Producto,
+    d.Cantidad,
+    d.Precio,
+    d.Subtotal AS Monto,
+    ISNULL(NULLIF(LTRIM(RTRIM(v.MetodoPago)), N''), N'—') AS [Método de Pago],
+    ISNULL(NULLIF(LTRIM(RTRIM(v.Usuario)), N''), N'—') AS Usuario
+FROM DetalleVentas d
+INNER JOIN Ventas v ON v.Id = d.VentaId
+INNER JOIN Productos pr ON pr.Id = d.ProductoId
+{joinCategoria}LEFT JOIN Clientes c ON c.ID = v.ClienteId
+WHERE v.Fecha >= @Desde
+  AND v.Fecha < DATEADD(DAY, 1, @Hasta)
+{filtroCategoria}ORDER BY v.Fecha DESC, v.Id DESC, d.Id";
+
+            using SqlConnection conn = db.GetConnection();
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.Add("@Desde", SqlDbType.DateTime).Value = desde.Date;
+            cmd.Parameters.Add("@Hasta", SqlDbType.DateTime).Value = hasta.Date;
+
+            using SqlDataAdapter da = new SqlDataAdapter(cmd);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+            return dt;
         }
     }
 }

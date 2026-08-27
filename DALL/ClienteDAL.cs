@@ -42,6 +42,50 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
         }
 
         /// <summary>
+        /// Id del cliente técnico VISITANTE (SISTEMA); lo crea si no existe.
+        /// </summary>
+        public int ObtenerOCrearVisitanteSistema()
+        {
+            EnsureSexoColumn();
+
+            const string nombre = "VISITANTE (SISTEMA)";
+            object? idExistente = db.ExecuteScalar(
+                @"SELECT TOP 1 ID FROM dbo.Clientes WHERE Nombre = @Nombre",
+                new[] { new SqlParameter("@Nombre", nombre) });
+
+            if (idExistente != null && idExistente != DBNull.Value)
+                return Convert.ToInt32(idExistente);
+
+            return InsertarCliente(
+                nombre,
+                new DateTime(2000, 1, 1),
+                "Acceso parcial ATLETA/VISITA",
+                "N/A",
+                null);
+        }
+
+        /// <summary>
+        /// Catálogo POS sin el cliente técnico de accesos parciales.
+        /// </summary>
+        public DataTable ListarClientesParaPos()
+        {
+            EnsureSexoColumn();
+
+            string query = @"SELECT 
+                        ID as Id,
+                        Nombre,
+                        Telefono,
+                        Direccion,
+                        FechaNacimiento,
+                        Sexo
+                     FROM dbo.Clientes
+                     WHERE Nombre <> N'VISITANTE (SISTEMA)'
+                     ORDER BY Nombre";
+
+            return db.ExecuteQuery(query);
+        }
+
+        /// <summary>
         /// Clientes del catálogo excepto los que ya están ACTIVO (SSOT Estado).
         /// Usado para integrar miembros ya pagados fuera de la app.
         /// </summary>

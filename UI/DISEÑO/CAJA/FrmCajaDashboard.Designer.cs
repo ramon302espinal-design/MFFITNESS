@@ -57,6 +57,7 @@ namespace UI.DISEÑO
             panelBotones = new Panel();
             btnCierresCaja = new Button();
             btnRegistrarGasto = new Button();
+            btnRegistrarIngreso = new Button();
             btnMovimientos = new Button();
             btnCerrarCaja = new Button();
             btnAbrirCaja = new Button();
@@ -87,98 +88,113 @@ namespace UI.DISEÑO
             panelNav.Name = "panelNav";
             panelNav.Size = new Size(1062, 52);
             panelNav.TabIndex = 0;
+            panelNav.Tag = "classic";
             // 
             // btnNavClientes
             // 
+            btnNavClientes.FlatStyle = FlatStyle.Standard;
             btnNavClientes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavClientes.Location = new Point(940, 10);
             btnNavClientes.Name = "btnNavClientes";
             btnNavClientes.Size = new Size(120, 32);
             btnNavClientes.TabIndex = 8;
+            btnNavClientes.Tag = "classic";
             btnNavClientes.Text = "CLIENTES";
             btnNavClientes.UseVisualStyleBackColor = true;
             // 
             // btnNavReportes
             // 
+            btnNavReportes.FlatStyle = FlatStyle.Standard;
             btnNavReportes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavReportes.Location = new Point(810, 10);
             btnNavReportes.Name = "btnNavReportes";
             btnNavReportes.Size = new Size(120, 32);
             btnNavReportes.TabIndex = 7;
+            btnNavReportes.Tag = "classic";
             btnNavReportes.Text = "REPORTES";
             btnNavReportes.UseVisualStyleBackColor = true;
             // 
             // btnNavInventario
             // 
+            btnNavInventario.FlatStyle = FlatStyle.Standard;
             btnNavInventario.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavInventario.Location = new Point(670, 10);
             btnNavInventario.Name = "btnNavInventario";
             btnNavInventario.Size = new Size(130, 32);
             btnNavInventario.TabIndex = 6;
+            btnNavInventario.Tag = "classic";
             btnNavInventario.Text = "INVENTARIO";
             btnNavInventario.UseVisualStyleBackColor = true;
             // 
             // btnNavHistorial
             // 
+            btnNavHistorial.FlatStyle = FlatStyle.Standard;
             btnNavHistorial.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavHistorial.Location = new Point(540, 10);
             btnNavHistorial.Name = "btnNavHistorial";
             btnNavHistorial.Size = new Size(120, 32);
             btnNavHistorial.TabIndex = 5;
+            btnNavHistorial.Tag = "classic";
             btnNavHistorial.Text = "HISTORIAL";
             btnNavHistorial.UseVisualStyleBackColor = true;
             // 
             // btnNavCaja
             // 
+            btnNavCaja.FlatStyle = FlatStyle.Standard;
             btnNavCaja.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavCaja.Location = new Point(420, 10);
             btnNavCaja.Name = "btnNavCaja";
             btnNavCaja.Size = new Size(110, 32);
             btnNavCaja.TabIndex = 4;
+            btnNavCaja.Tag = "classic";
             btnNavCaja.Text = "CAJA";
             btnNavCaja.UseVisualStyleBackColor = true;
             // 
             // btnNavEstado
             // 
+            btnNavEstado.FlatStyle = FlatStyle.Standard;
             btnNavEstado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavEstado.Location = new Point(300, 10);
             btnNavEstado.Name = "btnNavEstado";
             btnNavEstado.Size = new Size(110, 32);
             btnNavEstado.TabIndex = 3;
+            btnNavEstado.Tag = "classic";
             btnNavEstado.Text = "ESTADO";
             btnNavEstado.UseVisualStyleBackColor = true;
             // 
             // btnNavDeudas
             // 
+            btnNavDeudas.FlatStyle = FlatStyle.Standard;
             btnNavDeudas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavDeudas.Location = new Point(180, 10);
             btnNavDeudas.Name = "btnNavDeudas";
             btnNavDeudas.Size = new Size(110, 32);
             btnNavDeudas.TabIndex = 2;
+            btnNavDeudas.Tag = "classic";
             btnNavDeudas.Text = "DEUDAS";
             btnNavDeudas.UseVisualStyleBackColor = true;
             // 
             // btnNavPagar
             // 
-            btnNavPagar.BackColor = Color.FromArgb(22, 163, 74);
+            btnNavPagar.FlatStyle = FlatStyle.Standard;
             btnNavPagar.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnNavPagar.ForeColor = Color.White;
             btnNavPagar.Location = new Point(60, 10);
             btnNavPagar.Name = "btnNavPagar";
             btnNavPagar.Size = new Size(110, 32);
             btnNavPagar.TabIndex = 1;
+            btnNavPagar.Tag = "classic";
             btnNavPagar.Text = "COBRAR";
-            btnNavPagar.UseVisualStyleBackColor = false;
+            btnNavPagar.UseVisualStyleBackColor = true;
             // 
             // btnBack
             // 
-            btnBack.FlatAppearance.BorderSize = 0;
-            btnBack.FlatStyle = FlatStyle.Flat;
+            btnBack.FlatStyle = FlatStyle.Standard;
             btnBack.Font = new Font("Segoe UI", 11F);
             btnBack.Location = new Point(8, 8);
             btnBack.Name = "btnBack";
             btnBack.Size = new Size(43, 35);
             btnBack.TabIndex = 0;
+            btnBack.Tag = "classic";
             btnBack.UseVisualStyleBackColor = true;
             // 
             // panelTop
@@ -350,65 +366,95 @@ namespace UI.DISEÑO
             // 
             // panelBotones
             // 
-            panelBotones.BackColor = Color.Blue;
+            panelBotones.BackColor = SystemColors.Control;
             panelBotones.Controls.Add(btnCierresCaja);
             panelBotones.Controls.Add(btnRegistrarGasto);
+            panelBotones.Controls.Add(btnRegistrarIngreso);
             panelBotones.Controls.Add(btnMovimientos);
             panelBotones.Controls.Add(btnCerrarCaja);
             panelBotones.Controls.Add(btnAbrirCaja);
             panelBotones.Dock = DockStyle.Fill;
-            panelBotones.ForeColor = Color.Black;
+            panelBotones.ForeColor = SystemColors.ControlText;
             panelBotones.Location = new Point(0, 267);
             panelBotones.Name = "panelBotones";
             panelBotones.Size = new Size(1062, 406);
             panelBotones.TabIndex = 2;
+            panelBotones.Tag = "classic";
             // 
             // btnCierresCaja
             // 
-            btnCierresCaja.Location = new Point(842, 86);
+            btnCierresCaja.FlatStyle = FlatStyle.Standard;
+            btnCierresCaja.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnCierresCaja.Location = new Point(8, 164);
             btnCierresCaja.Name = "btnCierresCaja";
             btnCierresCaja.Size = new Size(200, 60);
-            btnCierresCaja.TabIndex = 4;
+            btnCierresCaja.TabIndex = 5;
+            btnCierresCaja.Tag = "classic";
             btnCierresCaja.Text = "CUADRES DE CAJA";
             btnCierresCaja.UseVisualStyleBackColor = true;
             btnCierresCaja.Click += btnCierresCaja_Click;
             // 
             // btnRegistrarGasto
             // 
-            btnRegistrarGasto.Location = new Point(224, 88);
+            btnRegistrarGasto.FlatStyle = FlatStyle.Standard;
+            btnRegistrarGasto.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnRegistrarGasto.Location = new Point(430, 88);
             btnRegistrarGasto.Name = "btnRegistrarGasto";
             btnRegistrarGasto.Size = new Size(200, 60);
             btnRegistrarGasto.TabIndex = 3;
+            btnRegistrarGasto.Tag = "classic";
             btnRegistrarGasto.Text = "REGISTRAR GASTO";
             btnRegistrarGasto.UseVisualStyleBackColor = true;
             btnRegistrarGasto.Click += btnRegistrarGasto_Click;
             // 
+            // btnRegistrarIngreso
+            // 
+            btnRegistrarIngreso.FlatStyle = FlatStyle.Standard;
+            btnRegistrarIngreso.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnRegistrarIngreso.Location = new Point(224, 88);
+            btnRegistrarIngreso.Name = "btnRegistrarIngreso";
+            btnRegistrarIngreso.Size = new Size(200, 60);
+            btnRegistrarIngreso.TabIndex = 4;
+            btnRegistrarIngreso.Tag = "classic";
+            btnRegistrarIngreso.Text = "REGISTRAR INGRESO";
+            btnRegistrarIngreso.UseVisualStyleBackColor = true;
+            btnRegistrarIngreso.Click += btnRegistrarIngreso_Click;
+            // 
             // btnMovimientos
             // 
-            btnMovimientos.Location = new Point(430, 88);
+            btnMovimientos.FlatStyle = FlatStyle.Standard;
+            btnMovimientos.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnMovimientos.Location = new Point(636, 88);
             btnMovimientos.Name = "btnMovimientos";
             btnMovimientos.Size = new Size(200, 60);
             btnMovimientos.TabIndex = 2;
+            btnMovimientos.Tag = "classic";
             btnMovimientos.Text = "VER MOVIMIENTOS";
             btnMovimientos.UseVisualStyleBackColor = true;
             btnMovimientos.Click += btnVerMovimientos_Click;
             // 
             // btnCerrarCaja
             // 
-            btnCerrarCaja.Location = new Point(636, 86);
+            btnCerrarCaja.FlatStyle = FlatStyle.Standard;
+            btnCerrarCaja.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnCerrarCaja.Location = new Point(842, 88);
             btnCerrarCaja.Name = "btnCerrarCaja";
             btnCerrarCaja.Size = new Size(200, 60);
             btnCerrarCaja.TabIndex = 1;
+            btnCerrarCaja.Tag = "classic";
             btnCerrarCaja.Text = "CERRAR CAJA";
             btnCerrarCaja.UseVisualStyleBackColor = true;
             btnCerrarCaja.Click += btnCerrarCaja_Click;
             // 
             // btnAbrirCaja
             // 
-            btnAbrirCaja.Location = new Point(8, 86);
+            btnAbrirCaja.FlatStyle = FlatStyle.Standard;
+            btnAbrirCaja.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnAbrirCaja.Location = new Point(8, 88);
             btnAbrirCaja.Name = "btnAbrirCaja";
             btnAbrirCaja.Size = new Size(200, 60);
             btnAbrirCaja.TabIndex = 0;
+            btnAbrirCaja.Tag = "classic";
             btnAbrirCaja.Text = "ABRIR CAJA";
             btnAbrirCaja.UseVisualStyleBackColor = true;
             btnAbrirCaja.Click += btnAbrirCaja_Click;
@@ -472,6 +518,7 @@ namespace UI.DISEÑO
         private Label label3;
         private Panel panelBotones;
         private Button btnAbrirCaja;
+        private Button btnRegistrarIngreso;
         private Button btnRegistrarGasto;
         private Button btnMovimientos;
         private Button btnCerrarCaja;

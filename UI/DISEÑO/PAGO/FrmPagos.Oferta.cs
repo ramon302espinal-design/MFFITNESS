@@ -20,6 +20,13 @@ namespace UI.DISEÑO
             return PlanNombres.EsOferta(cmbMembresia.Text);
         }
 
+        private bool EsPlanParcialSeleccionado()
+        {
+            if (cmbMembresia.SelectedItem is DataRowView row)
+                return PlanNombres.EsParcial(Convert.ToString(row["Nombre"]));
+            return PlanNombres.EsParcial(cmbMembresia.Text);
+        }
+
         /// <summary>Oferta no aplica a ACTIVO, CONGELADO ni con deudas activas.</summary>
         private bool PuedeActivarOferta(int clienteId, out string motivo)
         {

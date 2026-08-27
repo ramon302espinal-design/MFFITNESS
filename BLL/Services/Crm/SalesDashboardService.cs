@@ -15,14 +15,20 @@ namespace BLL.Services.Crm
         private readonly SalesCapitalBridgeService _capital = new();
         private readonly SalesByProductService _byProduct = new();
         private readonly SalesByCategoryService _byCategory = new();
+        private readonly ProfitAnalyticsService _profit = new();
 
         public SalesDashboardReport GetReport(
             ProfitPeriodKind periodKind = ProfitPeriodKind.ThisMonth,
             DateTime? asOf = null,
-            int topLists = 5)
+            int topLists = 5,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
             int top = topLists <= 0 ? 5 : topLists;
-            SalesSummary summary = _sales.GetSummary(periodKind, asOf);
+            SalesSummary summary = _sales.GetSummary(periodKind, asOf, customFrom, customToExclusive);
+
+            if (periodKind == ProfitPeriodKind.Custom)
+                return BuildCustom(summary, customFrom, customToExclusive, asOf, top);
 
             SalesVariationReport? variations = null;
             SalesComparisonReport? cmp = _comparison.GetComparison(periodKind, asOf);
@@ -72,6 +78,56 @@ namespace BLL.Services.Crm
                 stars,
                 stock,
                 capital,
+                topProducts,
+                topCategories);
+        }
+
+        private SalesDashboardReport BuildCustom(
+            SalesSummary summary,
+            DateTime? customFrom,
+            DateTime? customToExclusive,
+            DateTime? asOf,
+            int top)
+        {
+            ProfitPeriodRange range = ProfitAnalyticsService.ResolvePeriod(
+                ProfitPeriodKind.Custom, asOf, customFrom, customToExclusive);
+
+            IReadOnlyList<ProfitGroupRow> productRows =
+                _profit.GetByProduct(range.From, range.ToExclusive, top);
+            IReadOnlyList<ProfitGroupRow> categoryRows =
+                _profit.GetByCategory(range.From, range.ToExclusive, top);
+
+            decimal rev = summary.RevenueTotal;
+            var topProducts = productRows
+                .Select((r, i) => new SalesDashboardTopItem
+                {
+                    Rank = i + 1,
+                    Name = r.ProductName ?? r.GroupName,
+                    Amount = r.RevenueTotal,
+                    SharePct = rev == 0m ? null : Math.Round(r.RevenueTotal / rev * 100m, 2)
+                })
+                .ToList();
+
+            var topCategories = categoryRows
+                .Select((r, i) => new SalesDashboardTopItem
+                {
+                    Rank = i + 1,
+                    Name = r.GroupName,
+                    Amount = r.RevenueTotal,
+                    SharePct = rev == 0m ? null : Math.Round(r.RevenueTotal / rev * 100m, 2)
+                })
+                .ToList();
+
+            return SalesDashboardComposer.Build(
+                ProfitPeriodKind.Custom,
+                summary,
+                variations: null,
+                revenueTrend: null,
+                revenueAcceleration: null,
+                forecast: null,
+                starMix: null,
+                stockRisk: null,
+                capital: null,
                 topProducts,
                 topCategories);
         }

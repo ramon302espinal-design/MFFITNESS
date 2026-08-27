@@ -42,12 +42,15 @@ namespace UI.Helpers
         public static ProductPerformanceDashboardReport? TryLoadDashboard(
             out string? error,
             ProfitPeriodKind periodKind = ProfitPeriodKind.ThisMonth,
-            int topLists = 5)
+            int topLists = 5,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
             try
             {
                 error = null;
-                return new ProductPerformanceDashboardService().GetReport(periodKind, topLists: topLists);
+                return new ProductPerformanceDashboardService().GetReport(
+                    periodKind, topLists: topLists, customFrom: customFrom, customToExclusive: customToExclusive);
             }
             catch (Exception ex)
             {

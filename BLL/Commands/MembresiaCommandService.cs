@@ -17,6 +17,19 @@ namespace BLL.Commands
             try
             {
                 var bll = new MembresiaBLL();
+                var plan = new PlanBLL().ObtenerPlan(planId);
+                if (plan != null && PlanNombres.EsParcial(plan.Nombre))
+                {
+                    var parcial = bll.RegistrarPagoPlanParcial(
+                        clienteId,
+                        planId,
+                        monto,
+                        metodo,
+                        concepto,
+                        ResolveUsuario(usuario));
+                    return CommandResult.Ok("Acceso parcial registrado correctamente.", parcial);
+                }
+
                 var operacion = bll.PagarMembresiaCompleta(
                     clienteId,
                     planId,
@@ -26,6 +39,31 @@ namespace BLL.Commands
                     concepto,
                     ResolveUsuario(usuario));
                 return CommandResult.Ok("Membresía registrada correctamente.", operacion);
+            }
+            catch (Exception ex)
+            {
+                return CommandResult.Fail(ex.Message);
+            }
+        }
+
+        public static CommandResult RegistrarPlanParcial(
+            int clienteId,
+            int planId,
+            decimal monto,
+            string metodo,
+            string concepto,
+            string? usuario = null)
+        {
+            try
+            {
+                var operacion = new MembresiaBLL().RegistrarPagoPlanParcial(
+                    clienteId,
+                    planId,
+                    monto,
+                    metodo,
+                    concepto,
+                    ResolveUsuario(usuario));
+                return CommandResult.Ok("Acceso parcial registrado correctamente.", operacion);
             }
             catch (Exception ex)
             {

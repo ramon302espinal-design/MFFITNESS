@@ -12,9 +12,12 @@ namespace BLL.Services.Crm
         public ProductPerformanceDashboardReport GetReport(
             ProfitPeriodKind periodKind = ProfitPeriodKind.ThisMonth,
             DateTime? asOf = null,
-            int topLists = 5)
+            int topLists = 5,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
-            ProductClassificationReport classification = _classification.GetReport(periodKind, asOf);
+            ProductClassificationReport classification = _classification.GetReport(
+                periodKind, asOf, customFrom: customFrom, customToExclusive: customToExclusive);
             return ProductPerformanceDashboardComposer.Build(classification, topLists);
         }
     }

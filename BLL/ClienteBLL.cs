@@ -17,6 +17,18 @@ namespace BLL
             return clienteDAL.ListarClientes();
         }
 
+        /// <summary>Catálogo de cobro (excluye VISITANTE sistema).</summary>
+        public DataTable ObtenerClientesParaPos()
+        {
+            return clienteDAL.ListarClientesParaPos();
+        }
+
+        /// <summary>Cliente técnico para ATLETA/VISITA sin miembro en combo.</summary>
+        public int ObtenerOCrearVisitanteSistema()
+        {
+            return clienteDAL.ObtenerOCrearVisitanteSistema();
+        }
+
         /// <summary>Clientes elegibles para alta sin cobro (excluye ACTIVO).</summary>
         public DataTable ObtenerClientesNoActivos()
         {

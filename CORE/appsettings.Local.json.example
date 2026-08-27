@@ -9,8 +9,8 @@
   },
   "Ollama": {
     "BaseUrl": "http://127.0.0.1:11434",
-    "VisionModel": "llava:7b",
-    "TimeoutSeconds": 90,
-    "VisionMaxSide": 896
+    "VisionModel": "qwen2.5vl:7b",
+    "TimeoutSeconds": 120,
+    "VisionMaxSide": 1024
   }
 }

@@ -97,20 +97,22 @@ namespace CORE.Ollama
             string prompt,
             IReadOnlyList<string> imagesBase64,
             bool jsonFormat = true,
+            int? numPredict = null,
             CancellationToken ct = default)
         {
+            int predict = numPredict ?? 360;
             var body = new Dictionary<string, object?>
             {
                 ["model"] = model,
                 ["prompt"] = prompt,
                 ["images"] = imagesBase64,
                 ["stream"] = false,
-                // Más tokens para nombres largos de empaque; poca creatividad (OCR).
                 ["options"] = new Dictionary<string, object?>
                 {
-                    ["num_predict"] = 280,
-                    ["temperature"] = 0.05,
-                    ["top_p"] = 0.7
+                    ["num_predict"] = predict,
+                    ["temperature"] = 0.0,
+                    ["top_p"] = 0.8,
+                    ["repeat_penalty"] = 1.05
                 }
             };
             if (jsonFormat)

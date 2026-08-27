@@ -1,4 +1,4 @@
--- Auditoría de sugerencias IA (llava/Ollama). No crea productos ni toca stock/ventas.
+-- Auditoría de sugerencias IA (Ollama visión). No crea productos ni toca stock/ventas.
 -- Destino: SchemaVersion 21.
 -- Idempotente.
 

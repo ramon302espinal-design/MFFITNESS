@@ -57,7 +57,7 @@ namespace CORE
             }
             catch
             {
-                // Mantener defaults (llava:7b local).
+                // Mantener defaults (qwen2.5vl:7b local).
             }
         }
 

@@ -6,15 +6,15 @@ namespace CORE.Ollama
     public static class OllamaOptions
     {
         public const string DefaultBaseUrl = "http://127.0.0.1:11434";
-        public const string DefaultVisionModel = "llava:7b";
-        public const int DefaultTimeoutSeconds = 90;
+        public const string DefaultVisionModel = "qwen2.5vl:7b";
+        public const int DefaultTimeoutSeconds = 120;
 
         public static string BaseUrl { get; private set; } = DefaultBaseUrl;
         public static string VisionModel { get; private set; } = DefaultVisionModel;
         public static int TimeoutSeconds { get; private set; } = DefaultTimeoutSeconds;
 
-        /// <summary>Lado máximo de imagen enviada a llava (mayor = mejor texto pequeño).</summary>
-        public static int VisionMaxSide { get; private set; } = 896;
+        /// <summary>Lado máximo de imagen enviada al modelo VL (OCR de empaque).</summary>
+        public static int VisionMaxSide { get; private set; } = 1024;
 
         public static void ApplyFromConfiguration(Microsoft.Extensions.Configuration.IConfiguration? config)
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Windows.Forms;
 using BLL.Models.Crm;
 using UI.Helpers;
@@ -8,7 +9,7 @@ namespace UI
 {
     /// <summary>
     /// Shell visual del CRM Financiero (FASE 1).
-    /// Sidebar + Header (título / período / Actualizar) + Content + Footer.
+    /// Sidebar + Header (título / período auto) + Content + Footer.
     /// Hospeda Forms existentes en pnlContent.
     /// </summary>
     [System.ComponentModel.DesignerCategory("Form")]
@@ -28,22 +29,40 @@ namespace UI
         private void FrmCRMFinanciero_Load(object sender, EventArgs e)
         {
             _suppressPeriodRefresh = true;
-            if (cmbPeriodo.Items.Count > 0 && cmbPeriodo.SelectedIndex < 0)
+            dtDesdePeriodo.Value = DateTime.Today.AddDays(-29);
+            dtHastaPeriodo.Value = DateTime.Today;
+
+            // Default: Este mes (índice 5 en el combo ampliado).
+            if (cmbPeriodo.Items.Count > 5)
+                cmbPeriodo.SelectedIndex = 5;
+            else if (cmbPeriodo.Items.Count > 0 && cmbPeriodo.SelectedIndex < 0)
                 cmbPeriodo.SelectedIndex = 0;
 
             cmbPeriodo.Enabled = true;
-            btnActualizar.Enabled = true;
+            ActualizarUiRangoPersonalizado();
             panelHeader.Visible = true;
             panelHeader.BringToFront();
 
-            MostrarVista(() => new FrmAnaDashboard(PeriodoSeleccionado()), btnDashboard,
+            MostrarVista(() => CrearDashboard(), btnDashboard,
                 "Dashboard financiero",
                 "Vision general del rendimiento financiero");
             _suppressPeriodRefresh = false;
         }
 
+        private FrmAnaDashboard CrearDashboard()
+        {
+            var dash = new FrmAnaDashboard(PeriodoSeleccionado());
+            if (EsPersonalizado()
+                && TryObtenerRangoPersonalizado(out DateTime desde, out DateTime hastaExcl))
+            {
+                dash.Recargar(ProfitPeriodKind.Custom, desde, hastaExcl);
+            }
+
+            return dash;
+        }
+
         private void btnDashboard_Click(object sender, EventArgs e)
-            => MostrarVista(() => new FrmAnaDashboard(PeriodoSeleccionado()), btnDashboard,
+            => MostrarVista(() => CrearDashboard(), btnDashboard,
                 "Dashboard financiero",
                 "Vision general del rendimiento financiero");
 
@@ -118,52 +137,59 @@ namespace UI
         private static Form CrearVistaReportesPos()
         {
             var vista = new FrmReportes();
-            PrepararReportesEmbebido(vista);
+            vista.PrepararParaEmbebido();
             return vista;
-        }
-
-        /// <summary>
-        /// Ajuste solo de presentación al embeber: oculta panelNav del POS
-        /// y revierte el offset vertical que FrmReportes aplica para esa barra.
-        /// Sin cambios en generación/exportación de reportes.
-        /// </summary>
-        private static void PrepararReportesEmbebido(FrmReportes vista)
-        {
-            const int offsetNav = 52;
-            Control? nav = null;
-            foreach (Control c in vista.Controls)
-            {
-                if (string.Equals(c.Name, "panelNav", StringComparison.Ordinal))
-                {
-                    nav = c;
-                    break;
-                }
-            }
-
-            if (nav == null)
-                return;
-
-            nav.Visible = false;
-            foreach (Control c in vista.Controls)
-            {
-                if (c.Dock != DockStyle.None)
-                    continue;
-                c.Top = Math.Max(0, c.Top - offsetNav);
-            }
         }
 
         private void btnEstrellas_Click(object sender, EventArgs e)
             => MostrarVista(() => new FrmAnaProductosEstrella(), btnConfiguracion, "Productos estrella",
                 "Impacto + eficiencia + bajo riesgo (explicable)");
 
-        private void btnActualizar_Click(object sender, EventArgs e)
-            => RefrescarVistaActual();
-
         private void cmbPeriodo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            ActualizarUiRangoPersonalizado();
             if (_suppressPeriodRefresh)
                 return;
             RefrescarVistaActual();
+        }
+
+        private void PeriodoFechas_ValueChanged(object? sender, EventArgs e)
+        {
+            ActualizarEtiquetaDias();
+            if (_suppressPeriodRefresh || !EsPersonalizado())
+                return;
+            RefrescarVistaActual();
+        }
+
+        private bool EsPersonalizado()
+            => cmbPeriodo.SelectedIndex == 8
+               || string.Equals(cmbPeriodo.SelectedItem?.ToString(), "Personalizado", StringComparison.OrdinalIgnoreCase);
+
+        private void ActualizarUiRangoPersonalizado()
+        {
+            bool personalizado = EsPersonalizado();
+            dtDesdePeriodo.Visible = personalizado;
+            dtHastaPeriodo.Visible = personalizado;
+            lblDiasPeriodo.Visible = personalizado;
+            if (personalizado)
+                ActualizarEtiquetaDias();
+        }
+
+        private void ActualizarEtiquetaDias()
+        {
+            DateTime desde = dtDesdePeriodo.Value.Date;
+            DateTime hasta = dtHastaPeriodo.Value.Date;
+            if (desde > hasta)
+            {
+                lblDiasPeriodo.ForeColor = Color.FromArgb(220, 38, 38);
+                lblDiasPeriodo.Text = "Rango invalido";
+                return;
+            }
+
+            // Inclusive: del 10 al 10 = 1 día; del 10 al 12 = 3 días.
+            int dias = (hasta - desde).Days + 1;
+            lblDiasPeriodo.ForeColor = Color.FromArgb(37, 99, 235);
+            lblDiasPeriodo.Text = dias == 1 ? "1 dia" : $"{dias} dias";
         }
 
         /// <summary>
@@ -179,13 +205,37 @@ namespace UI
             }
 
             Form vista = factory();
-            vista.TopLevel = false;
-            vista.FormBorderStyle = FormBorderStyle.None;
-            vista.Dock = DockStyle.Fill;
+            // PrepararParaEmbebido de Reportes ya fija TopLevel/Dock; el resto de vistas CRM igual.
+            if (vista.TopLevel)
+            {
+                vista.TopLevel = false;
+                vista.FormBorderStyle = FormBorderStyle.None;
+                vista.WindowState = FormWindowState.Normal;
+                vista.MinimumSize = Size.Empty;
+                vista.Dock = DockStyle.Fill;
+            }
+
             CrmVisualTokens.MarkClassic(vista);
             pnlContent.Controls.Add(vista);
             vista.Show();
+            vista.BringToFront();
+            vista.PerformLayout();
+            pnlContent.PerformLayout();
             _vistaActual = vista;
+
+            // Sincroniza período del panelHeader del shell con la vista (Reportes POS, dashboards…).
+            if (vista is ICrmPeriodRefreshable refreshable)
+            {
+                if (EsPersonalizado()
+                    && TryObtenerRangoPersonalizado(out DateTime desde, out DateTime hastaExcl))
+                {
+                    refreshable.Recargar(ProfitPeriodKind.Custom, desde, hastaExcl);
+                }
+                else
+                {
+                    refreshable.Recargar(PeriodoSeleccionado());
+                }
+            }
 
             lblTitle.Text = titulo;
             lblSubtitle.Text = subtitulo;
@@ -198,19 +248,44 @@ namespace UI
         {
             if (_vistaActual is ICrmPeriodRefreshable refreshable)
             {
-                refreshable.Recargar(PeriodoSeleccionado());
+                if (EsPersonalizado()
+                    && TryObtenerRangoPersonalizado(out DateTime desde, out DateTime hastaExcl))
+                {
+                    refreshable.Recargar(ProfitPeriodKind.Custom, desde, hastaExcl);
+                }
+                else if (!EsPersonalizado())
+                {
+                    refreshable.Recargar(PeriodoSeleccionado());
+                }
+
                 return;
             }
 
             // Vistas sin período: no-op seguro (header sigue visible/usable).
         }
 
+        private bool TryObtenerRangoPersonalizado(out DateTime desde, out DateTime hastaExclusivo)
+        {
+            desde = dtDesdePeriodo.Value.Date;
+            DateTime hasta = dtHastaPeriodo.Value.Date;
+            hastaExclusivo = hasta.AddDays(1);
+            if (desde > hasta)
+                return false;
+            return true;
+        }
+
         private ProfitPeriodKind PeriodoSeleccionado()
             => cmbPeriodo.SelectedIndex switch
             {
-                1 => ProfitPeriodKind.Last30Days,
-                2 => ProfitPeriodKind.ThisQuarter,
-                3 => ProfitPeriodKind.ThisYear,
+                0 => ProfitPeriodKind.Today,
+                1 => ProfitPeriodKind.Yesterday,
+                2 => ProfitPeriodKind.Last7Days,
+                3 => ProfitPeriodKind.Last14Days,
+                4 => ProfitPeriodKind.Last30Days,
+                5 => ProfitPeriodKind.ThisMonth,
+                6 => ProfitPeriodKind.ThisQuarter,
+                7 => ProfitPeriodKind.ThisYear,
+                8 => ProfitPeriodKind.Custom,
                 _ => ProfitPeriodKind.ThisMonth
             };
 

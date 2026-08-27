@@ -358,7 +358,7 @@ ORDER BY dc.Fecha DESC";
 
             cmdInsert.Parameters.Add("@CajaId", SqlDbType.Int).Value = cajaId;
             cmdInsert.Parameters.Add("@TipoMovimiento", SqlDbType.NVarChar, 50).Value = tipoInverso;
-            cmdInsert.Parameters.Add("@Concepto", SqlDbType.NVarChar, 200).Value = conceptoReverso;
+            cmdInsert.Parameters.Add("@Concepto", SqlDbType.NVarChar, 1000).Value = conceptoReverso;
             cmdInsert.Parameters.Add("@Monto", SqlDbType.Decimal).Value = monto;
             cmdInsert.Parameters.Add("@Usuario", SqlDbType.NVarChar, 100).Value = usuario;
             cmdInsert.Parameters.Add("@MetodoPago", SqlDbType.NVarChar, 50).Value =

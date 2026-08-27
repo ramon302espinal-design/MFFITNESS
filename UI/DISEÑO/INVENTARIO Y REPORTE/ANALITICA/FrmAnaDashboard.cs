@@ -15,6 +15,8 @@ namespace UI
     public partial class FrmAnaDashboard : Form, ICrmPeriodRefreshable
     {
         private ProfitPeriodKind _periodo = ProfitPeriodKind.ThisMonth;
+        private DateTime? _customFrom;
+        private DateTime? _customToExclusive;
 
         public FrmAnaDashboard()
             : this(ProfitPeriodKind.ThisMonth)
@@ -28,12 +30,17 @@ namespace UI
         }
 
         /// <summary>Recarga KPIs/listas según el período del header del shell CRM.</summary>
-        public void Recargar(ProfitPeriodKind period)
+        public void Recargar(
+            ProfitPeriodKind period,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
         {
             if (DesignMode || IsDisposed)
                 return;
 
             _periodo = period;
+            _customFrom = customFrom;
+            _customToExclusive = customToExclusive;
             CargarDatos();
         }
 
@@ -50,13 +57,16 @@ namespace UI
             if (DesignMode)
                 return;
 
-            ProfitSummary? profit = CrmProfitUiBinder.TryLoadSummary(_periodo, out string? error);
+            ProfitSummary? profit = CrmProfitUiBinder.TryLoadSummary(
+                _periodo, out string? error, customFrom: _customFrom, customToExclusive: _customToExclusive);
             InventoryFinancialSummary? summary = CrmInventoryUiBinder.TryLoadSummary(out string? invError);
             InventoryCapitalHealthReport? health = CrmInventoryUiBinder.TryLoadHealth(out _);
             ProductPerformanceDashboardReport? dash =
-                CrmProductPerformanceUiBinder.TryLoadDashboard(out _, _periodo, topLists: 5);
+                CrmProductPerformanceUiBinder.TryLoadDashboard(
+                    out _, _periodo, topLists: 5, _customFrom, _customToExclusive);
             SalesDashboardReport? salesDash =
-                CrmSalesUiBinder.TryLoadDashboard(out _, _periodo, topLists: 5);
+                CrmSalesUiBinder.TryLoadDashboard(
+                    out _, _periodo, topLists: 5, _customFrom, _customToExclusive);
 
             if (profit == null && summary == null && health == null && dash == null)
             {
@@ -222,7 +232,8 @@ namespace UI
             }
             else
             {
-                var topProducts = CrmProfitUiBinder.TryLoadByProduct(_periodo, out _, top: 5);
+                var topProducts = CrmProfitUiBinder.TryLoadByProduct(
+                    _periodo, out _, top: 5, _customFrom, _customToExclusive);
                 if (topProducts != null && topProducts.Count > 0)
                 {
                     foreach (var row in topProducts)

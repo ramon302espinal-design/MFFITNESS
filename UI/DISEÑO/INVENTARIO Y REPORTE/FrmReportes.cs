@@ -1,52 +1,121 @@
 using BLL;
+using BLL.Models.Crm;
+using BLL.Services.Crm;
 using CORE;
 using System;
+using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Text;
 using System.Windows.Forms;
 using UI.Helpers;
-using UI.Theme;
 
 namespace UI
 {
     [System.ComponentModel.DesignerCategory("Form")]
-    public partial class FrmReportes : Form
+    public partial class FrmReportes : Form, ICrmPeriodRefreshable
     {
-        private ReporteBLL reporteBLL = new ReporteBLL();
-        private DataTable datosFuente = new DataTable();
-        private DataTable datosActuales = new DataTable();
-        private bool estaExportando = false;
+        private static readonly string[] CategoriasReporte =
+        {
+            "CAJA", "MEMBRESIA", "VENTAS", "SUPLEMENTO", "GASTO"
+        };
+
+        private static readonly string[] ColumnasMoneda =
+        {
+            "Monto", "Total", "Subtotal", "Precio"
+        };
+
+        private readonly ReporteBLL reporteBLL = new();
+        private DataTable datosFuente = new();
+        private DataTable datosActuales = new();
+        private bool estaExportando;
         private bool _cargandoUi;
+        private bool _reporteInicialCargado;
+
+        /// <summary>Rango inclusive (desde/hasta). Lo alimenta panelHeader del CRM o default 30 días.</summary>
+        private DateTime _desde = DateTime.Today.AddDays(-29);
+        private DateTime _hasta = DateTime.Today;
 
         public FrmReportes()
         {
             InitializeComponent();
-            ThemeHost.Attach(this);
-            if (ThemeHost.IsDesignTime())
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
                 return;
+
             dgvMostrarDatos.CellFormatting += DgvMostrarDatos_CellFormatting;
-            ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloReportes);
-            AjustarContenidoTrasNavBar();
         }
 
         /// <summary>
-        /// Baja el contenido absoluto para que no quede debajo de la barra Dock.Top.
+        /// Host CRM: sin MinimumSize/Maximized; Dock Fill bajo panelHeader del shell.
         /// </summary>
-        private void AjustarContenidoTrasNavBar()
+        public void PrepararParaEmbebido()
         {
-            const int offset = 52;
-            foreach (Control c in Controls)
+            TopLevel = false;
+            FormBorderStyle = FormBorderStyle.None;
+            WindowState = FormWindowState.Normal;
+            MinimumSize = Size.Empty;
+            MaximumSize = Size.Empty;
+            AutoScaleMode = AutoScaleMode.Dpi;
+            Dock = DockStyle.Fill;
+        }
+
+        /// <summary>
+        /// Cableado al período de FrmCRMFinanciero.panelHeader (cmbPeriodo / fechas).
+        /// </summary>
+        public void Recargar(
+            ProfitPeriodKind period,
+            DateTime? customFrom = null,
+            DateTime? customToExclusive = null)
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            ProfitPeriodRange range = ProfitAnalyticsService.ResolvePeriod(
+                period, DateTime.Today, customFrom, customToExclusive);
+
+            _desde = (range.From ?? DateTime.Today.AddDays(-29)).Date;
+            _hasta = range.ToExclusive.HasValue
+                ? range.ToExclusive.Value.Date.AddDays(-1)
+                : DateTime.Today;
+
+            if (_hasta < _desde)
+                _hasta = _desde;
+
+            if (!_cargandoUi && IsHandleCreated)
+                CargarReporte();
+        }
+
+        private void AsegurarLayoutGrid()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (!TopLevel)
             {
-                if (c.Dock != DockStyle.None)
-                    continue;
-                c.Top += offset;
+                WindowState = FormWindowState.Normal;
+                MinimumSize = Size.Empty;
+            }
+
+            SuspendLayout();
+            try
+            {
+                panelHeader.Dock = DockStyle.Top;
+                panelPie.Dock = DockStyle.Bottom;
+                dgvMostrarDatos.Dock = DockStyle.Fill;
+                dgvMostrarDatos.BringToFront();
+            }
+            finally
+            {
+                ResumeLayout(true);
             }
         }
 
         private void CalcularTotal()
         {
+            if (lblTotal == null)
+                return;
+
             if (datosActuales == null || datosActuales.Rows.Count == 0)
             {
                 lblTotal.Text = "TOTAL: " + 0m.ToString("C");
@@ -54,8 +123,19 @@ namespace UI
             }
 
             decimal total = ObtenerMontoTotal();
-            lblTotal.Text = "TOTAL: " + total.ToString("C");
+            string etiqueta = ObtenerEtiquetaTotal(ObtenerTipoSeleccionado());
+            lblTotal.Text = $"{etiqueta}: {total.ToString("C")}";
         }
+
+        private static string ObtenerEtiquetaTotal(string? tipo) => tipo switch
+        {
+            "GASTO" or "GASTOS" => "TOTAL GASTOS",
+            "VENTAS" => "TOTAL VENTAS",
+            "SUPLEMENTO" or "SUPLEMENTOS" => "TOTAL SUPLEMENTO",
+            "MEMBRESIA" or "MEMBRESÍA" => "TOTAL MEMBRESÍA",
+            "CAJA" => "TOTAL CAJA",
+            _ => "TOTAL"
+        };
 
         private decimal ObtenerMontoTotal()
         {
@@ -65,17 +145,43 @@ namespace UI
             decimal total = 0m;
             foreach (DataRow row in datosActuales.Rows)
             {
-                if (datosActuales.Columns.Contains("Monto") && row["Monto"] != DBNull.Value)
-                    total += Convert.ToDecimal(row["Monto"]);
-                else if (datosActuales.Columns.Contains("Total") && row["Total"] != DBNull.Value)
-                    total += Convert.ToDecimal(row["Total"]);
+                if (TryLeerMonto(row, "Monto", out decimal monto)
+                    || TryLeerMonto(row, "Total", out monto)
+                    || TryLeerMonto(row, "Subtotal", out monto))
+                {
+                    total += monto;
+                }
             }
 
             return total;
         }
 
+        private static bool TryLeerMonto(DataRow row, string columna, out decimal monto)
+        {
+            monto = 0m;
+            if (!row.Table.Columns.Contains(columna) || row[columna] == DBNull.Value)
+                return false;
+
+            monto = Convert.ToDecimal(row[columna]);
+            return true;
+        }
+
+        private string? ObtenerTipoSeleccionado()
+            => cmbReporte.SelectedItem?.ToString()?.Trim().ToUpperInvariant();
+
+        private void MostrarTablaVacia(string? totalTexto = null)
+        {
+            datosFuente = new DataTable();
+            datosActuales = datosFuente;
+            dgvMostrarDatos.DataSource = datosActuales;
+            if (totalTexto != null)
+                lblTotal.Text = totalTexto;
+            else
+                CalcularTotal();
+        }
+
         /// <summary>
-        /// Recarga el grid según categoría y rango. Sustituye al botón GENERAR REPORTE.
+        /// UI → ReporteBLL → ReporteDAL → DBHelper/AppConfig (MF CYBER DB / DEV).
         /// </summary>
         private void CargarReporte()
         {
@@ -87,26 +193,32 @@ namespace UI
                 string? tipo = cmbReporte.SelectedItem?.ToString();
                 if (string.IsNullOrEmpty(tipo))
                 {
-                    datosActuales = new DataTable();
-                    dgvMostrarDatos.DataSource = datosActuales;
-                    lblTotal.Text = "TOTAL: " + 0m.ToString("C");
+                    MostrarTablaVacia();
                     return;
                 }
 
-                if (dtDesde.Value.Date > dtHasta.Value.Date)
+                if (_desde.Date > _hasta.Date)
                 {
-                    lblTotal.Text = "TOTAL: —";
+                    MostrarTablaVacia("TOTAL: —");
                     return;
                 }
 
-                datosFuente = reporteBLL.ObtenerReporte(tipo, dtDesde.Value.Date, dtHasta.Value.Date);
+                datosFuente = reporteBLL.ObtenerReporte(tipo, _desde.Date, _hasta.Date)
+                    ?? new DataTable();
                 AplicarBusquedaInteligente();
-                dgvMostrarDatos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
                 FormatearColumnasReporte(tipo);
+                CalcularTotal();
+                AsegurarLayoutGrid();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al obtener datos: " + ex.Message);
+                MessageBox.Show(
+                    "Error al obtener datos: " + ex.Message
+                    + "\n\nBD: " + AppConfig.DatabaseName
+                    + " (" + AppConfig.EnvironmentName + ")",
+                    "Reportes",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
@@ -115,33 +227,60 @@ namespace UI
             if (dgvMostrarDatos.Columns.Count == 0)
                 return;
 
+            dgvMostrarDatos.AutoGenerateColumns = true;
+
             if (dgvMostrarDatos.Columns.Contains("Fecha"))
                 dgvMostrarDatos.Columns["Fecha"].DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
 
             if (dgvMostrarDatos.Columns.Contains("FechaPago"))
                 dgvMostrarDatos.Columns["FechaPago"].DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
 
-            if (dgvMostrarDatos.Columns.Contains("Monto"))
-                dgvMostrarDatos.Columns["Monto"].DefaultCellStyle.Format = "N2";
-
-            if (dgvMostrarDatos.Columns.Contains("Total"))
-                dgvMostrarDatos.Columns["Total"].DefaultCellStyle.Format = "N2";
-
-            if (string.Equals(tipo, "CAJA", StringComparison.OrdinalIgnoreCase))
+            foreach (string colMoneda in ColumnasMoneda)
             {
-                if (dgvMostrarDatos.Columns.Contains("Método de Pago"))
-                    dgvMostrarDatos.Columns["Método de Pago"].HeaderText = "Método de Pago";
-                if (dgvMostrarDatos.Columns.Contains("MIEMBRO"))
-                    dgvMostrarDatos.Columns["MIEMBRO"].HeaderText = "MIEMBRO";
-                if (dgvMostrarDatos.Columns.Contains("USUARIO"))
-                    dgvMostrarDatos.Columns["USUARIO"].HeaderText = "USUARIO";
+                if (!dgvMostrarDatos.Columns.Contains(colMoneda))
+                    continue;
+
+                dgvMostrarDatos.Columns[colMoneda].DefaultCellStyle.Format = "N2";
+                dgvMostrarDatos.Columns[colMoneda].DefaultCellStyle.Alignment =
+                    DataGridViewContentAlignment.MiddleRight;
+            }
+
+            string clave = tipo.Trim().ToUpperInvariant();
+            switch (clave)
+            {
+                case "CAJA":
+                    SetHeaderSiExiste("Tipo", "Tipo");
+                    SetHeaderSiExiste("Concepto", "Concepto");
+                    SetHeaderSiExiste("Monto", "Monto");
+                    break;
+                case "MEMBRESIA":
+                case "MEMBRESÍA":
+                    SetHeaderSiExiste("Miembro", "Miembro");
+                    SetHeaderSiExiste("Plan", "Plan");
+                    SetHeaderSiExiste("Tipo", "Movimiento");
+                    break;
+                case "VENTAS":
+                case "SUPLEMENTO":
+                case "SUPLEMENTOS":
+                    SetHeaderSiExiste("VentaId", "Venta #");
+                    SetHeaderSiExiste("Producto", "Producto");
+                    SetHeaderSiExiste("Categoria", "Categoría");
+                    SetHeaderSiExiste("Monto", "Subtotal");
+                    break;
+                case "GASTO":
+                case "GASTOS":
+                    SetHeaderSiExiste("Concepto", "Concepto");
+                    SetHeaderSiExiste("Monto", "Monto");
+                    break;
             }
         }
 
-        /// <summary>
-        /// Identifica visualmente las correcciones de caja: la celda Tipo muestra
-        /// REVERSO y queda roja, sin confundirla con un gasto/EGRESO operativo.
-        /// </summary>
+        private void SetHeaderSiExiste(string columna, string header)
+        {
+            if (dgvMostrarDatos.Columns.Contains(columna))
+                dgvMostrarDatos.Columns[columna].HeaderText = header;
+        }
+
         private void DgvMostrarDatos_CellFormatting(
             object? sender,
             DataGridViewCellFormattingEventArgs e)
@@ -173,19 +312,11 @@ namespace UI
         }
 
         private void cmbReporte_SelectedIndexChanged(object? sender, EventArgs e)
-        {
-            CargarReporte();
-        }
+            => CargarReporte();
 
         private void txtBusca_TextChanged(object? sender, EventArgs e)
-        {
-            AplicarBusquedaInteligente();
-        }
+            => AplicarBusquedaInteligente();
 
-        /// <summary>
-        /// Búsqueda inmediata en todas las columnas visibles. Ignora acentos,
-        /// mayúsculas y signos; admite varias palabras en cualquier orden.
-        /// </summary>
         private void AplicarBusquedaInteligente()
         {
             if (datosFuente == null)
@@ -225,6 +356,7 @@ namespace UI
                 datosActuales = filtrados;
             }
 
+            dgvMostrarDatos.DataSource = null;
             dgvMostrarDatos.DataSource = datosActuales;
             CalcularTotal();
         }
@@ -299,7 +431,8 @@ namespace UI
 
         private void btnGenerarPDF_Click(object sender, EventArgs e)
         {
-            if (estaExportando) return;
+            if (estaExportando)
+                return;
 
             try
             {
@@ -309,67 +442,79 @@ namespace UI
                     return;
                 }
 
-                using (SaveFileDialog sfd = new SaveFileDialog())
-                {
-                    sfd.Filter = "PDF (*.pdf)|*.pdf";
-                    sfd.DefaultExt = "pdf";
-                    sfd.AddExtension = true;
-                    string tipo = cmbReporte.SelectedItem?.ToString() ?? "Reporte";
-                    DateTime fechaDescarga = DateTime.Now;
-                    sfd.FileName = $"{tipo}_{fechaDescarga:yyyyMMdd_hhmmss_tt}.pdf";
+                using SaveFileDialog sfd = new();
+                sfd.Filter = "PDF (*.pdf)|*.pdf";
+                sfd.DefaultExt = "pdf";
+                sfd.AddExtension = true;
+                string tipo = cmbReporte.SelectedItem?.ToString() ?? "Reporte";
+                DateTime fechaDescarga = DateTime.Now;
+                sfd.FileName = $"{tipo}_{fechaDescarga:yyyyMMdd_hhmmss_tt}.pdf";
 
-                    if (sfd.ShowDialog() == DialogResult.OK)
-                    {
-                        estaExportando = true;
-                        this.Cursor = Cursors.WaitCursor;
+                if (sfd.ShowDialog() != DialogResult.OK)
+                    return;
 
-                        reporteBLL.GenerarReportePdfDetallado(
-                            datosActuales,
-                            sfd.FileName,
-                            tipo,
-                            dtDesde.Value.Date,
-                            dtHasta.Value.Date,
-                            fechaDescarga,
-                            ObtenerMontoTotal());
+                estaExportando = true;
+                Cursor = Cursors.WaitCursor;
 
-                        MessageBox.Show("PDF generado con éxito", "MFFITNESS", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                }
+                reporteBLL.GenerarReportePdfDetallado(
+                    datosActuales,
+                    sfd.FileName,
+                    tipo,
+                    _desde.Date,
+                    _hasta.Date,
+                    fechaDescarga,
+                    ObtenerMontoTotal());
+
+                MessageBox.Show(
+                    "PDF generado con éxito",
+                    "MFFITNESS",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Anomalía en exportación: " + ex.Message, "Error Crítico", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    "Anomalía en exportación: " + ex.Message,
+                    "Error Crítico",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
             finally
             {
-                this.Cursor = Cursors.Default;
+                Cursor = Cursors.Default;
                 estaExportando = false;
             }
         }
 
         private void btnGenerarExcel_Click(object sender, EventArgs e)
         {
-            if (estaExportando) return;
+            if (estaExportando)
+                return;
 
             try
             {
-                if (datosActuales == null || datosActuales.Rows.Count == 0) return;
+                if (datosActuales == null || datosActuales.Rows.Count == 0)
+                    return;
 
-                using (SaveFileDialog sfd = new SaveFileDialog())
-                {
-                    sfd.Filter = "Excel (*.xlsx)|*.xlsx";
-                    sfd.FileName = "Reporte_MFFitness_" + DateTime.Now.ToString("yyyyMMdd");
+                using SaveFileDialog sfd = new();
+                sfd.Filter = "Excel (*.xlsx)|*.xlsx";
+                sfd.FileName = "Reporte_MFFitness_" + DateTime.Now.ToString("yyyyMMdd");
 
-                    if (sfd.ShowDialog() == DialogResult.OK)
-                    {
-                        estaExportando = true;
-                        reporteBLL.GenerarReporteDesdeDataTable(datosActuales, sfd.FileName, ".xlsx");
-                        MessageBox.Show("Excel generado correctamente");
-                    }
-                }
+                if (sfd.ShowDialog() != DialogResult.OK)
+                    return;
+
+                estaExportando = true;
+                reporteBLL.GenerarReporteDesdeDataTable(datosActuales, sfd.FileName, ".xlsx");
+                MessageBox.Show("Excel generado correctamente");
             }
-            catch (Exception ex) { MessageBox.Show("Error: " + ex.Message); }
-            finally { estaExportando = false; }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+            }
+            finally
+            {
+                estaExportando = false;
+            }
         }
 
         private void FrmReportes_Load(object sender, EventArgs e)
@@ -379,46 +524,29 @@ namespace UI
             {
                 cmbReporte.DropDownStyle = ComboBoxStyle.DropDownList;
                 cmbReporte.Items.Clear();
-                cmbReporte.Items.AddRange(new string[] { "CAJA", "VENTAS", "PAGOS" });
+                cmbReporte.Items.AddRange(CategoriasReporte);
                 cmbReporte.SelectedIndex = 0;
-                ActualizarLblTiempo();
             }
             finally
             {
                 _cargandoUi = false;
             }
 
+            AsegurarLayoutGrid();
             CargarReporte();
+            _reporteInicialCargado = true;
         }
 
-        private void RangoFechas_ValueChanged(object? sender, EventArgs e)
+        private void FrmReportes_Shown(object? sender, EventArgs e)
         {
-            ActualizarLblTiempo();
-            CargarReporte();
-        }
+            AsegurarLayoutGrid();
 
-        /// <summary>
-        /// Muestra en lbltiempo cuántos días cubre el rango Desde–Hasta (inclusive).
-        /// </summary>
-        private void ActualizarLblTiempo()
-        {
-            if (lbltiempo == null || dtDesde == null || dtHasta == null)
-                return;
-
-            DateTime desde = dtDesde.Value.Date;
-            DateTime hasta = dtHasta.Value.Date;
-
-            if (desde > hasta)
+            if (!_reporteInicialCargado
+                || (dgvMostrarDatos.DataSource == null && cmbReporte.SelectedItem != null))
             {
-                lbltiempo.ForeColor = Color.FromArgb(220, 38, 38);
-                lbltiempo.Text = "Rango inválido";
-                return;
+                CargarReporte();
+                _reporteInicialCargado = true;
             }
-
-            // Días transcurridos: del 10/08 al 20/08 son 10 días.
-            int dias = (hasta - desde).Days;
-            lbltiempo.ForeColor = Color.FromArgb(27, 146, 255);
-            lbltiempo.Text = dias == 1 ? "1 día" : $"{dias} días";
         }
     }
 }

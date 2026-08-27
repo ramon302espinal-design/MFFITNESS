@@ -82,22 +82,44 @@ namespace UI.Helpers
         }
 
         /// <summary>
-        /// Filtro POS inventario: Id, nombre, categoría, precios compra/venta, stock.
+        /// Filtro POS en vivo: Id, nombre, categoría, código de barras, precios y stock.
+        /// Multi-token (AND): "cool hea" exige ambas partes.
         /// </summary>
         public static string ConstruirFiltroProductosPos(string termino)
         {
-            var valor = EscaparFiltroDataView(termino);
-            var like = $"'%{valor}%'";
+            if (string.IsNullOrWhiteSpace(termino))
+                return string.Empty;
 
-            return $"Convert(Id, 'System.String') LIKE {like} " +
-                   $"OR Nombre LIKE {like} " +
-                   $"OR Categoria LIKE {like} " +
-                   $"OR CodigoBarra LIKE {like} " +
-                   $"OR Convert(IdCategoria, 'System.String') LIKE {like} " +
-                   $"OR Convert(PrecioCompra, 'System.String') LIKE {like} " +
-                   $"OR Convert(PrecioVenta, 'System.String') LIKE {like} " +
-                   $"OR Convert(StockActual, 'System.String') LIKE {like} " +
-                   $"OR Convert(StockMinimo, 'System.String') LIKE {like}";
+            var partes = new List<string>();
+            foreach (string tokenBruto in termino.Split(
+                         new[] { ' ', '\t', ',', ';' },
+                         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var valor = EscaparFiltroDataView(tokenBruto);
+                var like = $"'%{valor}%'";
+                var likeInicio = $"'{valor}%'";
+                var likePalabra = $"'% {valor}%'";
+
+                partes.Add(
+                    "(" +
+                    $"Convert(Id, 'System.String') LIKE {like} " +
+                    $"OR Convert(Id, 'System.String') LIKE {likeInicio} " +
+                    $"OR Nombre LIKE {like} " +
+                    $"OR Nombre LIKE {likeInicio} " +
+                    $"OR Nombre LIKE {likePalabra} " +
+                    $"OR Categoria LIKE {like} " +
+                    $"OR Categoria LIKE {likeInicio} " +
+                    $"OR CodigoBarra LIKE {like} " +
+                    $"OR CodigoBarra LIKE {likeInicio} " +
+                    $"OR Convert(IdCategoria, 'System.String') LIKE {like} " +
+                    $"OR Convert(PrecioCompra, 'System.String') LIKE {like} " +
+                    $"OR Convert(PrecioVenta, 'System.String') LIKE {like} " +
+                    $"OR Convert(StockActual, 'System.String') LIKE {like} " +
+                    $"OR Convert(StockMinimo, 'System.String') LIKE {like}" +
+                    ")");
+            }
+
+            return partes.Count == 0 ? string.Empty : string.Join(" AND ", partes);
         }
 
         /// <summary>

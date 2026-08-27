@@ -6,17 +6,21 @@ using OpenCvSharp.Extensions;
 namespace UI.DISEÑO
 {
     /// <summary>
-    /// Cámara con selector de dispositivo (PC / Iriun / otras). Clic = captura → Usar / Repetir.
+    /// Vista previa en vivo. Clic = captura → Usar / Repetir.
+    /// Con <paramref name="soloIriun"/> abre Iriun/Irium sin selector ni botón Activar.
     /// </summary>
     public sealed class FrmCapturaProductoCamara : Form
     {
+        private readonly bool _soloIriun;
+        private readonly bool _mostrarOmitir;
+        private readonly string _hintActiva;
         private readonly ComboBox _cmbCamara;
-        private readonly Button _btnActivar;
         private readonly PictureBox _preview;
         private readonly Panel _panelAcciones;
         private readonly Panel _panelTop;
         private readonly Button _btnUsar;
         private readonly Button _btnRepetir;
+        private readonly Button? _btnOmitir;
         private readonly Label _lblHint;
         private readonly System.Windows.Forms.Timer _timer;
 
@@ -25,12 +29,30 @@ namespace UI.DISEÑO
         private Bitmap? _frozen;
         private bool _capturado;
         private readonly List<int> _indicesCamara = new();
+        private bool _cambiandoCamara;
 
         public Image? FotoCapturada { get; private set; }
 
-        public FrmCapturaProductoCamara()
+        /// <param name="soloIriun">
+        /// true = solo Iriun/Irium (sin combo ni Activar). false = selector, auto-activa al elegir.
+        /// </param>
+        /// <param name="instruccionCaptura">Texto guía en la barra inferior.</param>
+        /// <param name="mostrarOmitir">Muestra botón Omitir (DialogResult = Ignore).</param>
+        public FrmCapturaProductoCamara(
+            bool soloIriun = false,
+            string? tituloVentana = null,
+            string? instruccionCaptura = null,
+            bool mostrarOmitir = false)
         {
-            Text = "Tomar foto del producto";
+            _soloIriun = soloIriun;
+            _mostrarOmitir = mostrarOmitir;
+            _hintActiva = string.IsNullOrWhiteSpace(instruccionCaptura)
+                ? (soloIriun
+                    ? "Cámara Iriun activa · clic para capturar · Esc cancela"
+                    : "Cámara activa · clic para capturar · Esc cancela")
+                : instruccionCaptura.Trim();
+
+            Text = tituloVentana ?? (soloIriun ? "Foto del producto (Iriun)" : "Tomar foto del producto");
             StartPosition = FormStartPosition.CenterParent;
             WindowState = FormWindowState.Maximized;
             BackColor = Color.Black;
@@ -42,7 +64,8 @@ namespace UI.DISEÑO
             {
                 Dock = DockStyle.Top,
                 Height = 52,
-                BackColor = Color.FromArgb(24, 24, 24)
+                BackColor = Color.FromArgb(24, 24, 24),
+                Visible = !soloIriun
             };
 
             var lblCam = new Label
@@ -58,26 +81,18 @@ namespace UI.DISEÑO
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Location = new System.Drawing.Point(90, 12),
-                Width = 420,
+                Width = 520,
                 Font = new Font("Segoe UI", 10F)
             };
-
-            _btnActivar = new Button
+            _cmbCamara.SelectedIndexChanged += (_, _) =>
             {
-                Text = "Activar cámara",
-                Location = new System.Drawing.Point(520, 10),
-                Size = new System.Drawing.Size(140, 32),
-                BackColor = Color.FromArgb(37, 99, 235),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                if (_cambiandoCamara || _soloIriun)
+                    return;
+                ActivarCamaraSeleccionada();
             };
-            _btnActivar.FlatAppearance.BorderSize = 0;
-            _btnActivar.Click += (_, _) => ActivarCamaraSeleccionada();
 
             _panelTop.Controls.Add(lblCam);
             _panelTop.Controls.Add(_cmbCamara);
-            _panelTop.Controls.Add(_btnActivar);
 
             _preview = new PictureBox
             {
@@ -96,7 +111,7 @@ namespace UI.DISEÑO
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(20, 20, 20),
                 Font = new Font("Segoe UI", 11F, FontStyle.Bold),
-                Text = "Elige la cámara del PC (no Iriun) → Activar → clic para capturar · Esc cancela"
+                Text = _hintActiva
             };
 
             _panelAcciones = new Panel
@@ -134,6 +149,27 @@ namespace UI.DISEÑO
             _panelAcciones.Controls.Add(_btnUsar);
             _panelAcciones.Controls.Add(_btnRepetir);
 
+            if (mostrarOmitir)
+            {
+                _btnOmitir = new Button
+                {
+                    Text = "Omitir",
+                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                    BackColor = Color.FromArgb(100, 116, 139),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Size = new System.Drawing.Size(120, 48),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right
+                };
+                _btnOmitir.FlatAppearance.BorderSize = 0;
+                _btnOmitir.Click += (_, _) =>
+                {
+                    DialogResult = DialogResult.Ignore;
+                    Close();
+                };
+                Controls.Add(_btnOmitir);
+            }
+
             Controls.Add(_preview);
             Controls.Add(_panelAcciones);
             Controls.Add(_lblHint);
@@ -154,6 +190,9 @@ namespace UI.DISEÑO
             int x = Math.Max(16, (_panelAcciones.ClientSize.Width - total) / 2);
             _btnUsar.Location = new System.Drawing.Point(x, 12);
             _btnRepetir.Location = new System.Drawing.Point(x + _btnUsar.Width + 24, 12);
+
+            if (_btnOmitir != null)
+                _btnOmitir.Location = new System.Drawing.Point(ClientSize.Width - _btnOmitir.Width - 24, 12);
         }
 
         private void Frm_Load(object? sender, EventArgs e)
@@ -163,7 +202,7 @@ namespace UI.DISEÑO
             {
                 MessageBox.Show(
                     this,
-                    "No se detectó ninguna cámara. Conecta la cámara del PC o Iriun y reabre.",
+                    "No se detectó ninguna cámara. Conecta Iriun Webcam y reabre.",
                     "Cámara",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -172,11 +211,44 @@ namespace UI.DISEÑO
                 return;
             }
 
-            // Preferir índice != 0 si hay varias (0 suele ser Iriun / virtual).
-            int prefer = _indicesCamara.Count > 1 ? 1 : 0;
-            _cmbCamara.SelectedIndex = Math.Min(prefer, _cmbCamara.Items.Count - 1);
+            _cambiandoCamara = true;
+            try
+            {
+                int prefer = ResolverIndicePreferido();
+                _cmbCamara.SelectedIndex = prefer;
+            }
+            finally
+            {
+                _cambiandoCamara = false;
+            }
+
             ActivarCamaraSeleccionada();
             ReposicionarBotones();
+        }
+
+        /// <summary>
+        /// Iriun suele ser índice 0; si hay varias, prioriza la etiquetada como Iriun/Irium.
+        /// </summary>
+        private int ResolverIndicePreferido()
+        {
+            if (_cmbCamara.Items.Count == 0)
+                return 0;
+
+            for (int i = 0; i < _cmbCamara.Items.Count; i++)
+            {
+                string label = _cmbCamara.Items[i]?.ToString() ?? string.Empty;
+                if (EsEtiquetaIriun(label))
+                    return i;
+            }
+
+            // Modo Iriun: primer dispositivo (casi siempre Iriun Webcam).
+            return 0;
+        }
+
+        private static bool EsEtiquetaIriun(string label)
+        {
+            string n = label.ToLowerInvariant();
+            return n.Contains("iriun") || n.Contains("irium");
         }
 
         private void EnumerarCamaras()
@@ -189,24 +261,17 @@ namespace UI.DISEÑO
                 VideoCapture? test = null;
                 try
                 {
-                    test = new VideoCapture(i, VideoCaptureAPIs.DSHOW);
-                    if (!test.IsOpened())
+                    test = AbrirCaptura(i);
+                    if (test == null || !test.IsOpened())
                     {
-                        test.Release();
-                        test.Dispose();
-                        test = new VideoCapture(i);
-                    }
-
-                    if (!test.IsOpened())
-                    {
-                        test.Dispose();
+                        test?.Dispose();
                         continue;
                     }
 
                     _indicesCamara.Add(i);
                     string label = i == 0
-                        ? $"Cámara {i} (a menudo Iriun / virtual)"
-                        : $"Cámara {i} (PC / USB recomendada)";
+                        ? $"Cámara {i} (Iriun / Irium)"
+                        : $"Cámara {i}";
                     _cmbCamara.Items.Add(label);
                 }
                 catch
@@ -221,6 +286,17 @@ namespace UI.DISEÑO
             }
         }
 
+        private static VideoCapture? AbrirCaptura(int index)
+        {
+            var cap = new VideoCapture(index, VideoCaptureAPIs.DSHOW);
+            if (cap.IsOpened())
+                return cap;
+
+            cap.Dispose();
+            cap = new VideoCapture(index);
+            return cap.IsOpened() ? cap : null;
+        }
+
         private void ActivarCamaraSeleccionada()
         {
             if (_cmbCamara.SelectedIndex < 0 || _cmbCamara.SelectedIndex >= _indicesCamara.Count)
@@ -231,35 +307,30 @@ namespace UI.DISEÑO
 
             try
             {
-                _capture = new VideoCapture(index, VideoCaptureAPIs.DSHOW);
-                if (!_capture.IsOpened())
-                {
-                    _capture.Dispose();
-                    _capture = new VideoCapture(index);
-                }
-
-                if (!_capture.IsOpened())
+                _capture = AbrirCaptura(index);
+                if (_capture == null || !_capture.IsOpened())
                 {
                     MessageBox.Show(
                         this,
-                        $"No se pudo abrir la cámara {index}. Prueba otra de la lista.",
+                        $"No se pudo abrir la cámara {index}.",
                         "Cámara",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                     return;
                 }
 
-                _capture.Set(VideoCaptureProperties.FrameWidth, 640);
-                _capture.Set(VideoCaptureProperties.FrameHeight, 480);
+                // Iriun: resolución moderada = preview fluido + OCR suficiente.
+                _capture.Set(VideoCaptureProperties.FrameWidth, 1280);
+                _capture.Set(VideoCaptureProperties.FrameHeight, 720);
                 _frame = new Mat();
                 _capturado = false;
                 _panelAcciones.Visible = false;
-                _lblHint.Text = "Haz clic en la pantalla para tomar la foto · Esc cancela";
+                _lblHint.Text = _hintActiva;
                 _timer.Start();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Error al activar cámara: " + ex.Message, "Cámara",
+                MessageBox.Show(this, "Error al abrir cámara: " + ex.Message, "Cámara",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -315,7 +386,7 @@ namespace UI.DISEÑO
             _frozen?.Dispose();
             _frozen = null;
             _panelAcciones.Visible = false;
-            _lblHint.Text = "Haz clic en la pantalla para tomar la foto · Esc cancela";
+            _lblHint.Text = _hintActiva;
             _timer.Start();
         }
 
