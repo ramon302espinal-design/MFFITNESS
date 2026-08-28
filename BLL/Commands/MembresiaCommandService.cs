@@ -52,7 +52,8 @@ namespace BLL.Commands
             decimal monto,
             string metodo,
             string concepto,
-            string? usuario = null)
+            string? usuario = null,
+            int cantidad = 1)
         {
             try
             {
@@ -62,7 +63,8 @@ namespace BLL.Commands
                     monto,
                     metodo,
                     concepto,
-                    ResolveUsuario(usuario));
+                    ResolveUsuario(usuario),
+                    cantidad);
                 return CommandResult.Ok("Acceso parcial registrado correctamente.", operacion);
             }
             catch (Exception ex)

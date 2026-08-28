@@ -36,6 +36,15 @@ namespace UI.DISEÑO
         private DateTime _ultimaTeclaEscannerPos = DateTime.MinValue;
         private readonly PosScannerIntervalGate _intervaloEscannerPos = new();
         private int _hoverProductoIdPos = -1;
+        /// <summary>Id del producto cuya foto está en picProductoPos (no se limpia al salir del listado).</summary>
+        private int _fotoProductoIdPos = -1;
+        private string? _rutaFotoProductoPosActual;
+        private ToolTip? _toolTipFotoProductoPos;
+        private bool _fotoProductoPosBusy;
+        private bool _toolbarFotoProductoPosListo;
+        /// <summary>Historial Undo en JPEG (independiente de GDI+/PictureBox).</summary>
+        private readonly List<byte[]> _undoFotoProductoPos = new();
+        private const int MaxUndoFotoProductoPos = 12;
 
         private FrmPresentacion? _presentacion;
         private readonly ClienteBLL clienteBLL = new ClienteBLL();
@@ -150,6 +159,10 @@ namespace UI.DISEÑO
             dtpFechaVencimiento.Value = DateTime.Today.AddDays(30);
             dtpFechaVencimiento.Enabled = false;
 
+            txtCantidad.Text = "1";
+            txtCantidad.Enabled = false;
+            lblCantidad.Enabled = false;
+
             if (dtpVenceDeudaProducto != null)
             {
                 dtpVenceDeudaProducto.Value = DateTime.Today.AddDays(30);
@@ -171,6 +184,8 @@ namespace UI.DISEÑO
 
             ConfigurarCapturaEscannerPos();
             ProcesarEscaneoInicialPendiente();
+            ConfigurarToolbarFotoProductoPos();
+            ActualizarEstadoToolbarFotoProductoPos(false);
 
             if (tabProductos.SelectedTab == tabPago)
                 EnfocarEscannerPos();
@@ -455,10 +470,22 @@ namespace UI.DISEÑO
                 && producto["Id"] != DBNull.Value)
                 id = Convert.ToInt32(producto["Id"]);
 
-            if (id > 0 && id == _hoverProductoIdPos)
+            // Misma foto ya en pantalla: no recargar ni borrar el historial Undo.
+            if (id > 0 && id == _fotoProductoIdPos && picProductoPos.Image != null)
+            {
+                _hoverProductoIdPos = id;
+                ActualizarEstadoToolbarFotoProductoPos(true);
                 return;
+            }
 
             _hoverProductoIdPos = id;
+
+            // Solo limpiar Undo al cambiar de producto.
+            if (id != _fotoProductoIdPos)
+                LimpiarUndoFotoProductoPos();
+
+            _fotoProductoIdPos = -1;
+            _rutaFotoProductoPosActual = null;
 
             string? ruta = null;
             if (producto.Table.Columns.Contains("RutaImagen"))
@@ -476,20 +503,358 @@ namespace UI.DISEÑO
             {
                 if (lblFotoProductoPos != null)
                     lblFotoProductoPos.Text = "SIN FOTO";
+                ActualizarEstadoToolbarFotoProductoPos(false);
                 return;
             }
 
             try
             {
+                // Clonar a Bitmap independiente: Image.FromStream + dispose del FileStream
+                // deja la imagen inválida y rompe Undo/edición.
                 using var fs = new FileStream(real, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                picProductoPos.Image = Image.FromStream(fs);
+                using var tmp = Image.FromStream(fs);
+                picProductoPos.Image = new Bitmap(tmp);
+                _fotoProductoIdPos = id;
+                _rutaFotoProductoPosActual = real;
                 if (lblFotoProductoPos != null)
                     lblFotoProductoPos.Text = "FOTO PRODUCTO";
+                ActualizarEstadoToolbarFotoProductoPos(true);
+                ReubicarToolbarFotoProductoPos();
             }
             catch
             {
+                _fotoProductoIdPos = -1;
+                _rutaFotoProductoPosActual = null;
                 if (lblFotoProductoPos != null)
                     lblFotoProductoPos.Text = "SIN FOTO";
+                ActualizarEstadoToolbarFotoProductoPos(false);
+            }
+        }
+
+        private void ConfigurarToolbarFotoProductoPos()
+        {
+            if (_toolbarFotoProductoPosListo || panelToolbarFotoPos == null)
+                return;
+
+            _toolTipFotoProductoPos ??= new ToolTip();
+            _toolTipFotoProductoPos.SetToolTip(btnUndoFotoProductoPos, "Deshacer último cambio de foto (Ctrl+Z)");
+            _toolTipFotoProductoPos.SetToolTip(btnIaFotoProductoPos, "Arreglar con IA · escribe qué quieres · Ctrl+Z deshace");
+            _toolTipFotoProductoPos.SetToolTip(btnRecortarFotoProductoPos, "Recortar y enderezar · se guarda al instante");
+            _toolTipFotoProductoPos.SetToolTip(btnGirarFotoProductoPos, "Girar foto 90° (vertical) · se guarda al instante");
+
+            btnUndoFotoProductoPos.Enabled = true; // el click valida si hay historial
+            ReubicarToolbarFotoProductoPos();
+            panelToolbarFotoPos.BringToFront();
+            _toolbarFotoProductoPosListo = true;
+        }
+
+        /// <summary>Mantiene la barra encima de la esquina de la foto (no dentro del PictureBox).</summary>
+        private void ReubicarToolbarFotoProductoPos()
+        {
+            if (panelToolbarFotoPos == null || picProductoPos == null)
+                return;
+
+            panelToolbarFotoPos.Parent = tabPago;
+            panelToolbarFotoPos.Location = new Point(
+                picProductoPos.Right - panelToolbarFotoPos.Width - 6,
+                picProductoPos.Bottom - panelToolbarFotoPos.Height - 6);
+            panelToolbarFotoPos.BringToFront();
+        }
+
+        private void ActualizarEstadoToolbarFotoProductoPos(bool visible)
+        {
+            ConfigurarToolbarFotoProductoPos();
+            if (panelToolbarFotoPos == null)
+                return;
+
+            bool show = visible
+                && !_fotoProductoPosBusy
+                && picProductoPos?.Image != null
+                && _fotoProductoIdPos > 0
+                && !string.IsNullOrWhiteSpace(_rutaFotoProductoPosActual);
+
+            panelToolbarFotoPos.Visible = show;
+            if (show)
+            {
+                ReubicarToolbarFotoProductoPos();
+                ActualizarEstadoBotonUndoFoto();
+            }
+        }
+
+        private void btnUndoFotoProductoPos_Click(object? sender, EventArgs e)
+            => DeshacerFotoProductoPos();
+
+        private async void btnIaFotoProductoPos_Click(object? sender, EventArgs e)
+            => await btnIaFotoProductoPos_ClickAsync();
+
+        private bool PuedeEditarFotoProductoPos()
+            => !_fotoProductoPosBusy
+               && picProductoPos?.Image != null
+               && _fotoProductoIdPos > 0
+               && !string.IsNullOrWhiteSpace(_rutaFotoProductoPosActual);
+
+        private void LimpiarUndoFotoProductoPos()
+        {
+            _undoFotoProductoPos.Clear();
+            ActualizarEstadoBotonUndoFoto();
+        }
+
+        private void PushUndoFotoProductoPos()
+        {
+            if (picProductoPos?.Image == null)
+                return;
+
+            try
+            {
+                byte[] jpeg = ProductoImagenHelper.ToJpegBytes(
+                    picProductoPos.Image,
+                    maxSide: 2048,
+                    quality: 92);
+                if (jpeg.Length == 0)
+                    return;
+
+                _undoFotoProductoPos.Add(jpeg);
+                while (_undoFotoProductoPos.Count > MaxUndoFotoProductoPos)
+                    _undoFotoProductoPos.RemoveAt(0);
+
+                ActualizarEstadoBotonUndoFoto();
+            }
+            catch
+            {
+                // No bloquear la edición si el snapshot falla.
+            }
+        }
+
+        private void ActualizarEstadoBotonUndoFoto()
+        {
+            if (btnUndoFotoProductoPos == null)
+                return;
+
+            bool can = _undoFotoProductoPos.Count > 0 && !_fotoProductoPosBusy;
+            // Siempre clickable; visual distinto si no hay historial.
+            btnUndoFotoProductoPos.Enabled = !_fotoProductoPosBusy;
+            btnUndoFotoProductoPos.BackColor = can
+                ? Color.FromArgb(34, 197, 94)
+                : Color.FromArgb(100, 116, 139);
+            btnUndoFotoProductoPos.Cursor = Cursors.Hand;
+        }
+
+        private void DeshacerFotoProductoPos()
+        {
+            if (_fotoProductoPosBusy)
+                return;
+
+            if (_undoFotoProductoPos.Count == 0)
+            {
+                MessageBox.Show(
+                    this,
+                    "No hay cambios de foto para deshacer.\nEdita la foto (IA / girar / recortar) y luego usa ↶ o Ctrl+Z.",
+                    "Undo foto",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (_fotoProductoIdPos <= 0 || string.IsNullOrWhiteSpace(_rutaFotoProductoPosActual))
+                return;
+
+            byte[] prevJpeg = _undoFotoProductoPos[^1];
+            _undoFotoProductoPos.RemoveAt(_undoFotoProductoPos.Count - 1);
+
+            try
+            {
+                using var ms = new MemoryStream(prevJpeg, writable: false);
+                using var tmp = Image.FromStream(ms);
+                var restore = new Bitmap(tmp);
+                AplicarYGuardarFotoProductoPos(restore, pushUndo: false);
+                ActualizarEstadoToolbarFotoProductoPos(true);
+                ActualizarEstadoBotonUndoFoto();
+            }
+            catch (Exception ex)
+            {
+                ActualizarEstadoBotonUndoFoto();
+                MessageBox.Show(
+                    this,
+                    "No se pudo deshacer el cambio de foto.\n" + ex.Message,
+                    "Foto producto",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+        private void AplicarYGuardarFotoProductoPos(Image nueva, bool pushUndo = true)
+        {
+            ArgumentNullException.ThrowIfNull(nueva);
+            if (_fotoProductoIdPos <= 0 || string.IsNullOrWhiteSpace(_rutaFotoProductoPosActual))
+            {
+                nueva.Dispose();
+                return;
+            }
+
+            if (pushUndo)
+                PushUndoFotoProductoPos();
+
+            int productoId = _fotoProductoIdPos;
+            Image? old = picProductoPos!.Image;
+            picProductoPos.Image = nueva;
+            if (!ReferenceEquals(old, nueva))
+                old?.Dispose();
+            picProductoPos.Refresh();
+
+            byte[] jpeg = ProductoImagenHelper.ToJpegBytes(nueva, maxSide: 2048, quality: 90);
+
+            string rutaActual = _rutaFotoProductoPosActual!;
+            File.WriteAllBytes(rutaActual, jpeg);
+
+            string canonical = ProductoImagenStorage.RutaProducto(productoId);
+            if (!string.Equals(
+                    Path.GetFullPath(rutaActual),
+                    Path.GetFullPath(canonical),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                File.WriteAllBytes(canonical, jpeg);
+            }
+
+            try
+            {
+                productoBLL.ActualizarRutaImagen(productoId, canonical);
+            }
+            catch
+            {
+                // Archivo ya guardado; BD es refuerzo.
+            }
+
+            if (lstProductosPos?.SelectedItem is DataRowView drv
+                && drv.Row.Table.Columns.Contains("RutaImagen")
+                && drv.Row.Table.Columns.Contains("Id")
+                && drv.Row["Id"] != DBNull.Value
+                && Convert.ToInt32(drv.Row["Id"]) == productoId)
+            {
+                drv.Row["RutaImagen"] = canonical;
+            }
+            else if (_bsProductos.DataSource is DataTable table
+                     && table.Columns.Contains("Id")
+                     && table.Columns.Contains("RutaImagen"))
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    if (row["Id"] == DBNull.Value || Convert.ToInt32(row["Id"]) != productoId)
+                        continue;
+                    row["RutaImagen"] = canonical;
+                    break;
+                }
+            }
+
+            _rutaFotoProductoPosActual = File.Exists(canonical) ? canonical : rutaActual;
+            ActualizarEstadoBotonUndoFoto();
+        }
+
+        private async System.Threading.Tasks.Task btnIaFotoProductoPos_ClickAsync()
+        {
+            if (!PuedeEditarFotoProductoPos() || picProductoPos?.Image == null)
+                return;
+
+            string peticion;
+            using (var dlg = new FrmPeticionIaFoto())
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK)
+                    return;
+                peticion = dlg.Peticion;
+            }
+
+            if (string.IsNullOrWhiteSpace(peticion))
+                return;
+
+            _fotoProductoPosBusy = true;
+            ActualizarEstadoToolbarFotoProductoPos(false);
+            ActualizarEstadoBotonUndoFoto();
+            UseWaitCursor = true;
+            try
+            {
+                // Clonar en UI: GDI+ no es thread-safe.
+                using var clone = new Bitmap(picProductoPos.Image);
+                var (mejorada, plan) = await ProductoFotoIaHelper
+                    .AplicarPeticionAsync(clone, peticion)
+                    .ConfigureAwait(true);
+
+                AplicarYGuardarFotoProductoPos(mejorada);
+
+                if (lblFotoProductoPos != null)
+                {
+                    lblFotoProductoPos.Text = "IA: " + plan.Resumen;
+                    var t = new System.Windows.Forms.Timer { Interval = 2500 };
+                    t.Tick += (_, _) =>
+                    {
+                        t.Stop();
+                        t.Dispose();
+                        if (lblFotoProductoPos != null && picProductoPos?.Image != null)
+                            lblFotoProductoPos.Text = "FOTO PRODUCTO";
+                    };
+                    t.Start();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    this,
+                    "No se pudo arreglar la foto con IA.\n" + ex.Message,
+                    "Foto producto",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                UseWaitCursor = false;
+                _fotoProductoPosBusy = false;
+                ActualizarEstadoToolbarFotoProductoPos(picProductoPos?.Image != null);
+                ActualizarEstadoBotonUndoFoto();
+            }
+        }
+
+        private void btnRecortarFotoProductoPos_Click(object? sender, EventArgs e)
+        {
+            if (!PuedeEditarFotoProductoPos() || picProductoPos?.Image == null)
+                return;
+
+            try
+            {
+                using var dlg = new FrmRecortarEnderezarFoto(picProductoPos.Image);
+                if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Resultado == null)
+                    return;
+
+                AplicarYGuardarFotoProductoPos(dlg.Resultado);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    this,
+                    "No se pudo recortar/enderezar la foto.\n" + ex.Message,
+                    "Foto producto",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+        private void btnGirarFotoProductoPos_Click(object? sender, EventArgs e)
+        {
+            if (!PuedeEditarFotoProductoPos() || picProductoPos?.Image == null)
+                return;
+
+            try
+            {
+                // Clonar + girar: no mutar in-place (evita rarezas al re-guardar).
+                var girada = new Bitmap(picProductoPos.Image);
+                girada.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                AplicarYGuardarFotoProductoPos(girada);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    this,
+                    "No se pudo girar/guardar la foto.\n" + ex.Message,
+                    "Foto producto",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
             }
         }
 
@@ -518,6 +883,20 @@ namespace UI.DISEÑO
         /// </summary>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (keyData == (Keys.Control | Keys.Z))
+            {
+                // No interferir con undo nativo de cajas de texto.
+                if (ActiveControl is TextBoxBase { ReadOnly: false } or ComboBox { DropDownStyle: ComboBoxStyle.DropDown })
+                    return base.ProcessCmdKey(ref msg, keyData);
+
+                if (!_fotoProductoPosBusy && _undoFotoProductoPos.Count > 0
+                    && picProductoPos?.Image != null && _fotoProductoIdPos > 0)
+                {
+                    DeshacerFotoProductoPos();
+                    return true;
+                }
+            }
+
             if (keyData == Keys.Enter || keyData == Keys.Return)
             {
                 if (txtBuscarProducto != null && txtBuscarProducto.Focused)
@@ -1348,10 +1727,12 @@ namespace UI.DISEÑO
                 if (esParcial && chkFinanciamiento.Checked)
                     chkFinanciamiento.Checked = false;
 
-                // ATLETA/VISITA: no requieren miembro en combo.
+                // ATLETA/VISITA: no requieren miembro en combo; cantidad para varios visitantes.
                 cmbCliente.Enabled = !esParcial;
                 if (esParcial)
                     cmbCliente.SelectedIndex = -1;
+
+                ActualizarUiPlanParcialCantidad();
 
                 if (chkFinanciamiento.Checked)
                     CalcularSaldoFinanciamiento();
@@ -1361,6 +1742,7 @@ namespace UI.DISEÑO
             else
             {
                 cmbCliente.Enabled = true;
+                ActualizarUiPlanParcialCantidad();
                 ActualizarPanelOfertaPorPlan();
             }
         }
@@ -1575,34 +1957,51 @@ namespace UI.DISEÑO
             PlanDTO plan,
             string usuario)
         {
+            if (!TryObtenerCantidadPlanParcial(out int cantidad, out string? errorCantidad))
+            {
+                MessageBox.Show(errorCantidad ?? "Cantidad inválida.");
+                txtCantidad.Focus();
+                return;
+            }
+
+            decimal montoEsperado = Math.Round(
+                plan.Precio * cantidad,
+                2,
+                MidpointRounding.AwayFromZero);
+
             if (!decimal.TryParse(txtMonto.Text, out decimal monto) || monto <= 0)
             {
                 MessageBox.Show("Monto inválido.");
                 return;
             }
 
-            if (Math.Abs(monto - plan.Precio) > 0.009m)
+            if (Math.Abs(monto - montoEsperado) > 0.009m)
             {
                 MessageBox.Show(
-                    $"ATLETA y VISITA se cobran al precio fijo del plan (RD$ {plan.Precio:N2}).",
+                    cantidad > 1
+                        ? $"ATLETA y VISITA: {cantidad} × RD$ {plan.Precio:N2} = RD$ {montoEsperado:N2}."
+                        : $"ATLETA y VISITA se cobran al precio fijo del plan (RD$ {plan.Precio:N2}).",
                     "Acceso parcial",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
-                txtMonto.Text = plan.Precio.ToString("0.00");
+                txtMonto.Text = montoEsperado.ToString("0.00");
                 return;
             }
 
-            string concepto = $"Plan {plan.Nombre}";
+            string concepto = cantidad > 1
+                ? $"Plan {plan.Nombre} x{cantidad}"
+                : $"Plan {plan.Nombre}";
             string metodoPago = "Efectivo";
 
             // clienteId 0 → BLL usa VISITANTE (SISTEMA); no exige cmbCliente.
             var result = MembresiaCommandService.RegistrarPlanParcial(
                 clienteIdOpcional,
                 planId,
-                monto,
+                plan.Precio,
                 metodoPago,
                 concepto,
-                usuario);
+                usuario,
+                cantidad);
 
             if (!result.Success)
             {
@@ -1612,9 +2011,13 @@ namespace UI.DISEÑO
 
             LimpiarCampos();
             MessageBox.Show(
-                $"{plan.Nombre} registrado.\n\n" +
-                $"Monto: RD$ {monto:N2}\n" +
-                "Sin miembro permanente · no activa Estado Clientes.",
+                cantidad > 1
+                    ? $"{cantidad} × {plan.Nombre} registrados.\n\n" +
+                      $"Total: RD$ {montoEsperado:N2}\n" +
+                      "Sin miembro permanente · no activa Estado Clientes."
+                    : $"{plan.Nombre} registrado.\n\n" +
+                      $"Monto: RD$ {montoEsperado:N2}\n" +
+                      "Sin miembro permanente · no activa Estado Clientes.",
                 "Acceso parcial",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
@@ -1842,6 +2245,9 @@ namespace UI.DISEÑO
                 txtBuscarProducto.Clear();
             cmbMembresia.SelectedIndex = -1;
             txtMonto.Clear();
+            txtCantidad.Text = "1";
+            txtCantidad.Enabled = false;
+            lblCantidad.Enabled = false;
             chkFinanciamiento.Checked = false;
             txtPagoInicial.Text = "0";
             lblSaldoValor.Text = "$0.00";

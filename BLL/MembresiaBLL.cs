@@ -480,8 +480,14 @@ namespace BLL
             decimal? montoOverride,
             string metodoPago,
             string? concepto,
-            string usuario)
+            string usuario,
+            int cantidad = 1)
         {
+            if (cantidad < 1)
+                throw new Exception("La cantidad debe ser al menos 1.");
+            if (cantidad > 99)
+                throw new Exception("La cantidad máxima por cobro es 99.");
+
             var plan = planDAL.ObtenerPlan(planId);
             if (plan == null)
                 throw new Exception("Plan no encontrado.");
@@ -494,37 +500,73 @@ namespace BLL
                 ? clienteId
                 : new ClienteBLL().ObtenerOCrearVisitanteSistema();
 
-            decimal monto = montoOverride ?? plan.Precio;
-            if (monto <= 0)
+            decimal montoUnitario = montoOverride ?? plan.Precio;
+            if (montoUnitario <= 0)
                 throw new Exception("El monto debe ser mayor a 0.");
+
+            if (montoOverride.HasValue && Math.Abs(montoOverride.Value - plan.Precio) > 0.009m)
+                throw new Exception(
+                    $"ATLETA y VISITA se cobran al precio fijo del plan (RD$ {plan.Precio:N2} c/u).");
 
             DateTime ahora = DateTime.Now;
             // Vencimiento del recibo = mismo día (no es vigencia de membresía).
             DateTime finDia = ahora.Date.AddDays(1).AddTicks(-1);
             string nombrePlan = plan.Nombre?.Trim() ?? PlanNombres.TipoHistorialParcial(plan.Nombre);
-            string conceptoPago = string.IsNullOrWhiteSpace(concepto)
+            string conceptoBase = string.IsNullOrWhiteSpace(concepto)
                 ? $"Plan {nombrePlan}"
                 : concepto.Trim();
 
-            var pagoBLL = new PagoBLL();
-            var (pagoId, cajaMovId) = pagoBLL.RegistrarPagoConResultado(
-                clienteEfectivo,
-                ahora,
-                finDia,
-                monto,
-                metodoPago,
-                conceptoPago,
-                usuario);
-
             string tipoHistorial = PlanNombres.TipoHistorialParcial(plan.Nombre);
-            string nota = conceptoPago.Length > 200 ? conceptoPago.Substring(0, 200) : conceptoPago;
-            new HistorialMembresiaDAL().Insertar(
-                clienteEfectivo,
-                tipoHistorial,
-                planId,
-                monto,
-                usuario,
-                nota);
+            string? nombreCliente = clienteDAL.ObtenerClientePorId(clienteEfectivo)?["Nombre"]?.ToString();
+
+            var pagoDal = new PagoDAL();
+            var historialDal = new HistorialMembresiaDAL();
+            var txService = new CajaTransaccionService();
+
+            int pagoId = 0;
+            int cajaMovId = 0;
+
+            txService.Ejecutar((conn, tx) =>
+            {
+                for (int i = 0; i < cantidad; i++)
+                {
+                    string conceptoPago = cantidad > 1
+                        ? $"{conceptoBase} ({i + 1}/{cantidad})"
+                        : conceptoBase;
+                    string nota = conceptoPago.Length > 200
+                        ? conceptoPago.Substring(0, 200)
+                        : conceptoPago;
+                    string conceptoCaja = CajaConceptoHelper.IngresoPagoMembresia(
+                        clienteEfectivo, nombreCliente, conceptoPago);
+
+                    pagoId = pagoDal.RegistrarPagoConId(
+                        conn, tx,
+                        clienteEfectivo,
+                        ahora,
+                        finDia,
+                        montoUnitario,
+                        metodoPago,
+                        conceptoPago,
+                        usuario);
+
+                    cajaMovId = txService.RegistrarIngresoConId(
+                        conn, tx,
+                        montoUnitario,
+                        conceptoCaja,
+                        usuario,
+                        metodoPago,
+                        clienteEfectivo);
+
+                    historialDal.Registrar(
+                        conn, tx,
+                        clienteEfectivo,
+                        tipoHistorial,
+                        planId,
+                        montoUnitario,
+                        usuario,
+                        nota);
+                }
+            });
 
             return new MembresiaOperacionResult
             {
