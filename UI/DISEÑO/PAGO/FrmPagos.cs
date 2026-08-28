@@ -186,6 +186,7 @@ namespace UI.DISEÑO
             ProcesarEscaneoInicialPendiente();
             ConfigurarToolbarFotoProductoPos();
             ActualizarEstadoToolbarFotoProductoPos(false);
+            ConfigurarSaldoAFavor();
 
             if (tabProductos.SelectedTab == tabPago)
                 EnfocarEscannerPos();
@@ -244,6 +245,15 @@ namespace UI.DISEÑO
             if (txtBuscarProducto != null && txtBuscarProducto.Focused)
                 return false;
 
+            // Panel pausar ventas: permitir escribir en el buscador de miembros.
+            if (cmbClientePausarVenta != null
+                && (cmbClientePausarVenta.Focused || cmbClientePausarVenta.DroppedDown))
+                return false;
+
+            if (pnlPausarVentas != null && pnlPausarVentas.Visible
+                && cmbClientePausarVenta != null && cmbClientePausarVenta.ContainsFocus)
+                return false;
+
             // Panel financiamiento abierto: permitir escribir en txtMiembroDebe / listMiembros.
             if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
                 return false;
@@ -298,8 +308,14 @@ namespace UI.DISEÑO
             if (txtBuscarProducto == null || txtBuscarProducto.IsDisposed)
                 return;
 
-            // No robar foco mientras se busca el miembro deudor.
+            // No robar foco mientras se busca el miembro deudor o se pausa una venta.
             if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
+                return;
+
+            if (pnlPausarVentas != null && pnlPausarVentas.Visible)
+                return;
+
+            if (cmbClientePausarVenta != null && cmbClientePausarVenta.Focused)
                 return;
 
             BeginInvoke(new Action(() =>
@@ -307,6 +323,10 @@ namespace UI.DISEÑO
                 if (txtBuscarProducto.IsDisposed)
                     return;
                 if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
+                    return;
+                if (pnlPausarVentas != null && pnlPausarVentas.Visible)
+                    return;
+                if (cmbClientePausarVenta != null && cmbClientePausarVenta.Focused)
                     return;
                 txtBuscarProducto.Focus();
                 txtBuscarProducto.SelectAll();
@@ -332,23 +352,10 @@ namespace UI.DISEÑO
 
             // Copia independiente del catálogo para búsqueda TextBox + ListBox (no ComboBox).
             CargarCatalogoMiembrosDebe(dt);
+            CargarCombosSaldoAFavor(dt);
 
             if (cmbClientePausarVenta != null)
-            {
-                _suppressPausaUi = true;
-                try
-                {
-                    cmbClientePausarVenta.DropDownStyle = ComboBoxStyle.DropDownList;
-                    cmbClientePausarVenta.DisplayMember = "Nombre";
-                    cmbClientePausarVenta.ValueMember = "Id";
-                    cmbClientePausarVenta.DataSource = dt.Copy();
-                    cmbClientePausarVenta.SelectedIndex = -1;
-                }
-                finally
-                {
-                    _suppressPausaUi = false;
-                }
-            }
+                CargarComboClientePausarVenta(dt);
         }
 
         /// <summary>
@@ -902,6 +909,9 @@ namespace UI.DISEÑO
                 if (txtBuscarProducto != null && txtBuscarProducto.Focused)
                     return false;
 
+                if (cmbClientePausarVenta != null && cmbClientePausarVenta.Focused)
+                    return false;
+
                 // No cobrar con Enter mientras se busca el miembro deudor.
                 if (txtMiembroDebe != null && txtMiembroDebe.Focused)
                     return false;
@@ -1232,6 +1242,8 @@ namespace UI.DISEÑO
 
             if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
                 RefrescarPanelFinanciamientoProducto();
+
+            SincronizarSaldoAbonoDesdeCarritoSiAsignando();
         }
 
         // ===============================
@@ -1262,6 +1274,15 @@ namespace UI.DISEÑO
             {
                 pnlPausarVentas.BringToFront();
                 RefrescarMiembrosPausados();
+                if (cmbClientePausarVenta != null && !cmbClientePausarVenta.IsDisposed)
+                {
+                    BeginInvoke(new Action(() =>
+                    {
+                        if (cmbClientePausarVenta.IsDisposed || !pnlPausarVentas.Visible)
+                            return;
+                        cmbClientePausarVenta.Focus();
+                    }));
+                }
             }
 
             if (chkPausarVenta != null && chkPausarVenta.Checked != visible)
@@ -1287,7 +1308,7 @@ namespace UI.DISEÑO
 
         private void cmbClientePausarVenta_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (_suppressPausaUi)
+            if (_suppressPausaUi || _cmbPausaFiltrando)
                 return;
 
             if (!TryObtenerClientePausaAsignar(out int clienteId, out string nombre))

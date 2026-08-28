@@ -213,7 +213,8 @@ namespace BLL
             int clienteId,
             int planId,
             DateTime fechaInicio,
-            string? usuario = null)
+            string? usuario = null,
+            DateTime? fechaFin = null)
         {
             if (clienteId <= 0)
                 throw new Exception("Seleccione un miembro válido.");
@@ -233,7 +234,7 @@ namespace BLL
                 ?? throw new Exception("Plan no encontrado.");
 
             DateTime inicio = fechaInicio.Date;
-            DateTime fin = MembresiaHelper.CalcularFechaVencimiento(inicio);
+            DateTime fin = fechaFin?.Date ?? MembresiaHelper.CalcularFechaVencimiento(inicio);
             if (fin < inicio)
                 throw new Exception("La fecha de vencimiento calculada no es válida.");
 

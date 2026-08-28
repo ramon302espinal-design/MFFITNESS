@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using Microsoft.Data.SqlClient;
 
 namespace DL
 {
@@ -56,6 +57,73 @@ namespace DL
             ORDER BY estado.Nombre";
 
             return db.ExecuteQuery(query);
+        }
+
+        /// <summary>
+        /// Ingresos por plan en un mes calendario (HistorialMembresias).
+        /// Cantidad = movimientos de cobro/alta; MontoTotal = Σ Monto registrado.
+        /// </summary>
+        public DataTable ObtenerKpisPlanesPorMes(int anio, int mes)
+        {
+            DateTime desde = new DateTime(anio, mes, 1);
+            DateTime hasta = desde.AddMonths(1);
+
+            string query = @"
+                SELECT
+                    ISNULL(NULLIF(LTRIM(RTRIM(p.Nombre)), ''), N'SIN PLAN') AS PlanNombre,
+                    COUNT(*) AS Cantidad,
+                    SUM(ISNULL(h.Monto, 0)) AS MontoTotal
+                FROM dbo.HistorialMembresias h
+                INNER JOIN dbo.Clientes c ON c.ID = h.ClienteId
+                LEFT JOIN dbo.Planes p ON p.Id = h.PlanId
+                WHERE h.Fecha >= @Desde
+                  AND h.Fecha < @Hasta
+                  AND c.Nombre <> N'VISITANTE (SISTEMA)'
+                  AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (
+                        N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
+                        N'ATLETA', N'VISITA', N'PARCIAL')
+                GROUP BY p.Nombre";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Desde", desde),
+                new SqlParameter("@Hasta", hasta)
+            };
+
+            return db.ExecuteQuery(query, parametros);
+        }
+
+        /// <summary>Detalle de cobros/altas del mes para reporte PDF.</summary>
+        public DataTable ObtenerDetalleMembresiasPorMes(int anio, int mes)
+        {
+            DateTime desde = new DateTime(anio, mes, 1);
+            DateTime hasta = desde.AddMonths(1);
+
+            string query = @"
+                SELECT
+                    h.Fecha,
+                    c.Nombre AS Cliente,
+                    ISNULL(NULLIF(LTRIM(RTRIM(p.Nombre)), ''), N'Sin plan') AS Plan,
+                    h.TipoMovimiento AS Movimiento,
+                    ISNULL(h.Monto, 0) AS Monto
+                FROM dbo.HistorialMembresias h
+                INNER JOIN dbo.Clientes c ON c.ID = h.ClienteId
+                LEFT JOIN dbo.Planes p ON p.Id = h.PlanId
+                WHERE h.Fecha >= @Desde
+                  AND h.Fecha < @Hasta
+                  AND c.Nombre <> N'VISITANTE (SISTEMA)'
+                  AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (
+                        N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
+                        N'ATLETA', N'VISITA', N'PARCIAL')
+                ORDER BY h.Fecha DESC, c.Nombre";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Desde", desde),
+                new SqlParameter("@Hasta", hasta)
+            };
+
+            return db.ExecuteQuery(query, parametros);
         }
     }
 }

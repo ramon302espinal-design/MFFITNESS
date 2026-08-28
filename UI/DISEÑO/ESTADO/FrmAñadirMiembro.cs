@@ -3,7 +3,6 @@ using BLL.Models;
 using CORE;
 using System;
 using System.Data;
-using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -23,7 +22,7 @@ namespace UI.DISEÑO.ESTADO
         private readonly PlanBLL _planBLL = new();
         private readonly MembresiaBLL _membresiaBLL = new();
         private readonly MensajeAutomaticoBLL _mensajeBLL = new();
-        private readonly Label _lblVence = new();
+        private bool _syncFechaVence;
 
         public bool CambioRealizado { get; private set; }
 
@@ -31,52 +30,6 @@ namespace UI.DISEÑO.ESTADO
         {
             InitializeComponent();
             ThemeHost.Attach(this);
-            ConfigurarFormulario();
-        }
-
-        private void ConfigurarFormulario()
-        {
-            Text = "Añadir miembro (ya pagado)";
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition = FormStartPosition.CenterParent;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            AcceptButton = tbnGuardar;
-
-            cbmTipoPlanAñadir.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbMiembro.DropDownStyle = ComboBoxStyle.DropDownList;
-            ConfigurarFechaIngresoLibre();
-
-            _lblVence.AutoSize = false;
-            _lblVence.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            _lblVence.ForeColor = Color.FromArgb(22, 163, 74);
-            _lblVence.Location = new Point(172, 200);
-            _lblVence.Size = new Size(360, 24);
-            Controls.Add(_lblVence);
-
-            tbnGuardar.Click += tbnGuardar_Click;
-            dtFechaInicio.ValueChanged += (_, _) => ActualizarVistaVencimiento();
-            Load += FrmAñadirMiembro_Load;
-        }
-
-        /// <summary>
-        /// Permite cualquier fecha de ingreso (pasada o futura).
-        /// El vencimiento se calcula con la regla de negocio (ej. 10/08 → 15/09).
-        /// </summary>
-        private void ConfigurarFechaIngresoLibre()
-        {
-            dtFechaInicio.Format = DateTimePickerFormat.Short;
-            dtFechaInicio.ShowCheckBox = false;
-            // Rango amplio: integración de miembros ya pagados con fechas históricas.
-            dtFechaInicio.MinDate = new DateTime(2000, 1, 1);
-            dtFechaInicio.MaxDate = new DateTime(2100, 12, 31);
-            DateTime hoy = DateTime.Today;
-            if (hoy < dtFechaInicio.MinDate)
-                hoy = dtFechaInicio.MinDate;
-            if (hoy > dtFechaInicio.MaxDate)
-                hoy = dtFechaInicio.MaxDate;
-            dtFechaInicio.Value = hoy;
         }
 
         private void FrmAñadirMiembro_Load(object? sender, EventArgs e)
@@ -86,8 +39,7 @@ namespace UI.DISEÑO.ESTADO
 
             try
             {
-                // Reaplicar tras ThemeHost (por si el tema tocó el picker).
-                ConfigurarFechaIngresoLibre();
+                InicializarFechaIngreso();
                 CargarPlanes();
                 CargarMiembros();
                 ActualizarVistaVencimiento();
@@ -97,6 +49,31 @@ namespace UI.DISEÑO.ESTADO
                 MessageBox.Show(this, "Error al cargar datos: " + ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>Fecha de ingreso libre (histórica o futura).</summary>
+        private void InicializarFechaIngreso()
+        {
+            DateTime hoy = DateTime.Today;
+            if (hoy < dtFechaInicio.MinDate)
+                hoy = dtFechaInicio.MinDate;
+            if (hoy > dtFechaInicio.MaxDate)
+                hoy = dtFechaInicio.MaxDate;
+            dtFechaInicio.Value = hoy;
+        }
+
+        private void dtFechaInicio_ValueChanged(object? sender, EventArgs e)
+        {
+            ActualizarVistaVencimiento();
+        }
+
+        /// <summary>Evita editar manualmente la fecha de vencimiento calculada.</summary>
+        private void dtFechaVence_ValueChanged(object? sender, EventArgs e)
+        {
+            if (_syncFechaVence)
+                return;
+
+            ActualizarVistaVencimiento();
         }
 
         private void CargarPlanes()
@@ -126,10 +103,55 @@ namespace UI.DISEÑO.ESTADO
             cmbMiembro.SelectedIndex = clientes.Rows.Count > 0 ? 0 : -1;
         }
 
+        /// <summary>
+        /// Alta con fecha histórica: el día de vencimiento sale del ingreso (7–19 → 15; 20–6 → fin de mes),
+        /// pero el mes/año es el actual del PC para reflejar cuándo debe pagar hoy en Estado Clientes.
+        /// </summary>
+        private static DateTime CalcularVencimientoAltaHistorica(DateTime fechaIngreso)
+        {
+            DateTime hoy = DateTime.Today;
+            int diaIngreso = fechaIngreso.Day;
+
+            if (diaIngreso >= 7 && diaIngreso <= 19)
+                return new DateTime(hoy.Year, hoy.Month, 15);
+
+            int ultimoDia = DateTime.DaysInMonth(hoy.Year, hoy.Month);
+            return new DateTime(hoy.Year, hoy.Month, ultimoDia);
+        }
+
+        private static DateTime ResolverVencimientoAlta(DateTime inicio)
+        {
+            if (inicio.Date < DateTime.Today)
+                return CalcularVencimientoAltaHistorica(inicio);
+
+            return MembresiaHelper.CalcularFechaVencimiento(inicio);
+        }
+
         private void ActualizarVistaVencimiento()
         {
-            DateTime fin = MembresiaHelper.CalcularFechaVencimiento(dtFechaInicio.Value.Date);
-            _lblVence.Text = "Vence (próximo pago): " + fin.ToString("dd/MM/yyyy");
+            DateTime inicio = dtFechaInicio.Value.Date;
+            DateTime fin = ResolverVencimientoAlta(inicio);
+            bool esHistorica = inicio < DateTime.Today;
+
+            _syncFechaVence = true;
+            try
+            {
+                dtFechaVence.MinDate = new DateTime(2000, 1, 1);
+                dtFechaVence.MaxDate = new DateTime(2100, 12, 31);
+                dtFechaVence.Value = fin;
+                dtFechaVence.MinDate = fin;
+                dtFechaVence.MaxDate = fin;
+            }
+            finally
+            {
+                _syncFechaVence = false;
+            }
+
+            int dia = inicio.Day;
+            string reglaDia = dia >= 7 && dia <= 19 ? "día 15" : "último día del mes";
+            string reglaMes = esHistorica ? "mes actual (PC)" : "mes siguiente al ingreso";
+            lblNotaVence.Text =
+                $"Ingreso {inicio:dd/MM/yyyy} → vence {fin:dd/MM/yyyy} ({reglaDia}, {reglaMes}). Sin movimiento en caja.";
         }
 
         private void tbnGuardar_Click(object? sender, EventArgs e)
@@ -155,11 +177,12 @@ namespace UI.DISEÑO.ESTADO
                 string nombrePlan = cbmTipoPlanAñadir.Text?.Trim() ?? "membresía";
                 string nombreCliente = cmbMiembro.Text?.Trim() ?? "Miembro";
                 DateTime inicio = dtFechaInicio.Value.Date;
+                DateTime vence = ResolverVencimientoAlta(inicio);
 
                 var confirm = MessageBox.Show(this,
                     $"¿Integrar a {nombreCliente} con plan {nombrePlan}?\n\n" +
                     $"Ingreso: {inicio:dd/MM/yyyy}\n" +
-                    $"Vence: {MembresiaHelper.CalcularFechaVencimiento(inicio):dd/MM/yyyy}\n\n" +
+                    $"Vence: {vence:dd/MM/yyyy}\n\n" +
                     "No se registrará ingreso en caja.",
                     "Confirmar integración",
                     MessageBoxButtons.YesNo,
@@ -170,7 +193,7 @@ namespace UI.DISEÑO.ESTADO
 
                 tbnGuardar.Enabled = false;
                 MembresiaOperacionResult result = _membresiaBLL.RegistrarMiembroYaPagado(
-                    clienteId, planId, inicio, Sesion.Usuario);
+                    clienteId, planId, inicio, Sesion.Usuario, vence);
 
                 CambioRealizado = true;
 

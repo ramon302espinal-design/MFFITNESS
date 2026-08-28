@@ -25,6 +25,7 @@ namespace UI.DISEÑO
         private readonly PlanBLL planBLL = new PlanBLL();
         private readonly FrmPresentacion _presentacion;
         private readonly MensajeAutomaticoBLL mensajeBLL = new MensajeAutomaticoBLL();
+        private readonly ReporteBLL reporteBLL = new ReporteBLL();
         private readonly BindingSource _bsEstado = new BindingSource();
         private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
         private ContextMenuStrip? _menuEstado;
@@ -100,6 +101,8 @@ namespace UI.DISEÑO
 
             _estadoUiInicializado = true;
 
+            InicializarComboMesesPanel();
+
             AppEventos.OnPagoRegistrado -= OnDatosEstadoCambiaron;
             AppEventos.OnDeudaModificada -= OnDatosEstadoCambiaron;
             AppEventos.OnPagoRegistrado += OnDatosEstadoCambiaron;
@@ -167,7 +170,8 @@ namespace UI.DISEÑO
                 dgvEstado.DataSource = _bsEstado;
                 AplicarFiltroBusqueda();
                 FormatearGrid();
-                ActualizarKpisPlanes(tabla);
+                ActualizarKpisSegunPeriodo(tabla);
+                ActualizarEtiquetaTiempo();
                 dgvEstado.ClearSelection();
             }
             catch (Exception ex)
@@ -183,71 +187,7 @@ namespace UI.DISEÑO
             }
         }
 
-        /// <summary>
-        /// Conteo y monto por plan (miembros ACTIVO).
-        /// M-A se agrupa en MENSUALIDAD. Monto = Σ Precio del plan de cada miembro.
-        /// </summary>
-        private void ActualizarKpisPlanes(DataTable tabla)
-        {
-            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0;
-            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m;
-
-            Dictionary<string, decimal> precios = ObtenerPreciosPlanes();
-
-            if (tabla != null && tabla.Columns.Contains("Membresia") && tabla.Columns.Contains("Estado"))
-            {
-                foreach (DataRow row in tabla.Rows)
-                {
-                    string estado = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
-                    if (!string.Equals(estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(plan)
-                        || string.Equals(plan, "SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    decimal precio = precios.TryGetValue(plan, out decimal p) ? p : 0m;
-                    string bucket = ClasificarPlanKpi(plan);
-
-                    switch (bucket)
-                    {
-                        case "MENSUALIDAD":
-                            cMensualidad++;
-                            mMensualidad += precio;
-                            break;
-                        case "PREMIUM":
-                            cPremium++;
-                            mPremium += precio;
-                            break;
-                        case "PRO":
-                            cPro++;
-                            mPro += precio;
-                            break;
-                        case "3X":
-                            c3x++;
-                            m3x += precio;
-                            break;
-                    }
-                }
-            }
-
-            SetKpi(lblCMensualidad, cMensualidad.ToString("N0", CulturaDo));
-            SetKpi(lblMMensualidad, "RD$ " + mMensualidad.ToString("N2", CulturaDo));
-            SetKpi(lblCPremium, cPremium.ToString("N0", CulturaDo));
-            SetKpi(lblMPremium, "RD$ " + mPremium.ToString("N2", CulturaDo));
-            SetKpi(lblCPro, cPro.ToString("N0", CulturaDo));
-            SetKpi(lblMPro, "RD$ " + mPro.ToString("N2", CulturaDo));
-            SetKpi(lblC3x, c3x.ToString("N0", CulturaDo));
-            SetKpi(lblM3x, "RD$ " + m3x.ToString("N2", CulturaDo));
-
-            int cTotal = cMensualidad + cPremium + cPro + c3x;
-            decimal mTotal = mMensualidad + mPremium + mPro + m3x;
-            SetKpi(lblCTotal, cTotal.ToString("N0", CulturaDo));
-            SetKpi(lblMTotal, "RD$ " + mTotal.ToString("N2", CulturaDo));
-        }
-
-        /// <summary>M-A y MENSUALIDAD → bucket MENSUALIDAD.</summary>
+        /// <summary>M-A y MENSUALIDAD → bucket MENSUALIDAD; planes especiales con bucket propio.</summary>
         private static string ClasificarPlanKpi(string nombrePlan)
         {
             string n = (nombrePlan ?? string.Empty).Trim();
@@ -261,6 +201,10 @@ namespace UI.DISEÑO
             if (string.Equals(n, "3x", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(n, "3X", StringComparison.OrdinalIgnoreCase))
                 return "3X";
+            if (string.Equals(n, "ABDOMEN PLANO", StringComparison.OrdinalIgnoreCase))
+                return "ABDOMEN PLANO";
+            if (string.Equals(n, "GLUTEOS GRANDE", StringComparison.OrdinalIgnoreCase))
+                return "GLUTEOS GRANDE";
             return string.Empty;
         }
 
@@ -856,6 +800,324 @@ namespace UI.DISEÑO
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
+        }
+
+        // ===============================
+        // PDF ESTADO CLIENTES
+        // ===============================
+        private void btnDescargarPDF_Click(object? sender, EventArgs e)
+        {
+            var periodo = SeleccionPeriodoEstadoDialog.Mostrar(this);
+            if (periodo == null)
+                return;
+
+            try
+            {
+                DataTable detalle;
+                DataTable resumen;
+                string etiqueta = periodo.Etiqueta;
+
+                if (periodo.EsHoy)
+                {
+                    detalle = estadoBLL.ObtenerDetalleActivosReporte();
+                    resumen = estadoBLL.ObtenerResumenDesdeDetalle(detalle);
+                    etiqueta = "HOY";
+                }
+                else
+                {
+                    detalle = estadoBLL.ObtenerDetalleMembresiasPorMes(periodo.Anio, periodo.Mes);
+                    resumen = estadoBLL.ObtenerResumenPlanesPorMes(periodo.Anio, periodo.Mes);
+                }
+
+                if (detalle.Rows.Count == 0)
+                {
+                    MessageBox.Show(this,
+                        "No hay datos para el período seleccionado.",
+                        "Reporte PDF",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                string slug = periodo.EsHoy
+                    ? "Hoy"
+                    : $"{periodo.Anio}{periodo.Mes:00}";
+
+                using var sfd = new SaveFileDialog
+                {
+                    Filter = "PDF (*.pdf)|*.pdf",
+                    DefaultExt = "pdf",
+                    AddExtension = true,
+                    FileName = $"EstadoClientes_{slug}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+                };
+
+                if (sfd.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                Cursor = Cursors.WaitCursor;
+                DateTime generado = DateTime.Now;
+                reporteBLL.GenerarPdfEstadoClientes(
+                    resumen,
+                    detalle,
+                    etiqueta,
+                    periodo.EsHoy,
+                    generado,
+                    sfd.FileName);
+
+                DialogResult abrir = MessageBox.Show(this,
+                    $"PDF generado correctamente.\n\n{sfd.FileName}\n\n¿Desea abrirlo?",
+                    "Reporte PDF",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (abrir == DialogResult.Yes)
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = sfd.FileName,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "No se pudo generar el PDF: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
+        }
+
+        // ===============================
+        // KPIs POR MES (cbmMesesPanel + lblTiempo)
+        // ===============================
+        private sealed class OpcionMesPanel
+        {
+            public bool EsHoy { get; init; }
+            public int Mes { get; init; }
+            public int Anio { get; init; }
+            public string Etiqueta { get; init; } = string.Empty;
+
+            public override string ToString() => Etiqueta;
+        }
+
+        private bool _cmbMesesInicializado;
+
+        private void InicializarComboMesesPanel()
+        {
+            if (_cmbMesesInicializado || cbmMesesPanel == null || cbmMesesPanel.IsDisposed)
+                return;
+
+            _cmbMesesInicializado = true;
+            cbmMesesPanel.DropDownStyle = ComboBoxStyle.DropDownList;
+
+            int anio = DateTime.Today.Year;
+            var items = new object[13];
+            items[0] = new OpcionMesPanel { EsHoy = true, Anio = anio, Etiqueta = "HOY" };
+
+            for (int mes = 1; mes <= 12; mes++)
+            {
+                string nombre = CulturaDo.DateTimeFormat.GetMonthName(mes);
+                if (!string.IsNullOrEmpty(nombre))
+                    nombre = char.ToUpper(nombre[0], CulturaDo) + nombre[1..];
+
+                items[mes] = new OpcionMesPanel
+                {
+                    EsHoy = false,
+                    Mes = mes,
+                    Anio = anio,
+                    Etiqueta = $"{nombre} {anio}"
+                };
+            }
+
+            cbmMesesPanel.Items.AddRange(items);
+            cbmMesesPanel.SelectedIndex = 0;
+            cbmMesesPanel.SelectedIndexChanged += cbmMesesPanel_SelectedIndexChanged;
+            ActualizarEtiquetaTiempo();
+        }
+
+        private void cbmMesesPanel_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cargando || !_cmbMesesInicializado)
+                return;
+
+            ActualizarEtiquetaTiempo();
+
+            if (_bsEstado.DataSource is DataTable tablaActual)
+                ActualizarKpisSegunPeriodo(tablaActual);
+            else
+                ActualizarKpisSegunPeriodo(null);
+        }
+
+        private void ActualizarEtiquetaTiempo()
+        {
+            if (lblTiempo == null || lblTiempo.IsDisposed)
+                return;
+
+            if (cbmMesesPanel?.SelectedItem is not OpcionMesPanel opcion)
+            {
+                lblTiempo.Text = "HOY";
+                return;
+            }
+
+            lblTiempo.Text = opcion.EsHoy ? "HOY" : opcion.Etiqueta.ToUpper(CulturaDo);
+        }
+
+        private void ActualizarKpisSegunPeriodo(DataTable? tablaEstado)
+        {
+            if (cbmMesesPanel?.SelectedItem is not OpcionMesPanel opcion || opcion.EsHoy)
+            {
+                if (tablaEstado != null)
+                    ActualizarKpisPlanesActivos(tablaEstado);
+                else
+                    AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
+                return;
+            }
+
+            try
+            {
+                DataTable kpis = estadoBLL.ObtenerKpisPlanesPorMes(opcion.Anio, opcion.Mes);
+                ActualizarKpisPlanesHistorico(kpis);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"KPI mes estado: {ex.Message}");
+                AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
+            }
+        }
+
+        private void ActualizarKpisPlanesActivos(DataTable tabla)
+        {
+            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0, cAbdomen = 0, cGluteos = 0;
+            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m, mAbdomen = 0m, mGluteos = 0m;
+
+            Dictionary<string, decimal> precios = ObtenerPreciosPlanes();
+
+            if (tabla.Columns.Contains("Membresia") && tabla.Columns.Contains("Estado"))
+            {
+                foreach (DataRow row in tabla.Rows)
+                {
+                    string estado = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
+                    if (!string.Equals(estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(plan)
+                        || string.Equals(plan, "SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    decimal precio = precios.TryGetValue(plan, out decimal p) ? p : 0m;
+                    AcumularKpiPlan(plan, 1, precio,
+                        ref cMensualidad, ref mMensualidad,
+                        ref cPremium, ref mPremium,
+                        ref cPro, ref mPro,
+                        ref c3x, ref m3x,
+                        ref cAbdomen, ref mAbdomen,
+                        ref cGluteos, ref mGluteos);
+                }
+            }
+
+            AplicarKpisAControles(
+                cMensualidad, mMensualidad, cPremium, mPremium, cPro, mPro,
+                c3x, m3x, cAbdomen, mAbdomen, cGluteos, mGluteos);
+        }
+
+        private void ActualizarKpisPlanesHistorico(DataTable kpis)
+        {
+            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0, cAbdomen = 0, cGluteos = 0;
+            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m, mAbdomen = 0m, mGluteos = 0m;
+
+            foreach (DataRow row in kpis.Rows)
+            {
+                string plan = Convert.ToString(row["PlanNombre"])?.Trim() ?? string.Empty;
+                int cantidad = row["Cantidad"] == DBNull.Value ? 0 : Convert.ToInt32(row["Cantidad"]);
+                decimal monto = row["MontoTotal"] == DBNull.Value ? 0m : Convert.ToDecimal(row["MontoTotal"]);
+
+                if (cantidad <= 0 && monto <= 0)
+                    continue;
+
+                AcumularKpiPlan(plan, cantidad, monto,
+                    ref cMensualidad, ref mMensualidad,
+                    ref cPremium, ref mPremium,
+                    ref cPro, ref mPro,
+                    ref c3x, ref m3x,
+                    ref cAbdomen, ref mAbdomen,
+                    ref cGluteos, ref mGluteos);
+            }
+
+            AplicarKpisAControles(
+                cMensualidad, mMensualidad, cPremium, mPremium, cPro, mPro,
+                c3x, m3x, cAbdomen, mAbdomen, cGluteos, mGluteos);
+        }
+
+        private void AcumularKpiPlan(
+            string plan, int cantidad, decimal monto,
+            ref int cMensualidad, ref decimal mMensualidad,
+            ref int cPremium, ref decimal mPremium,
+            ref int cPro, ref decimal mPro,
+            ref int c3x, ref decimal m3x,
+            ref int cAbdomen, ref decimal mAbdomen,
+            ref int cGluteos, ref decimal mGluteos)
+        {
+            switch (ClasificarPlanKpi(plan))
+            {
+                case "MENSUALIDAD":
+                    cMensualidad += cantidad;
+                    mMensualidad += monto;
+                    break;
+                case "PREMIUM":
+                    cPremium += cantidad;
+                    mPremium += monto;
+                    break;
+                case "PRO":
+                    cPro += cantidad;
+                    mPro += monto;
+                    break;
+                case "3X":
+                    c3x += cantidad;
+                    m3x += monto;
+                    break;
+                case "ABDOMEN PLANO":
+                    cAbdomen += cantidad;
+                    mAbdomen += monto;
+                    break;
+                case "GLUTEOS GRANDE":
+                    cGluteos += cantidad;
+                    mGluteos += monto;
+                    break;
+            }
+        }
+
+        private void AplicarKpisAControles(
+            int cMensualidad, decimal mMensualidad,
+            int cPremium, decimal mPremium,
+            int cPro, decimal mPro,
+            int c3x, decimal m3x,
+            int cAbdomen, decimal mAbdomen,
+            int cGluteos, decimal mGluteos)
+        {
+            SetKpi(lblCMensualidad, cMensualidad.ToString("N0", CulturaDo));
+            SetKpi(lblMMensualidad, "RD$ " + mMensualidad.ToString("N2", CulturaDo));
+            SetKpi(lblCPremium, cPremium.ToString("N0", CulturaDo));
+            SetKpi(lblMPremium, "RD$ " + mPremium.ToString("N2", CulturaDo));
+            SetKpi(lblCPro, cPro.ToString("N0", CulturaDo));
+            SetKpi(lblMPro, "RD$ " + mPro.ToString("N2", CulturaDo));
+            SetKpi(lblC3x, c3x.ToString("N0", CulturaDo));
+            SetKpi(lblM3x, "RD$ " + m3x.ToString("N2", CulturaDo));
+            SetKpi(lblCAbdomenPlano, cAbdomen.ToString("N0", CulturaDo));
+            SetKpi(lblMAbdomenPlano, "RD$ " + mAbdomen.ToString("N2", CulturaDo));
+            SetKpi(lblCGluteosGrande, cGluteos.ToString("N0", CulturaDo));
+            SetKpi(lblMGluteosGrande, "RD$ " + mGluteos.ToString("N2", CulturaDo));
+
+            int cTotal = cMensualidad + cPremium + cPro + c3x + cAbdomen + cGluteos;
+            decimal mTotal = mMensualidad + mPremium + mPro + m3x + mAbdomen + mGluteos;
+            SetKpi(lblCTotal, cTotal.ToString("N0", CulturaDo));
+            SetKpi(lblMTotal, "RD$ " + mTotal.ToString("N2", CulturaDo));
         }
 
         // ===============================

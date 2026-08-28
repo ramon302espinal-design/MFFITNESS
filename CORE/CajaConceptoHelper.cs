@@ -35,6 +35,12 @@ namespace CORE
             return $"Pago membresía - {nombre} (Cliente {clienteId}) - {det}";
         }
 
+        public static string IngresoSaldoAFavor(int clienteId, string? nombreCliente, decimal totalReserva)
+        {
+            string nombre = NombreSeguro(nombreCliente, clienteId);
+            return $"Saldo a favor - {nombre} (Cliente {clienteId}) - reserva RD${totalReserva:N2}";
+        }
+
         /// <summary>
         /// True si el movimiento es un reverso (deshacer / corrección de pago inicial),
         /// no un gasto operativo. No debe sumar al panel de Gastos.

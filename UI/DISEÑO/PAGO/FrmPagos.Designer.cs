@@ -46,6 +46,18 @@ namespace UI.DISEÑO
             btnGirarFotoProductoPos = new Button();
             tabProductos = new TabControl();
             tabPago = new TabPage();
+            chkSaldoAFavor = new CheckBox();
+            pnlSaldoAFavor = new Panel();
+            btnCobrarSaldo = new Button();
+            btnCerrarSaldo = new Button();
+            label7 = new Label();
+            label5 = new Label();
+            lblNombreSaldoAbono = new Label();
+            btnAbonarSaldo = new Button();
+            lblTotalSaldoAbono = new Label();
+            dgvSaldoAbono = new DataGridView();
+            cmbConSaldo = new ComboBox();
+            cmbAsignarSaldo = new ComboBox();
             label4 = new Label();
             pnlPausarVentas = new Panel();
             btnCerrarPnlPausa = new Button();
@@ -77,6 +89,7 @@ namespace UI.DISEÑO
             btnLimpiarCarrito = new Button();
             lblTotal = new Label();
             label6 = new Label();
+            lblFotoProductoPos = new Label();
             dgvCarrito = new DataGridView();
             btnPagarProductos = new Button();
             tabMembresia = new TabPage();
@@ -107,23 +120,12 @@ namespace UI.DISEÑO
             btnNavCaja = new Button();
             btnNavEstado = new Button();
             btnNavDeudas = new Button();
-            lblFotoProductoPos = new Label();
-            pnlSaldoAFavor = new Panel();
-            chkSaldoAFavor = new CheckBox();
-            cmbAsignarSaldo = new ComboBox();
-            cmbConSaldo = new ComboBox();
-            dgvSaldoAbono = new DataGridView();
-            lblTotalSaldoAbono = new Label();
-            btnAbonarSaldo = new Button();
-            lblNombreSaldoAbono = new Label();
-            label5 = new Label();
-            label7 = new Label();
-            btnCerrarSaldo = new Button();
-            btnCobrarSaldo = new Button();
             ((System.ComponentModel.ISupportInitialize)picProductoPos).BeginInit();
             panelToolbarFotoPos.SuspendLayout();
             tabProductos.SuspendLayout();
             tabPago.SuspendLayout();
+            pnlSaldoAFavor.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvSaldoAbono).BeginInit();
             pnlPausarVentas.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvPausaVentas).BeginInit();
             panelFinanciamientoProducto.SuspendLayout();
@@ -132,8 +134,6 @@ namespace UI.DISEÑO
             pnlOferta.SuspendLayout();
             pnlFinanciamiento.SuspendLayout();
             panelNav.SuspendLayout();
-            pnlSaldoAFavor.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)dgvSaldoAbono).BeginInit();
             SuspendLayout();
             // 
             // btnPagar
@@ -377,6 +377,137 @@ namespace UI.DISEÑO
             tabPago.Text = "PRODUCTOS";
             tabPago.UseVisualStyleBackColor = true;
             // 
+            // chkSaldoAFavor
+            // 
+            chkSaldoAFavor.AutoSize = true;
+            chkSaldoAFavor.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            chkSaldoAFavor.Location = new Point(451, 433);
+            chkSaldoAFavor.Name = "chkSaldoAFavor";
+            chkSaldoAFavor.Size = new Size(113, 29);
+            chkSaldoAFavor.TabIndex = 103;
+            chkSaldoAFavor.Text = "ABONAR";
+            chkSaldoAFavor.UseVisualStyleBackColor = true;
+            chkSaldoAFavor.CheckedChanged += chkSaldoAFavor_CheckedChanged;
+            // 
+            // pnlSaldoAFavor
+            // 
+            pnlSaldoAFavor.Controls.Add(btnCobrarSaldo);
+            pnlSaldoAFavor.Controls.Add(btnCerrarSaldo);
+            pnlSaldoAFavor.Controls.Add(label7);
+            pnlSaldoAFavor.Controls.Add(label5);
+            pnlSaldoAFavor.Controls.Add(lblNombreSaldoAbono);
+            pnlSaldoAFavor.Controls.Add(btnAbonarSaldo);
+            pnlSaldoAFavor.Controls.Add(lblTotalSaldoAbono);
+            pnlSaldoAFavor.Controls.Add(dgvSaldoAbono);
+            pnlSaldoAFavor.Controls.Add(cmbConSaldo);
+            pnlSaldoAFavor.Controls.Add(cmbAsignarSaldo);
+            pnlSaldoAFavor.Location = new Point(888, 6);
+            pnlSaldoAFavor.Name = "pnlSaldoAFavor";
+            pnlSaldoAFavor.Size = new Size(660, 398);
+            pnlSaldoAFavor.TabIndex = 102;
+            pnlSaldoAFavor.Visible = false;
+            // 
+            // btnCobrarSaldo
+            // 
+            btnCobrarSaldo.BackColor = SystemColors.MenuHighlight;
+            btnCobrarSaldo.ForeColor = Color.White;
+            btnCobrarSaldo.Location = new Point(492, 188);
+            btnCobrarSaldo.Name = "btnCobrarSaldo";
+            btnCobrarSaldo.Size = new Size(118, 39);
+            btnCobrarSaldo.TabIndex = 11;
+            btnCobrarSaldo.Text = "COBRAR";
+            btnCobrarSaldo.UseVisualStyleBackColor = false;
+            btnCobrarSaldo.Click += btnCobrarSaldo_Click;
+            // 
+            // btnCerrarSaldo
+            // 
+            btnCerrarSaldo.FlatAppearance.BorderSize = 0;
+            btnCerrarSaldo.FlatStyle = FlatStyle.Flat;
+            btnCerrarSaldo.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            btnCerrarSaldo.ForeColor = Color.FromArgb(185, 28, 28);
+            btnCerrarSaldo.Location = new Point(615, 5);
+            btnCerrarSaldo.Name = "btnCerrarSaldo";
+            btnCerrarSaldo.Size = new Size(42, 32);
+            btnCerrarSaldo.TabIndex = 10;
+            btnCerrarSaldo.Text = "X";
+            btnCerrarSaldo.UseVisualStyleBackColor = true;
+            btnCerrarSaldo.Click += btnCerrarSaldo_Click;
+            // 
+            // label7
+            // 
+            label7.AutoSize = true;
+            label7.Location = new Point(61, 57);
+            label7.Name = "label7";
+            label7.Size = new Size(126, 28);
+            label7.TabIndex = 7;
+            label7.Text = "CON SALDO";
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Location = new Point(90, 12);
+            label5.Name = "label5";
+            label5.Size = new Size(100, 28);
+            label5.TabIndex = 6;
+            label5.Text = "ASIGNAR";
+            // 
+            // lblNombreSaldoAbono
+            // 
+            lblNombreSaldoAbono.AutoSize = true;
+            lblNombreSaldoAbono.Location = new Point(12, 116);
+            lblNombreSaldoAbono.Name = "lblNombreSaldoAbono";
+            lblNombreSaldoAbono.Size = new Size(99, 28);
+            lblNombreSaldoAbono.TabIndex = 5;
+            lblNombreSaldoAbono.Text = "NOMBRE";
+            // 
+            // btnAbonarSaldo
+            // 
+            btnAbonarSaldo.BackColor = SystemColors.MenuHighlight;
+            btnAbonarSaldo.ForeColor = Color.White;
+            btnAbonarSaldo.Location = new Point(492, 238);
+            btnAbonarSaldo.Name = "btnAbonarSaldo";
+            btnAbonarSaldo.Size = new Size(118, 39);
+            btnAbonarSaldo.TabIndex = 4;
+            btnAbonarSaldo.Text = "ABONAR";
+            btnAbonarSaldo.UseVisualStyleBackColor = false;
+            btnAbonarSaldo.Click += btnAbonarSaldo_Click;
+            // 
+            // lblTotalSaldoAbono
+            // 
+            lblTotalSaldoAbono.AutoSize = true;
+            lblTotalSaldoAbono.Location = new Point(483, 294);
+            lblTotalSaldoAbono.Name = "lblTotalSaldoAbono";
+            lblTotalSaldoAbono.Size = new Size(72, 28);
+            lblTotalSaldoAbono.TabIndex = 3;
+            lblTotalSaldoAbono.Text = "TOTAL";
+            // 
+            // dgvSaldoAbono
+            // 
+            dgvSaldoAbono.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvSaldoAbono.Location = new Point(3, 148);
+            dgvSaldoAbono.Name = "dgvSaldoAbono";
+            dgvSaldoAbono.RowHeadersWidth = 51;
+            dgvSaldoAbono.Size = new Size(477, 244);
+            dgvSaldoAbono.TabIndex = 2;
+            // 
+            // cmbConSaldo
+            // 
+            cmbConSaldo.FormattingEnabled = true;
+            cmbConSaldo.Location = new Point(195, 54);
+            cmbConSaldo.Name = "cmbConSaldo";
+            cmbConSaldo.Size = new Size(350, 36);
+            cmbConSaldo.TabIndex = 1;
+            cmbConSaldo.SelectedIndexChanged += cmbConSaldo_SelectedIndexChanged;
+            // 
+            // cmbAsignarSaldo
+            // 
+            cmbAsignarSaldo.FormattingEnabled = true;
+            cmbAsignarSaldo.Location = new Point(195, 12);
+            cmbAsignarSaldo.Name = "cmbAsignarSaldo";
+            cmbAsignarSaldo.Size = new Size(347, 36);
+            cmbAsignarSaldo.TabIndex = 0;
+            cmbAsignarSaldo.SelectedIndexChanged += cmbAsignarSaldo_SelectedIndexChanged;
+            // 
             // label4
             // 
             label4.AutoSize = true;
@@ -433,14 +564,21 @@ namespace UI.DISEÑO
             // 
             // cmbClientePausarVenta
             // 
-            cmbClientePausarVenta.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbClientePausarVenta.AutoCompleteMode = AutoCompleteMode.None;
+            cmbClientePausarVenta.DropDownStyle = ComboBoxStyle.DropDown;
             cmbClientePausarVenta.Font = new Font("Segoe UI", 10F);
             cmbClientePausarVenta.FormattingEnabled = true;
             cmbClientePausarVenta.Location = new Point(12, 38);
             cmbClientePausarVenta.Name = "cmbClientePausarVenta";
             cmbClientePausarVenta.Size = new Size(450, 31);
             cmbClientePausarVenta.TabIndex = 2;
+            cmbClientePausarVenta.Text = "Buscar miembro...";
+            cmbClientePausarVenta.DropDown += cmbClientePausarVenta_DropDown;
+            cmbClientePausarVenta.DropDownClosed += cmbClientePausarVenta_DropDownClosed;
+            cmbClientePausarVenta.Enter += cmbClientePausarVenta_Enter;
+            cmbClientePausarVenta.KeyDown += cmbClientePausarVenta_KeyDown;
             cmbClientePausarVenta.SelectedIndexChanged += cmbClientePausarVenta_SelectedIndexChanged;
+            cmbClientePausarVenta.TextUpdate += cmbClientePausarVenta_TextUpdate;
             cmbClientePausarVenta.MouseDown += cmbClientePausarVenta_MouseDown;
             // 
             // lblMiembrosPausados
@@ -741,6 +879,17 @@ namespace UI.DISEÑO
             label6.TabIndex = 38;
             label6.Text = "TOTAL";
             // 
+            // lblFotoProductoPos
+            // 
+            lblFotoProductoPos.AutoSize = true;
+            lblFotoProductoPos.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblFotoProductoPos.ForeColor = Color.FromArgb(45, 55, 72);
+            lblFotoProductoPos.Location = new Point(1746, 381);
+            lblFotoProductoPos.Name = "lblFotoProductoPos";
+            lblFotoProductoPos.Size = new Size(150, 23);
+            lblFotoProductoPos.TabIndex = 41;
+            lblFotoProductoPos.Text = "FOTO PRODUCTO";
+            // 
             // dgvCarrito
             // 
             dgvCarrito.AllowUserToAddRows = false;
@@ -1027,208 +1176,85 @@ namespace UI.DISEÑO
             // 
             // btnNavClientes
             // 
+            btnNavClientes.BackColor = Color.Aqua;
             btnNavClientes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavClientes.Location = new Point(820, 10);
             btnNavClientes.Name = "btnNavClientes";
             btnNavClientes.Size = new Size(120, 32);
             btnNavClientes.TabIndex = 7;
             btnNavClientes.Text = "CLIENTES";
-            btnNavClientes.UseVisualStyleBackColor = true;
+            btnNavClientes.UseVisualStyleBackColor = false;
             // 
             // btnNavReportes
             // 
+            btnNavReportes.BackColor = SystemColors.WindowText;
             btnNavReportes.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavReportes.ForeColor = SystemColors.ControlLightLight;
             btnNavReportes.Location = new Point(690, 10);
             btnNavReportes.Name = "btnNavReportes";
             btnNavReportes.Size = new Size(120, 32);
             btnNavReportes.TabIndex = 6;
             btnNavReportes.Text = "REPORTES";
-            btnNavReportes.UseVisualStyleBackColor = true;
+            btnNavReportes.UseVisualStyleBackColor = false;
             // 
             // btnNavInventario
             // 
+            btnNavInventario.BackColor = Color.SlateBlue;
             btnNavInventario.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavInventario.ForeColor = SystemColors.ControlLightLight;
             btnNavInventario.Location = new Point(550, 10);
             btnNavInventario.Name = "btnNavInventario";
             btnNavInventario.Size = new Size(130, 32);
             btnNavInventario.TabIndex = 5;
             btnNavInventario.Text = "INVENTARIO";
-            btnNavInventario.UseVisualStyleBackColor = true;
+            btnNavInventario.UseVisualStyleBackColor = false;
             // 
             // btnNavHistorial
             // 
+            btnNavHistorial.BackColor = Color.Yellow;
             btnNavHistorial.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnNavHistorial.Location = new Point(420, 10);
             btnNavHistorial.Name = "btnNavHistorial";
             btnNavHistorial.Size = new Size(120, 32);
             btnNavHistorial.TabIndex = 4;
             btnNavHistorial.Text = "HISTORIAL";
-            btnNavHistorial.UseVisualStyleBackColor = true;
+            btnNavHistorial.UseVisualStyleBackColor = false;
             // 
             // btnNavCaja
             // 
+            btnNavCaja.BackColor = Color.Gray;
             btnNavCaja.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavCaja.ForeColor = SystemColors.ControlLightLight;
             btnNavCaja.Location = new Point(300, 10);
             btnNavCaja.Name = "btnNavCaja";
             btnNavCaja.Size = new Size(110, 32);
             btnNavCaja.TabIndex = 3;
             btnNavCaja.Text = "CAJA";
-            btnNavCaja.UseVisualStyleBackColor = true;
+            btnNavCaja.UseVisualStyleBackColor = false;
             // 
             // btnNavEstado
             // 
+            btnNavEstado.BackColor = SystemColors.HotTrack;
             btnNavEstado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavEstado.ForeColor = SystemColors.ControlLight;
             btnNavEstado.Location = new Point(180, 10);
             btnNavEstado.Name = "btnNavEstado";
             btnNavEstado.Size = new Size(110, 32);
             btnNavEstado.TabIndex = 2;
             btnNavEstado.Text = "ESTADO";
-            btnNavEstado.UseVisualStyleBackColor = true;
+            btnNavEstado.UseVisualStyleBackColor = false;
             // 
             // btnNavDeudas
             // 
+            btnNavDeudas.BackColor = Color.Red;
             btnNavDeudas.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnNavDeudas.ForeColor = SystemColors.ControlLightLight;
             btnNavDeudas.Location = new Point(60, 10);
             btnNavDeudas.Name = "btnNavDeudas";
             btnNavDeudas.Size = new Size(110, 32);
             btnNavDeudas.TabIndex = 1;
             btnNavDeudas.Text = "DEUDAS";
-            btnNavDeudas.UseVisualStyleBackColor = true;
-            // 
-            // lblFotoProductoPos
-            // 
-            lblFotoProductoPos.AutoSize = true;
-            lblFotoProductoPos.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblFotoProductoPos.ForeColor = Color.FromArgb(45, 55, 72);
-            lblFotoProductoPos.Location = new Point(1746, 381);
-            lblFotoProductoPos.Name = "lblFotoProductoPos";
-            lblFotoProductoPos.Size = new Size(150, 23);
-            lblFotoProductoPos.TabIndex = 41;
-            lblFotoProductoPos.Text = "FOTO PRODUCTO";
-            // 
-            // pnlSaldoAFavor
-            // 
-            pnlSaldoAFavor.Controls.Add(btnCobrarSaldo);
-            pnlSaldoAFavor.Controls.Add(btnCerrarSaldo);
-            pnlSaldoAFavor.Controls.Add(label7);
-            pnlSaldoAFavor.Controls.Add(label5);
-            pnlSaldoAFavor.Controls.Add(lblNombreSaldoAbono);
-            pnlSaldoAFavor.Controls.Add(btnAbonarSaldo);
-            pnlSaldoAFavor.Controls.Add(lblTotalSaldoAbono);
-            pnlSaldoAFavor.Controls.Add(dgvSaldoAbono);
-            pnlSaldoAFavor.Controls.Add(cmbConSaldo);
-            pnlSaldoAFavor.Controls.Add(cmbAsignarSaldo);
-            pnlSaldoAFavor.Location = new Point(888, 6);
-            pnlSaldoAFavor.Name = "pnlSaldoAFavor";
-            pnlSaldoAFavor.Size = new Size(660, 398);
-            pnlSaldoAFavor.TabIndex = 102;
-            // 
-            // chkSaldoAFavor
-            // 
-            chkSaldoAFavor.AutoSize = true;
-            chkSaldoAFavor.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            chkSaldoAFavor.Location = new Point(451, 433);
-            chkSaldoAFavor.Name = "chkSaldoAFavor";
-            chkSaldoAFavor.Size = new Size(113, 29);
-            chkSaldoAFavor.TabIndex = 103;
-            chkSaldoAFavor.Text = "ABONAR";
-            chkSaldoAFavor.UseVisualStyleBackColor = true;
-            // 
-            // cmbAsignarSaldo
-            // 
-            cmbAsignarSaldo.FormattingEnabled = true;
-            cmbAsignarSaldo.Location = new Point(195, 12);
-            cmbAsignarSaldo.Name = "cmbAsignarSaldo";
-            cmbAsignarSaldo.Size = new Size(347, 36);
-            cmbAsignarSaldo.TabIndex = 0;
-            // 
-            // cmbConSaldo
-            // 
-            cmbConSaldo.FormattingEnabled = true;
-            cmbConSaldo.Location = new Point(195, 54);
-            cmbConSaldo.Name = "cmbConSaldo";
-            cmbConSaldo.Size = new Size(350, 36);
-            cmbConSaldo.TabIndex = 1;
-            // 
-            // dgvSaldoAbono
-            // 
-            dgvSaldoAbono.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvSaldoAbono.Location = new Point(3, 148);
-            dgvSaldoAbono.Name = "dgvSaldoAbono";
-            dgvSaldoAbono.RowHeadersWidth = 51;
-            dgvSaldoAbono.Size = new Size(477, 244);
-            dgvSaldoAbono.TabIndex = 2;
-            // 
-            // lblTotalSaldoAbono
-            // 
-            lblTotalSaldoAbono.AutoSize = true;
-            lblTotalSaldoAbono.Location = new Point(483, 294);
-            lblTotalSaldoAbono.Name = "lblTotalSaldoAbono";
-            lblTotalSaldoAbono.Size = new Size(72, 28);
-            lblTotalSaldoAbono.TabIndex = 3;
-            lblTotalSaldoAbono.Text = "TOTAL";
-            // 
-            // btnAbonarSaldo
-            // 
-            btnAbonarSaldo.BackColor = SystemColors.MenuHighlight;
-            btnAbonarSaldo.ForeColor = Color.White;
-            btnAbonarSaldo.Location = new Point(492, 238);
-            btnAbonarSaldo.Name = "btnAbonarSaldo";
-            btnAbonarSaldo.Size = new Size(118, 39);
-            btnAbonarSaldo.TabIndex = 4;
-            btnAbonarSaldo.Text = "ABONAR";
-            btnAbonarSaldo.UseVisualStyleBackColor = false;
-            // 
-            // lblNombreSaldoAbono
-            // 
-            lblNombreSaldoAbono.AutoSize = true;
-            lblNombreSaldoAbono.Location = new Point(12, 116);
-            lblNombreSaldoAbono.Name = "lblNombreSaldoAbono";
-            lblNombreSaldoAbono.Size = new Size(99, 28);
-            lblNombreSaldoAbono.TabIndex = 5;
-            lblNombreSaldoAbono.Text = "NOMBRE";
-            // 
-            // label5
-            // 
-            label5.AutoSize = true;
-            label5.Location = new Point(90, 12);
-            label5.Name = "label5";
-            label5.Size = new Size(100, 28);
-            label5.TabIndex = 6;
-            label5.Text = "ASIGNAR";
-            // 
-            // label7
-            // 
-            label7.AutoSize = true;
-            label7.Location = new Point(61, 57);
-            label7.Name = "label7";
-            label7.Size = new Size(126, 28);
-            label7.TabIndex = 7;
-            label7.Text = "CON SALDO";
-            // 
-            // btnCerrarSaldo
-            // 
-            btnCerrarSaldo.FlatAppearance.BorderSize = 0;
-            btnCerrarSaldo.FlatStyle = FlatStyle.Flat;
-            btnCerrarSaldo.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            btnCerrarSaldo.ForeColor = Color.FromArgb(185, 28, 28);
-            btnCerrarSaldo.Location = new Point(615, 5);
-            btnCerrarSaldo.Name = "btnCerrarSaldo";
-            btnCerrarSaldo.Size = new Size(42, 32);
-            btnCerrarSaldo.TabIndex = 10;
-            btnCerrarSaldo.Text = "X";
-            btnCerrarSaldo.UseVisualStyleBackColor = true;
-            // 
-            // btnCobrarSaldo
-            // 
-            btnCobrarSaldo.BackColor = SystemColors.MenuHighlight;
-            btnCobrarSaldo.ForeColor = Color.White;
-            btnCobrarSaldo.Location = new Point(492, 188);
-            btnCobrarSaldo.Name = "btnCobrarSaldo";
-            btnCobrarSaldo.Size = new Size(118, 39);
-            btnCobrarSaldo.TabIndex = 11;
-            btnCobrarSaldo.Text = "COBRAR";
-            btnCobrarSaldo.UseVisualStyleBackColor = false;
+            btnNavDeudas.UseVisualStyleBackColor = false;
             // 
             // FrmPagos
             // 
@@ -1246,6 +1272,9 @@ namespace UI.DISEÑO
             tabProductos.ResumeLayout(false);
             tabPago.ResumeLayout(false);
             tabPago.PerformLayout();
+            pnlSaldoAFavor.ResumeLayout(false);
+            pnlSaldoAFavor.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvSaldoAbono).EndInit();
             pnlPausarVentas.ResumeLayout(false);
             pnlPausarVentas.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvPausaVentas).EndInit();
@@ -1259,9 +1288,6 @@ namespace UI.DISEÑO
             pnlFinanciamiento.ResumeLayout(false);
             pnlFinanciamiento.PerformLayout();
             panelNav.ResumeLayout(false);
-            pnlSaldoAFavor.ResumeLayout(false);
-            pnlSaldoAFavor.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)dgvSaldoAbono).EndInit();
             ResumeLayout(false);
         }
 

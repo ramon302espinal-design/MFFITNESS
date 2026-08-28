@@ -19,13 +19,15 @@ namespace UI.DISEÑO
         private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
         private readonly PosScannerIntervalGate _intervaloEscanner = new();
         private readonly BindingSource _bsProductosInventario = new();
+        private int _ultimoPreviewProductoId = -1;
 
         public FrmProductos()
         {
             InitializeComponent();
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloInventario);
             dgvProductos.DataSource = _bsProductosInventario;
-            dgvProductos.DataBindingComplete += (_, _) => ActualizarKpisInventario();
+            dgvProductos.DataBindingComplete += dgvProductos_DataBindingComplete;
+            ConfigurarComboProductoBusqueda();
         }
 
         // ===============================
@@ -220,14 +222,6 @@ namespace UI.DISEÑO
                 lblKpiGanVal.Text = "RD$ " + gananciaPotencial.ToString("N2", CulturaDo);
         }
 
-        private void CargarProductosCombo()
-        {
-            cmbProducto.DataSource = null;
-            cmbProducto.DataSource = productoBLL.ObtenerProductos();
-            cmbProducto.DisplayMember = "Nombre";
-            cmbProducto.ValueMember = "Id";
-            cmbProducto.SelectedIndex = -1;
-        }
 
         private void CargarMovimientos()
         {
@@ -344,6 +338,21 @@ namespace UI.DISEÑO
             LimpiarCampos();
         }
 
+        private void dgvProductos_DataBindingComplete(object? sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            ActualizarKpisInventario();
+            OcultarColumnaRutaImagenSiExiste();
+
+            if (dgvProductos.CurrentRow != null && !dgvProductos.CurrentRow.IsNewRow)
+                MostrarFotoSeleccionGrilla(dgvProductos.CurrentRow);
+        }
+
+        private void OcultarColumnaRutaImagenSiExiste()
+        {
+            if (dgvProductos.Columns.Contains("RutaImagen"))
+                dgvProductos.Columns["RutaImagen"].Visible = false;
+        }
+
         private void dgvProductos_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
@@ -352,37 +361,80 @@ namespace UI.DISEÑO
             MostrarFotoSeleccionGrilla(dgvProductos.Rows[e.RowIndex]);
         }
 
+        /// <summary>Hover: muestra la foto del producto bajo el cursor sin alterar la selección.</summary>
+        private void dgvProductos_CellMouseMove(object? sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            DataGridViewRow row = dgvProductos.Rows[e.RowIndex];
+            if (row.IsNewRow)
+                return;
+
+            MostrarFotoSeleccionGrilla(row);
+        }
+
+        /// <summary>Flechas arriba/abajo y selección con foco en la grilla.</summary>
+        private void dgvProductos_RowEnter(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || !dgvProductos.Focused)
+                return;
+
+            DataGridViewRow row = dgvProductos.Rows[e.RowIndex];
+            if (row.IsNewRow)
+                return;
+
+            MostrarFotoSeleccionGrilla(row);
+        }
+
         private void dgvProductos_SelectionChanged(object? sender, EventArgs e)
         {
+            if (!dgvProductos.Focused)
+                return;
+
             if (dgvProductos.CurrentRow == null || dgvProductos.CurrentRow.IsNewRow)
                 return;
+
             MostrarFotoSeleccionGrilla(dgvProductos.CurrentRow);
         }
 
         /// <summary>Solo preview al seleccionar fila; no toca campos ni foto pendiente de IA.</summary>
         private void MostrarFotoSeleccionGrilla(DataGridViewRow row)
         {
+            if (row.IsNewRow)
+                return;
+
+            int id = 0;
+            if (row.DataGridView.Columns.Contains("Id")
+                && row.Cells["Id"].Value != null
+                && row.Cells["Id"].Value != DBNull.Value)
+            {
+                id = Convert.ToInt32(row.Cells["Id"].Value);
+            }
+
+            if (id > 0 && id == _ultimoPreviewProductoId && picFotoProducto.Image != null)
+                return;
+
+            _ultimoPreviewProductoId = id;
+
             string? ruta = null;
             if (row.DataGridView.Columns.Contains("RutaImagen"))
                 ruta = row.Cells["RutaImagen"].Value?.ToString();
 
             // Fallback: producto_{id}.jpg en LocalAppData si la columna viene vacía.
-            if (string.IsNullOrWhiteSpace(ruta)
-                && row.DataGridView.Columns.Contains("Id")
-                && row.Cells["Id"].Value != null
-                && row.Cells["Id"].Value != DBNull.Value)
-            {
-                int id = Convert.ToInt32(row.Cells["Id"].Value);
-                if (id > 0)
-                    ruta = ProductoImagenStorage.RutaProducto(id);
-            }
+            if (string.IsNullOrWhiteSpace(ruta) && id > 0)
+                ruta = ProductoImagenStorage.RutaProducto(id);
 
             MostrarFotoEnPreview(ruta);
+
+            string nombre = row.Cells["Nombre"].Value?.ToString()?.Trim() ?? string.Empty;
             if (lblFotoaqui != null)
+            {
                 lblFotoaqui.Text = string.IsNullOrWhiteSpace(
                     ProductoImagenStorage.ResolverRutaExistente(ruta))
-                    ? "FOTO DEL PRODUCTO"
-                    : "FOTO DEL PRODUCTO";
+                    ? (string.IsNullOrWhiteSpace(nombre) ? "SIN FOTO" : nombre)
+                    : nombre;
+            }
         }
 
         private void dgvProductos_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -458,11 +510,6 @@ namespace UI.DISEÑO
             }
         }
 
-        private void SeleccionarProductoEnCombo(int productoId)
-        {
-            try { cmbProducto.SelectedValue = productoId; }
-            catch { cmbProducto.SelectedIndex = -1; }
-        }
 
         private void txtCodigo_KeyDown(object sender, KeyEventArgs e)
         {
@@ -524,7 +571,7 @@ namespace UI.DISEÑO
             }
         }
 
-        private void cmbProducto_SelectedIndexChanged(object sender, EventArgs e)
+        private void cmbProducto_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (cmbProducto.SelectedItem is DataRowView fila)
             {

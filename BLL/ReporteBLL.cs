@@ -527,6 +527,145 @@ namespace BLL
             File.WriteAllBytes(ruta, ms.ToArray());
         }
 
+        /// <summary>
+        /// PDF profesional de Estado Clientes: resumen por plan + detalle de miembros/movimientos.
+        /// </summary>
+        public void GenerarPdfEstadoClientes(
+            DataTable resumen,
+            DataTable detalle,
+            string periodoEtiqueta,
+            bool esSnapshotHoy,
+            DateTime fechaGeneracion,
+            string ruta)
+        {
+            if (detalle == null || detalle.Rows.Count == 0)
+                throw new InvalidOperationException("No hay datos para exportar en el período seleccionado.");
+            if (string.IsNullOrWhiteSpace(ruta))
+                throw new InvalidOperationException("La ruta de destino es inválida.");
+
+            CultureInfo cultura = CultureInfo.GetCultureInfo("es-DO");
+            int totalMiembros = detalle.Rows.Count;
+            decimal totalMonto = 0m;
+            foreach (DataRow row in detalle.Rows)
+            {
+                if (row["Monto"] != null && row["Monto"] != DBNull.Value)
+                    totalMonto += Convert.ToDecimal(row["Monto"]);
+            }
+
+            string diaReporte = fechaGeneracion.ToString("dddd, dd 'de' MMMM 'de' yyyy", cultura);
+            if (!string.IsNullOrEmpty(diaReporte))
+                diaReporte = char.ToUpper(diaReporte[0], cultura) + diaReporte[1..];
+
+            using var memoria = new MemoryStream();
+            using (var writer = new PdfWriter(memoria))
+            using (var pdf = new PdfDocument(writer))
+            using (var doc = new Document(pdf, iText.Kernel.Geom.PageSize.A4))
+            {
+                doc.SetMargins(36, 36, 36, 36);
+
+                PdfFont negrita = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+                PdfFont normal = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+                doc.Add(new Paragraph("MFFITNESS — ESTADO DE CLIENTES")
+                    .SetFont(negrita).SetFontSize(18).SetTextAlignment(TextAlignment.CENTER));
+                doc.Add(new Paragraph($"Período: {periodoEtiqueta.Trim().ToUpperInvariant()}")
+                    .SetFont(negrita).SetFontSize(12).SetTextAlignment(TextAlignment.CENTER).SetMarginBottom(4));
+                doc.Add(new Paragraph(
+                        esSnapshotHoy
+                            ? "Tipo: snapshot en vivo (miembros ACTIVO al momento del reporte)"
+                            : "Tipo: histórico de cobros y altas del mes")
+                    .SetFont(normal).SetFontSize(9).SetTextAlignment(TextAlignment.CENTER)
+                    .SetFontColor(ColorConstants.GRAY));
+
+                doc.Add(new Paragraph(
+                        $"Generado: {fechaGeneracion.ToString(FechaHoraFormats.FechaHoraSegundos, cultura)}")
+                    .SetFont(normal).SetFontSize(10).SetMarginTop(8));
+                doc.Add(new Paragraph($"Día del reporte: {diaReporte}")
+                    .SetFont(normal).SetFontSize(10).SetMarginBottom(14));
+
+                doc.Add(new Paragraph("RESUMEN POR PLAN")
+                    .SetFont(negrita).SetFontSize(11).SetMarginBottom(6));
+
+                var tablaResumen = new Table(UnitValue.CreatePercentArray(new float[] { 40, 20, 40 }))
+                    .UseAllAvailableWidth();
+                foreach (string h in new[] { "Plan", "Cantidad", "Monto RD$" })
+                {
+                    tablaResumen.AddHeaderCell(new Cell()
+                        .Add(new Paragraph(h).SetFont(negrita).SetFontSize(9))
+                        .SetBackgroundColor(ColorConstants.BLACK)
+                        .SetFontColor(ColorConstants.WHITE)
+                        .SetPadding(5));
+                }
+
+                if (resumen != null && resumen.Rows.Count > 0)
+                {
+                    foreach (DataRow row in resumen.Rows)
+                    {
+                        string plan = Convert.ToString(row["Plan"]) ?? "";
+                        int cant = row["Cantidad"] == DBNull.Value ? 0 : Convert.ToInt32(row["Cantidad"]);
+                        decimal monto = row["MontoTotal"] == DBNull.Value ? 0m : Convert.ToDecimal(row["MontoTotal"]);
+                        tablaResumen.AddCell(CeldaPdf(plan, normal));
+                        tablaResumen.AddCell(CeldaPdf(cant.ToString("N0", cultura), normal));
+                        tablaResumen.AddCell(CeldaPdf("RD$ " + monto.ToString("N2", cultura), normal));
+                    }
+                }
+                else
+                {
+                    tablaResumen.AddCell(CeldaPdf("—", normal));
+                    tablaResumen.AddCell(CeldaPdf("0", normal));
+                    tablaResumen.AddCell(CeldaPdf("RD$ 0.00", normal));
+                }
+
+                doc.Add(tablaResumen);
+
+                doc.Add(new Paragraph("DETALLE DE MIEMBROS")
+                    .SetFont(negrita).SetFontSize(11).SetMarginTop(16).SetMarginBottom(6));
+
+                var tablaDetalle = new Table(UnitValue.CreatePercentArray(new float[] { 14, 28, 18, 16, 14 }))
+                    .UseAllAvailableWidth();
+                foreach (string h in new[] { "Fecha", "Cliente", "Plan", "Movimiento", "Monto RD$" })
+                {
+                    tablaDetalle.AddHeaderCell(new Cell()
+                        .Add(new Paragraph(h).SetFont(negrita).SetFontSize(8))
+                        .SetBackgroundColor(ColorConstants.DARK_GRAY)
+                        .SetFontColor(ColorConstants.WHITE)
+                        .SetPadding(4));
+                }
+
+                foreach (DataRow row in detalle.Rows)
+                {
+                    string fecha = row["Fecha"] == DBNull.Value
+                        ? "-"
+                        : Convert.ToDateTime(row["Fecha"]).ToString(FechaHoraFormats.Fecha, cultura);
+                    string cliente = Convert.ToString(row["Cliente"]) ?? "";
+                    string plan = Convert.ToString(row["Plan"]) ?? "";
+                    string mov = Convert.ToString(row["Movimiento"]) ?? "";
+                    decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
+
+                    tablaDetalle.AddCell(CeldaPdf(fecha, normal, 8));
+                    tablaDetalle.AddCell(CeldaPdf(cliente, normal, 8));
+                    tablaDetalle.AddCell(CeldaPdf(plan, normal, 8));
+                    tablaDetalle.AddCell(CeldaPdf(mov, normal, 8));
+                    tablaDetalle.AddCell(CeldaPdf("RD$ " + monto.ToString("N2", cultura), normal, 8));
+                }
+
+                doc.Add(tablaDetalle);
+
+                doc.Add(new Paragraph(
+                        $"Totales · Miembros/movimientos: {totalMiembros:N0}  ·  Monto: RD$ {totalMonto:N2}")
+                    .SetFont(negrita).SetFontSize(11).SetTextAlignment(TextAlignment.RIGHT).SetMarginTop(14));
+            }
+
+            File.WriteAllBytes(ruta, memoria.ToArray());
+        }
+
+        private static Cell CeldaPdf(string texto, PdfFont fuente, float size = 9)
+        {
+            return new Cell()
+                .Add(new Paragraph(texto).SetFont(fuente).SetFontSize(size))
+                .SetPadding(4);
+        }
+
         private static DeviceRgb? ColorTipoMovimiento(string tipo) => tipo switch
         {
             "DEUDA" => new DeviceRgb(178, 34, 34),

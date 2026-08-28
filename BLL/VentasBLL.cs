@@ -139,6 +139,83 @@ namespace BLL
             }
         }
 
+        /// <summary>
+        /// Despacho de producto ya pagado con saldo a favor: venta + stock, sin movimiento de caja ni deuda.
+        /// </summary>
+        public VentaOperacionResult RegistrarVentaDespachoSaldoAFavor(
+            int clienteId,
+            decimal total,
+            string usuario,
+            DataTable carrito,
+            int saldoClienteId)
+        {
+            if (clienteId <= 0)
+                throw new Exception("Cliente inválido para despacho.");
+
+            if (carrito.Rows.Count == 0)
+                throw new Exception("No hay productos para despachar.");
+
+            if (total <= 0)
+                throw new Exception("El total debe ser mayor a 0.");
+
+            usuarioActual = usuario;
+
+            var result = new VentaOperacionResult
+            {
+                MontoPagado = total
+            };
+
+            try
+            {
+                int ventaId = ventasDAL.RegistrarVenta(
+                    clienteId,
+                    total,
+                    total,
+                    "Saldo a favor",
+                    usuario);
+                result.VentaId = ventaId;
+
+                foreach (DataRow row in carrito.Rows)
+                {
+                    if (row.RowState == DataRowState.Deleted)
+                        continue;
+
+                    int productoId = Convert.ToInt32(row["ProductoId"]);
+                    int cantidad = Convert.ToInt32(row["Cantidad"]);
+                    decimal precio = Convert.ToDecimal(row["Precio"]);
+                    decimal subtotal = Convert.ToDecimal(row["Total"]);
+
+                    var (costoVigente, _) = productoDAL.ObtenerCostoYStock(productoId);
+                    decimal? costoSnapshot = costoVigente > 0
+                        ? Math.Round(costoVigente, 4, MidpointRounding.AwayFromZero)
+                        : null;
+
+                    ventasDAL.RegistrarDetalleVenta(
+                        ventaId, productoId, cantidad, precio, subtotal, costoSnapshot);
+
+                    int movId = stockBLL.RegistrarSalidaConId(
+                        productoId,
+                        cantidad,
+                        usuario,
+                        $"Despacho saldo a favor Id {saldoClienteId} · Venta Id {ventaId}");
+
+                    result.StockMovimientoIds.Add(movId);
+                }
+
+                return result;
+            }
+            catch
+            {
+                if (result.VentaId > 0)
+                {
+                    try { RevertirVenta(result, usuario); }
+                    catch { /* ignore */ }
+                }
+
+                throw;
+            }
+        }
+
         public void RevertirVenta(VentaOperacionResult operacion, string usuario)
         {
             if (operacion.VentaId <= 0)

@@ -307,6 +307,11 @@ namespace UI.DISEÑO
             cmbProducto.Size = new Size(242, 28);
             cmbProducto.TabIndex = 44;
             cmbProducto.Text = "SELECCION DE PRODUCTOS";
+            cmbProducto.DropDown += cmbProducto_DropDown;
+            cmbProducto.SelectedIndexChanged += cmbProducto_SelectedIndexChanged;
+            cmbProducto.TextUpdate += cmbProducto_TextUpdate;
+            cmbProducto.DropDownClosed += cmbProducto_DropDownClosed;
+            cmbProducto.KeyDown += cmbProducto_KeyDown;
             // 
             // numSalida
             // 
@@ -396,13 +401,17 @@ namespace UI.DISEÑO
             dgvProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvProductos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvProductos.Location = new Point(427, 75);
+            dgvProductos.MultiSelect = false;
             dgvProductos.Name = "dgvProductos";
             dgvProductos.ReadOnly = true;
             dgvProductos.RowHeadersWidth = 51;
+            dgvProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvProductos.Size = new Size(925, 283);
             dgvProductos.TabIndex = 27;
             dgvProductos.CellClick += dgvProductos_CellClick;
             dgvProductos.CellDoubleClick += dgvProductos_CellDoubleClick;
+            dgvProductos.CellMouseMove += dgvProductos_CellMouseMove;
+            dgvProductos.RowEnter += dgvProductos_RowEnter;
             dgvProductos.RowPrePaint += dgvProductos_RowPrePaint;
             dgvProductos.SelectionChanged += dgvProductos_SelectionChanged;
             // 
@@ -573,7 +582,7 @@ namespace UI.DISEÑO
             lblFotoaqui.AutoSize = true;
             lblFotoaqui.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblFotoaqui.ForeColor = Color.FromArgb(45, 55, 72);
-            lblFotoaqui.Location = new Point(1550, 54);
+            lblFotoaqui.Location = new Point(1450, 54);
             lblFotoaqui.Name = "lblFotoaqui";
             lblFotoaqui.Size = new Size(161, 20);
             lblFotoaqui.TabIndex = 67;

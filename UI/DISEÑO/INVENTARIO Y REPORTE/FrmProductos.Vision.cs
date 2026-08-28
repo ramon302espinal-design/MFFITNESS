@@ -642,7 +642,9 @@ namespace UI.DISEÑO
 
             using var fs = new FileStream(real, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
-            picFotoProducto.Image = Image.FromStream(fs);
+            using var tmp = Image.FromStream(fs);
+
+            picFotoProducto.Image = new Bitmap(tmp);
 
         }
 
@@ -657,6 +659,8 @@ namespace UI.DISEÑO
             _rutaImagenPendiente = null;
 
             _jpegPendiente = null;
+
+            _ultimoPreviewProductoId = -1;
 
             Image? old = picFotoProducto.Image;
 

@@ -39,6 +39,8 @@ namespace UI.DISEÑO
             btnNavPagar = new Button();
             btnBack = new Button();
             panelBusqueda = new Panel();
+            btnDescargarPDF = new Button();
+            cbmMesesPanel = new ComboBox();
             lblBuscar = new Label();
             txtBuscar = new TextBox();
             panelAcciones = new Panel();
@@ -65,14 +67,15 @@ namespace UI.DISEÑO
             lblM3x = new Label();
             label9 = new Label();
             panel5 = new Panel();
-            label10 = new Label();
-            lbl = new Label();
+            lblCAbdomenPlano = new Label();
+            lblMAbdomenPlano = new Label();
             label12 = new Label();
             panel6 = new Panel();
-            label13 = new Label();
-            label14 = new Label();
+            lblCGluteosGrande = new Label();
+            lblMGluteosGrande = new Label();
             label15 = new Label();
             panel7 = new Panel();
+            lblTiempo = new Label();
             lblCTotal = new Label();
             lblMTotal = new Label();
             label4 = new Label();
@@ -202,6 +205,8 @@ namespace UI.DISEÑO
             // 
             // panelBusqueda
             // 
+            panelBusqueda.Controls.Add(btnDescargarPDF);
+            panelBusqueda.Controls.Add(cbmMesesPanel);
             panelBusqueda.Controls.Add(lblBuscar);
             panelBusqueda.Controls.Add(txtBuscar);
             panelBusqueda.Dock = DockStyle.Top;
@@ -210,6 +215,34 @@ namespace UI.DISEÑO
             panelBusqueda.Padding = new Padding(12, 8, 12, 8);
             panelBusqueda.Size = new Size(1924, 56);
             panelBusqueda.TabIndex = 1;
+            // 
+            // btnDescargarPDF
+            // 
+            btnDescargarPDF.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnDescargarPDF.BackColor = Color.FromArgb(229, 57, 53);
+            btnDescargarPDF.Cursor = Cursors.Hand;
+            btnDescargarPDF.FlatAppearance.BorderSize = 0;
+            btnDescargarPDF.FlatStyle = FlatStyle.Flat;
+            btnDescargarPDF.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnDescargarPDF.ForeColor = Color.White;
+            btnDescargarPDF.Location = new Point(1240, 12);
+            btnDescargarPDF.Name = "btnDescargarPDF";
+            btnDescargarPDF.Size = new Size(330, 36);
+            btnDescargarPDF.TabIndex = 71;
+            btnDescargarPDF.Text = "DESCARGAR PDF";
+            btnDescargarPDF.UseVisualStyleBackColor = false;
+            btnDescargarPDF.Click += btnDescargarPDF_Click;
+            // 
+            // cbmMesesPanel
+            // 
+            cbmMesesPanel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            cbmMesesPanel.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbmMesesPanel.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            cbmMesesPanel.FormattingEnabled = true;
+            cbmMesesPanel.Location = new Point(1580, 12);
+            cbmMesesPanel.Name = "cbmMesesPanel";
+            cbmMesesPanel.Size = new Size(320, 33);
+            cbmMesesPanel.TabIndex = 70;
             // 
             // lblBuscar
             // 
@@ -228,7 +261,7 @@ namespace UI.DISEÑO
             txtBuscar.Location = new Point(122, 10);
             txtBuscar.Name = "txtBuscar";
             txtBuscar.PlaceholderText = "Nombre, plan, estado...";
-            txtBuscar.Size = new Size(1782, 41);
+            txtBuscar.Size = new Size(897, 41);
             txtBuscar.TabIndex = 1;
             txtBuscar.TabStop = false;
             txtBuscar.TextChanged += txtBuscar_TextChanged;
@@ -301,6 +334,7 @@ namespace UI.DISEÑO
             // 
             dgvEstado.AllowUserToAddRows = false;
             dgvEstado.AllowUserToDeleteRows = false;
+            dgvEstado.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             dgvEstado.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvEstado.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvEstado.Location = new Point(0, 108);
@@ -310,7 +344,7 @@ namespace UI.DISEÑO
             dgvEstado.RowHeadersWidth = 51;
             dgvEstado.RowTemplate.Height = 32;
             dgvEstado.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvEstado.Size = new Size(1062, 342);
+            dgvEstado.Size = new Size(1586, 342);
             dgvEstado.TabIndex = 2;
             dgvEstado.CellDoubleClick += dgvEstado_CellDoubleClick;
             dgvEstado.CellFormatting += dgvEstado_CellFormatting;
@@ -537,8 +571,8 @@ namespace UI.DISEÑO
             // panel5
             // 
             panel5.BackColor = Color.Blue;
-            panel5.Controls.Add(label10);
-            panel5.Controls.Add(lbl);
+            panel5.Controls.Add(lblCAbdomenPlano);
+            panel5.Controls.Add(lblMAbdomenPlano);
             panel5.Controls.Add(label12);
             panel5.ForeColor = Color.Crimson;
             panel5.ImeMode = ImeMode.On;
@@ -548,30 +582,30 @@ namespace UI.DISEÑO
             panel5.TabIndex = 68;
             panel5.Tag = "classic";
             // 
-            // label10
+            // lblCAbdomenPlano
             // 
-            label10.AutoSize = true;
-            label10.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label10.FlatStyle = FlatStyle.Flat;
-            label10.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            label10.ForeColor = Color.White;
-            label10.Location = new Point(2, 36);
-            label10.Name = "label10";
-            label10.Size = new Size(38, 45);
-            label10.TabIndex = 62;
-            label10.Text = "0";
+            lblCAbdomenPlano.AutoSize = true;
+            lblCAbdomenPlano.BackColor = Color.FromArgb(0, 0, 0, 0);
+            lblCAbdomenPlano.FlatStyle = FlatStyle.Flat;
+            lblCAbdomenPlano.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCAbdomenPlano.ForeColor = Color.White;
+            lblCAbdomenPlano.Location = new Point(2, 36);
+            lblCAbdomenPlano.Name = "lblCAbdomenPlano";
+            lblCAbdomenPlano.Size = new Size(38, 45);
+            lblCAbdomenPlano.TabIndex = 62;
+            lblCAbdomenPlano.Text = "0";
             // 
-            // lbl
+            // lblMAbdomenPlano
             // 
-            lbl.AutoSize = true;
-            lbl.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lbl.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lbl.ForeColor = Color.White;
-            lbl.Location = new Point(1, 81);
-            lbl.Name = "lbl";
-            lbl.Size = new Size(38, 45);
-            lbl.TabIndex = 61;
-            lbl.Text = "0";
+            lblMAbdomenPlano.AutoSize = true;
+            lblMAbdomenPlano.BackColor = Color.FromArgb(0, 0, 0, 0);
+            lblMAbdomenPlano.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMAbdomenPlano.ForeColor = Color.White;
+            lblMAbdomenPlano.Location = new Point(1, 81);
+            lblMAbdomenPlano.Name = "lblMAbdomenPlano";
+            lblMAbdomenPlano.Size = new Size(38, 45);
+            lblMAbdomenPlano.TabIndex = 61;
+            lblMAbdomenPlano.Text = "0";
             // 
             // label12
             // 
@@ -588,8 +622,8 @@ namespace UI.DISEÑO
             // panel6
             // 
             panel6.BackColor = Color.Blue;
-            panel6.Controls.Add(label13);
-            panel6.Controls.Add(label14);
+            panel6.Controls.Add(lblCGluteosGrande);
+            panel6.Controls.Add(lblMGluteosGrande);
             panel6.Controls.Add(label15);
             panel6.ForeColor = Color.Crimson;
             panel6.ImeMode = ImeMode.On;
@@ -599,29 +633,29 @@ namespace UI.DISEÑO
             panel6.TabIndex = 69;
             panel6.Tag = "classic";
             // 
-            // label13
+            // lblCGluteosGrande
             // 
-            label13.AutoSize = true;
-            label13.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label13.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            label13.ForeColor = Color.White;
-            label13.Location = new Point(2, 36);
-            label13.Name = "label13";
-            label13.Size = new Size(38, 45);
-            label13.TabIndex = 62;
-            label13.Text = "0";
+            lblCGluteosGrande.AutoSize = true;
+            lblCGluteosGrande.BackColor = Color.FromArgb(0, 0, 0, 0);
+            lblCGluteosGrande.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCGluteosGrande.ForeColor = Color.White;
+            lblCGluteosGrande.Location = new Point(2, 36);
+            lblCGluteosGrande.Name = "lblCGluteosGrande";
+            lblCGluteosGrande.Size = new Size(38, 45);
+            lblCGluteosGrande.TabIndex = 62;
+            lblCGluteosGrande.Text = "0";
             // 
-            // label14
+            // lblMGluteosGrande
             // 
-            label14.AutoSize = true;
-            label14.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label14.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            label14.ForeColor = Color.White;
-            label14.Location = new Point(1, 81);
-            label14.Name = "label14";
-            label14.Size = new Size(38, 45);
-            label14.TabIndex = 61;
-            label14.Text = "0";
+            lblMGluteosGrande.AutoSize = true;
+            lblMGluteosGrande.BackColor = Color.FromArgb(0, 0, 0, 0);
+            lblMGluteosGrande.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMGluteosGrande.ForeColor = Color.White;
+            lblMGluteosGrande.Location = new Point(1, 81);
+            lblMGluteosGrande.Name = "lblMGluteosGrande";
+            lblMGluteosGrande.Size = new Size(38, 45);
+            lblMGluteosGrande.TabIndex = 61;
+            lblMGluteosGrande.Text = "0";
             // 
             // label15
             // 
@@ -638,6 +672,7 @@ namespace UI.DISEÑO
             // panel7
             // 
             panel7.BackColor = Color.Blue;
+            panel7.Controls.Add(lblTiempo);
             panel7.Controls.Add(lblCTotal);
             panel7.Controls.Add(lblMTotal);
             panel7.Controls.Add(label4);
@@ -649,13 +684,25 @@ namespace UI.DISEÑO
             panel7.TabIndex = 69;
             panel7.Tag = "classic";
             // 
+            // lblTiempo
+            // 
+            lblTiempo.AutoSize = true;
+            lblTiempo.BackColor = Color.FromArgb(0, 0, 0, 0);
+            lblTiempo.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblTiempo.ForeColor = Color.FromArgb(255, 224, 128);
+            lblTiempo.Location = new Point(78, 3);
+            lblTiempo.Name = "lblTiempo";
+            lblTiempo.Size = new Size(53, 25);
+            lblTiempo.TabIndex = 63;
+            lblTiempo.Text = "HOY";
+            // 
             // lblCTotal
             // 
             lblCTotal.AutoSize = true;
             lblCTotal.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblCTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
             lblCTotal.ForeColor = Color.White;
-            lblCTotal.Location = new Point(2, 36);
+            lblCTotal.Location = new Point(2, 58);
             lblCTotal.Name = "lblCTotal";
             lblCTotal.Size = new Size(38, 45);
             lblCTotal.TabIndex = 62;
@@ -667,7 +714,7 @@ namespace UI.DISEÑO
             lblMTotal.BackColor = Color.FromArgb(0, 0, 0, 0);
             lblMTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
             lblMTotal.ForeColor = Color.White;
-            lblMTotal.Location = new Point(1, 81);
+            lblMTotal.Location = new Point(1, 100);
             lblMTotal.Name = "lblMTotal";
             lblMTotal.Size = new Size(38, 45);
             lblMTotal.TabIndex = 61;
@@ -679,7 +726,7 @@ namespace UI.DISEÑO
             label4.BackColor = Color.FromArgb(0, 0, 0, 0);
             label4.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
             label4.ForeColor = Color.White;
-            label4.Location = new Point(25, 5);
+            label4.Location = new Point(25, 28);
             label4.Name = "label4";
             label4.Size = new Size(91, 35);
             label4.TabIndex = 60;
@@ -749,6 +796,7 @@ namespace UI.DISEÑO
         private Button btnCongelar;
         private Label lblBuscar;
         private TextBox txtBuscar;
+        private Button btnDescargarPDF;
         private Panel panel2;
         private Label lblCMensualidad;
         private Label labelStock;
@@ -759,8 +807,8 @@ namespace UI.DISEÑO
         private Panel panel4;
         private Label label9;
         private Panel panel5;
-        private Label label10;
-        private Label lbl;
+        private Label lblCAbdomenPlano;
+        private Label lblMAbdomenPlano;
         private Label label12;
         private Label lblMMensualidad;
         private Label lblCPremium;
@@ -770,10 +818,12 @@ namespace UI.DISEÑO
         private Label lblC3x;
         private Label lblM3x;
         private Panel panel6;
-        private Label label13;
-        private Label label14;
+        private Label lblCGluteosGrande;
+        private Label lblMGluteosGrande;
         private Label label15;
         private Panel panel7;
+        private Label lblTiempo;
+        private ComboBox cbmMesesPanel;
         private Label lblCTotal;
         private Label lblMTotal;
         private Label label4;
