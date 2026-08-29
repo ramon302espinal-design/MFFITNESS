@@ -40,14 +40,6 @@ namespace UI.DISEÑO
             txtMotivoExtra.Enabled = false;
         }
 
-        // =============================
-        // EVENTO PARA LIMPIAR AL HACER CLIC EN LA PESTAÑA
-        // =============================
-        private void tabProductos_Click(object sender, EventArgs e)
-        {
-            LimpiarCampos();
-        }
-
         // ===============================
         // OBTENER MOTIVO (Corregido para evitar Nulls)
         // ===============================

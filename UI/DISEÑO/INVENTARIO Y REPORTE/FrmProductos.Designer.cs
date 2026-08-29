@@ -144,7 +144,6 @@ namespace UI.DISEÑO
             tabProductos.TabIndex = 0;
             tabProductos.Text = "REGISTRO DE PRODUCTOS";
             tabProductos.UseVisualStyleBackColor = true;
-            tabProductos.Click += tabProductos_Click;
             // 
             // panel3
             // 
