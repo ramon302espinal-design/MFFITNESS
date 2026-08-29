@@ -8,6 +8,7 @@ using BLL.Models;
 using CORE;
 using DTO;
 using UI.Facturas;
+using UI.Theme;
 
 namespace UI.DISEÑO
 {
@@ -16,8 +17,11 @@ namespace UI.DISEÑO
     {
         private readonly int _clienteId;
         private readonly string _nombreCliente;
-        private readonly PlanBLL _planBLL = new PlanBLL();
-        private readonly CajaBLL _cajaBLL = new CajaBLL();
+        private PlanBLL? _planBLL;
+        private CajaBLL? _cajaBLL;
+
+        private PlanBLL Planes => _planBLL ??= new PlanBLL();
+        private CajaBLL Caja => _cajaBLL ??= new CajaBLL();
 
         public bool RenovacionCompletada { get; private set; }
 
@@ -36,6 +40,9 @@ namespace UI.DISEÑO
 
         private void FrmRenovarMembresia_Load(object? sender, EventArgs e)
         {
+            if (ThemeHost.IsDesignTime())
+                return;
+
             Text = "Renovar - " + (string.IsNullOrWhiteSpace(_nombreCliente) ? "Cliente" : _nombreCliente);
             lblCliente.Text = string.IsNullOrWhiteSpace(_nombreCliente) ? "Cliente" : _nombreCliente;
             ResetOfertaCampos();
@@ -44,7 +51,7 @@ namespace UI.DISEÑO
 
         private void CargarPlanes()
         {
-            DataTable tablaPlanes = _planBLL.ObtenerPlanes() ?? new DataTable();
+            DataTable tablaPlanes = Planes.ObtenerPlanes() ?? new DataTable();
             DataTable fuente = FiltrarPlanesRenovacion(tablaPlanes);
 
             cmbPlan.DisplayMember = "Nombre";
@@ -84,7 +91,7 @@ namespace UI.DISEÑO
                 }
 
                 int planId = Convert.ToInt32(cmbPlan.SelectedValue);
-                var plan = _planBLL.ObtenerPlan(planId);
+                var plan = Planes.ObtenerPlan(planId);
                 if (plan == null)
                 {
                     MessageBox.Show(this, "El plan no existe o no se pudo cargar.", "Renovación",
@@ -145,7 +152,7 @@ namespace UI.DISEÑO
 
         private bool AsegurarCajaAbierta(string usuario)
         {
-            if (_cajaBLL.ObtenerCajaAbiertaHoy() != null)
+            if (Caja.ObtenerCajaAbiertaHoy() != null)
                 return true;
 
             DialogResult r = MessageBox.Show(
@@ -170,7 +177,7 @@ namespace UI.DISEÑO
                 return false;
             }
 
-            _cajaBLL.AbrirCaja(montoInicial, usuario);
+            Caja.AbrirCaja(montoInicial, usuario);
             AppEventos.CajaCambiada();
             return true;
         }

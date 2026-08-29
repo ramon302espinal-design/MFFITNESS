@@ -61,8 +61,8 @@
             dtFechaVence.Name = "dtFechaVence";
             dtFechaVence.Size = new Size(200, 27);
             dtFechaVence.TabIndex = 3;
-            dtFechaVence.TabStop = false;
-            dtFechaVence.ValueChanged += dtFechaVence_ValueChanged;
+            dtFechaVence.Enabled = false;
+            dtFechaVence.ShowUpDown = false;
             // 
             // cmbMiembro
             // 

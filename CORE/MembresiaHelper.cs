@@ -34,6 +34,37 @@ namespace CORE
         }
 
         /// <summary>
+        /// Calcula la fecha fin de una membresía programada a partir de la fecha de inicio elegida.
+        /// A diferencia de <see cref="CalcularFechaVencimiento"/> (fecha de pago), el ancla es el inicio:
+        /// - Inicio día 7–19 → vence el 15 del mes siguiente
+        /// - Inicio día 1–6 → vence el último día del mismo mes de inicio
+        /// - Inicio día 20 en adelante → vence el último día del mes siguiente
+        /// </summary>
+        public static DateTime CalcularFechaFinProgramacion(DateTime fechaInicio)
+        {
+            fechaInicio = fechaInicio.Date;
+            int dia = fechaInicio.Day;
+            int mes = fechaInicio.Month;
+            int ano = fechaInicio.Year;
+
+            if (dia >= 7 && dia <= 19)
+            {
+                DateTime mesSiguiente = new DateTime(ano, mes, 1).AddMonths(1);
+                return new DateTime(mesSiguiente.Year, mesSiguiente.Month, 15);
+            }
+
+            if (dia >= 1 && dia <= 6)
+            {
+                int ultimoMesInicio = DateTime.DaysInMonth(ano, mes);
+                return new DateTime(ano, mes, ultimoMesInicio);
+            }
+
+            DateTime mesSiguienteFin = new DateTime(ano, mes, 1).AddMonths(1);
+            int ultimoDiaMesSiguiente = DateTime.DaysInMonth(mesSiguienteFin.Year, mesSiguienteFin.Month);
+            return new DateTime(mesSiguienteFin.Year, mesSiguienteFin.Month, ultimoDiaMesSiguiente);
+        }
+
+        /// <summary>
         /// Indica si FechaFin refleja el período real del plan o fue truncada (p. ej. al desactivar).
         /// </summary>
         public static bool EsFechaFinPlanCoherente(DateTime fechaInicio, DateTime fechaFin)

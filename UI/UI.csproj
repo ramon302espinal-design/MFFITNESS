@@ -120,6 +120,24 @@
 		<Compile Update="DISEÑO\ESTADO\FrmCongelarMiembro.Designer.cs">
 			<DependentUpon>FrmCongelarMiembro.cs</DependentUpon>
 		</Compile>
+		<Compile Update="DISEÑO\ESTADO\FrmAjustarFechaVencimiento.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\ESTADO\FrmAjustarFechaVencimiento.Designer.cs">
+			<DependentUpon>FrmAjustarFechaVencimiento.cs</DependentUpon>
+		</Compile>
+		<EmbeddedResource Update="DISEÑO\ESTADO\FrmAjustarFechaVencimiento.resx">
+			<DependentUpon>FrmAjustarFechaVencimiento.cs</DependentUpon>
+		</EmbeddedResource>
+		<Compile Update="DISEÑO\ESTADO\FrmProgramacion.cs">
+			<SubType>Form</SubType>
+		</Compile>
+		<Compile Update="DISEÑO\ESTADO\FrmProgramacion.Designer.cs">
+			<DependentUpon>FrmProgramacion.cs</DependentUpon>
+		</Compile>
+		<EmbeddedResource Update="DISEÑO\ESTADO\FrmProgramacion.resx">
+			<DependentUpon>FrmProgramacion.cs</DependentUpon>
+		</EmbeddedResource>
 		<Compile Update="DISEÑO\ESTADO\FrmRenovarMembresia.cs">
 			<SubType>Form</SubType>
 		</Compile>

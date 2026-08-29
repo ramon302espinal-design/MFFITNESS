@@ -47,6 +47,7 @@ namespace UI.DISEÑO
             lblIconoCambio = new Label();
             lblCambioMonto = new Label();
             pnlFooter = new Panel();
+            tlpFooterMain = new TableLayoutPanel();
             tlpFooterTop = new TableLayoutPanel();
             chkImprimirRecibo = new CheckBox();
             btnVistaPrevia = new Button();
@@ -62,6 +63,7 @@ namespace UI.DISEÑO
             cardCambio.SuspendLayout();
             tlpCambio.SuspendLayout();
             pnlFooter.SuspendLayout();
+            tlpFooterMain.SuspendLayout();
             tlpFooterTop.SuspendLayout();
             SuspendLayout();
             // 
@@ -398,13 +400,27 @@ namespace UI.DISEÑO
             // pnlFooter
             // 
             pnlFooter.BackColor = Color.Transparent;
-            pnlFooter.Controls.Add(tlpFooterTop);
-            pnlFooter.Controls.Add(btnPagar);
+            pnlFooter.Controls.Add(tlpFooterMain);
             pnlFooter.Dock = DockStyle.Fill;
             pnlFooter.Location = new Point(33, 553);
             pnlFooter.Name = "pnlFooter";
             pnlFooter.Size = new Size(1084, 194);
             pnlFooter.TabIndex = 2;
+            // 
+            // tlpFooterMain
+            // 
+            tlpFooterMain.ColumnCount = 1;
+            tlpFooterMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tlpFooterMain.Controls.Add(tlpFooterTop, 0, 0);
+            tlpFooterMain.Controls.Add(btnPagar, 0, 1);
+            tlpFooterMain.Dock = DockStyle.Fill;
+            tlpFooterMain.Location = new Point(0, 0);
+            tlpFooterMain.Name = "tlpFooterMain";
+            tlpFooterMain.RowCount = 2;
+            tlpFooterMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
+            tlpFooterMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tlpFooterMain.Size = new Size(1084, 194);
+            tlpFooterMain.TabIndex = 0;
             // 
             // tlpFooterTop
             // 
@@ -425,8 +441,8 @@ namespace UI.DISEÑO
             // 
             chkImprimirRecibo.Anchor = AnchorStyles.Left;
             chkImprimirRecibo.AutoSize = true;
-            chkImprimirRecibo.Checked = true;
-            chkImprimirRecibo.CheckState = CheckState.Checked;
+            chkImprimirRecibo.Checked = false;
+            chkImprimirRecibo.CheckState = CheckState.Unchecked;
             chkImprimirRecibo.Font = new Font("Segoe UI", 18F, FontStyle.Regular, GraphicsUnit.Pixel);
             chkImprimirRecibo.ForeColor = Color.FromArgb(31, 41, 55);
             chkImprimirRecibo.Location = new Point(3, 22);
@@ -456,18 +472,20 @@ namespace UI.DISEÑO
             // 
             // btnPagar
             // 
-            btnPagar.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             btnPagar.BackColor = Color.FromArgb(22, 163, 74);
             btnPagar.Cursor = Cursors.Hand;
+            btnPagar.Dock = DockStyle.Fill;
             btnPagar.FlatAppearance.BorderSize = 0;
             btnPagar.FlatAppearance.MouseDownBackColor = Color.FromArgb(21, 128, 61);
             btnPagar.FlatAppearance.MouseOverBackColor = Color.FromArgb(34, 197, 94);
             btnPagar.FlatStyle = FlatStyle.Flat;
             btnPagar.Font = new Font("Segoe UI", 28F, FontStyle.Bold, GraphicsUnit.Pixel);
             btnPagar.ForeColor = Color.White;
-            btnPagar.Location = new Point(0, 90);
+            btnPagar.Location = new Point(0, 76);
+            btnPagar.Margin = new Padding(0, 6, 0, 0);
+            btnPagar.MinimumSize = new Size(0, 72);
             btnPagar.Name = "btnPagar";
-            btnPagar.Size = new Size(1084, 72);
+            btnPagar.Size = new Size(1084, 118);
             btnPagar.TabIndex = 1;
             btnPagar.Text = "COBRAR";
             btnPagar.TextAlign = ContentAlignment.MiddleCenter;
@@ -503,6 +521,8 @@ namespace UI.DISEÑO
             cardCambio.ResumeLayout(false);
             tlpCambio.ResumeLayout(false);
             pnlFooter.ResumeLayout(false);
+            tlpFooterMain.ResumeLayout(false);
+            tlpFooterMain.PerformLayout();
             tlpFooterTop.ResumeLayout(false);
             tlpFooterTop.PerformLayout();
             ResumeLayout(false);
@@ -558,6 +578,7 @@ namespace UI.DISEÑO
         private Label lblIconoCambio;
         private Label lblCambioMonto;
         private Panel pnlFooter;
+        private TableLayoutPanel tlpFooterMain;
         private TableLayoutPanel tlpFooterTop;
         private CheckBox chkImprimirRecibo;
         private Button btnVistaPrevia;

@@ -100,8 +100,10 @@ namespace UI.DISEÑO
                 // 6️⃣ Deudas en vivo: cualquier cobro o nueva deuda refresca las tarjetas.
                 AppEventos.OnPagoRegistrado += RefrescarKpiDeudas;
                 AppEventos.OnDeudaModificada += RefrescarKpiDeudas;
+                AppEventos.OnProgramacionActivada += OnProgramacionActivada;
 
                 ConfigurarCapturaEscannerInicio();
+                ModuloAtajosTeclado.AsegurarFiltroGlobal();
 
                 string? advertenciaWhatsApp = TwilioSettings.ObtenerAdvertenciaConfiguracion();
                 if (!string.IsNullOrWhiteSpace(advertenciaWhatsApp))
@@ -181,6 +183,7 @@ namespace UI.DISEÑO
         {
             AppEventos.OnPagoRegistrado -= RefrescarKpiDeudas;
             AppEventos.OnDeudaModificada -= RefrescarKpiDeudas;
+            AppEventos.OnProgramacionActivada -= OnProgramacionActivada;
             AppEventos.OnStockCritico -= OnStockCriticoTiempoReal;
 
             if (_timerWhatsApp != null)
@@ -215,6 +218,14 @@ namespace UI.DISEÑO
             try { FacturaGastosAppHost.Stop(); } catch { /* ignore */ }
 
             base.OnFormClosed(e);
+        }
+
+        private static void OnProgramacionActivada(ProgramacionActivadaEventArgs info)
+        {
+            FrmProgramacionActivadaToast.MostrarUnaVez(
+                info.ProgramacionId,
+                info.PlanNombre,
+                info.ClienteNombre);
         }
 
         private void OnCajaCambiadaFacturaAuto()
@@ -631,6 +642,9 @@ namespace UI.DISEÑO
 
         private void FrmPresentacion_CapturaEscannerKeyDown(object? sender, KeyEventArgs e)
         {
+            if (ModuloAtajosTeclado.TryHandleNavegacion(e, this))
+                return;
+
             PosScannerCaptureHelper.HandleKeyDown(
                 e,
                 _bufferEscannerInicio,

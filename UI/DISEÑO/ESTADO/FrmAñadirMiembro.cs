@@ -18,11 +18,15 @@ namespace UI.DISEÑO.ESTADO
             "PREMIUM", "PRO", "MENSUALIDAD", "GLUTEOS GRANDE", "ABDOMEN PLANO", "M-A", "3x"
         };
 
-        private readonly ClienteBLL _clienteBLL = new();
-        private readonly PlanBLL _planBLL = new();
-        private readonly MembresiaBLL _membresiaBLL = new();
-        private readonly MensajeAutomaticoBLL _mensajeBLL = new();
-        private bool _syncFechaVence;
+        private ClienteBLL? _clienteBLL;
+        private PlanBLL? _planBLL;
+        private MembresiaBLL? _membresiaBLL;
+        private MensajeAutomaticoBLL? _mensajeBLL;
+
+        private ClienteBLL Clientes => _clienteBLL ??= new();
+        private PlanBLL Planes => _planBLL ??= new();
+        private MembresiaBLL Membresias => _membresiaBLL ??= new();
+        private MensajeAutomaticoBLL Mensajes => _mensajeBLL ??= new();
 
         public bool CambioRealizado { get; private set; }
 
@@ -67,18 +71,9 @@ namespace UI.DISEÑO.ESTADO
             ActualizarVistaVencimiento();
         }
 
-        /// <summary>Evita editar manualmente la fecha de vencimiento calculada.</summary>
-        private void dtFechaVence_ValueChanged(object? sender, EventArgs e)
-        {
-            if (_syncFechaVence)
-                return;
-
-            ActualizarVistaVencimiento();
-        }
-
         private void CargarPlanes()
         {
-            DataTable planes = _planBLL.ObtenerPlanes() ?? new DataTable();
+            DataTable planes = Planes.ObtenerPlanes() ?? new DataTable();
             var filtrados = planes.Clone();
 
             foreach (DataRow row in planes.Rows)
@@ -96,7 +91,7 @@ namespace UI.DISEÑO.ESTADO
 
         private void CargarMiembros()
         {
-            DataTable clientes = _clienteBLL.ObtenerClientesNoActivos() ?? new DataTable();
+            DataTable clientes = Clientes.ObtenerClientesNoActivos() ?? new DataTable();
             cmbMiembro.DisplayMember = "Nombre";
             cmbMiembro.ValueMember = "Id";
             cmbMiembro.DataSource = clientes;
@@ -104,54 +99,26 @@ namespace UI.DISEÑO.ESTADO
         }
 
         /// <summary>
-        /// Alta con fecha histórica: el día de vencimiento sale del ingreso (7–19 → 15; 20–6 → fin de mes),
-        /// pero el mes/año es el actual del PC para reflejar cuándo debe pagar hoy en Estado Clientes.
+        /// Calcula vencimiento desde la fecha de ingreso: 7–19 → 15 del mes siguiente;
+        /// 1–6 y 20 en adelante → último día del mes siguiente.
         /// </summary>
-        private static DateTime CalcularVencimientoAltaHistorica(DateTime fechaIngreso)
-        {
-            DateTime hoy = DateTime.Today;
-            int diaIngreso = fechaIngreso.Day;
-
-            if (diaIngreso >= 7 && diaIngreso <= 19)
-                return new DateTime(hoy.Year, hoy.Month, 15);
-
-            int ultimoDia = DateTime.DaysInMonth(hoy.Year, hoy.Month);
-            return new DateTime(hoy.Year, hoy.Month, ultimoDia);
-        }
-
-        private static DateTime ResolverVencimientoAlta(DateTime inicio)
-        {
-            if (inicio.Date < DateTime.Today)
-                return CalcularVencimientoAltaHistorica(inicio);
-
-            return MembresiaHelper.CalcularFechaVencimiento(inicio);
-        }
-
         private void ActualizarVistaVencimiento()
         {
             DateTime inicio = dtFechaInicio.Value.Date;
-            DateTime fin = ResolverVencimientoAlta(inicio);
-            bool esHistorica = inicio < DateTime.Today;
+            DateTime fin = MembresiaHelper.CalcularFechaVencimiento(inicio);
 
-            _syncFechaVence = true;
-            try
-            {
-                dtFechaVence.MinDate = new DateTime(2000, 1, 1);
-                dtFechaVence.MaxDate = new DateTime(2100, 12, 31);
-                dtFechaVence.Value = fin;
-                dtFechaVence.MinDate = fin;
-                dtFechaVence.MaxDate = fin;
-            }
-            finally
-            {
-                _syncFechaVence = false;
-            }
+            dtFechaVence.MinDate = new DateTime(2000, 1, 1);
+            dtFechaVence.MaxDate = new DateTime(2100, 12, 31);
+            dtFechaVence.Value = fin;
+            dtFechaVence.MinDate = fin;
+            dtFechaVence.MaxDate = fin;
 
             int dia = inicio.Day;
-            string reglaDia = dia >= 7 && dia <= 19 ? "día 15" : "último día del mes";
-            string reglaMes = esHistorica ? "mes actual (PC)" : "mes siguiente al ingreso";
+            string regla = dia >= 7 && dia <= 19
+                ? "día 15 del mes siguiente"
+                : "último día del mes siguiente";
             lblNotaVence.Text =
-                $"Ingreso {inicio:dd/MM/yyyy} → vence {fin:dd/MM/yyyy} ({reglaDia}, {reglaMes}). Sin movimiento en caja.";
+                $"Ingreso {inicio:dd/MM/yyyy} → vence {fin:dd/MM/yyyy} ({regla}). Sin movimiento en caja.";
         }
 
         private void tbnGuardar_Click(object? sender, EventArgs e)
@@ -177,7 +144,7 @@ namespace UI.DISEÑO.ESTADO
                 string nombrePlan = cbmTipoPlanAñadir.Text?.Trim() ?? "membresía";
                 string nombreCliente = cmbMiembro.Text?.Trim() ?? "Miembro";
                 DateTime inicio = dtFechaInicio.Value.Date;
-                DateTime vence = ResolverVencimientoAlta(inicio);
+                DateTime vence = MembresiaHelper.CalcularFechaVencimiento(inicio);
 
                 var confirm = MessageBox.Show(this,
                     $"¿Integrar a {nombreCliente} con plan {nombrePlan}?\n\n" +
@@ -192,7 +159,7 @@ namespace UI.DISEÑO.ESTADO
                     return;
 
                 tbnGuardar.Enabled = false;
-                MembresiaOperacionResult result = _membresiaBLL.RegistrarMiembroYaPagado(
+                MembresiaOperacionResult result = Membresias.RegistrarMiembroYaPagado(
                     clienteId, planId, inicio, Sesion.Usuario, vence);
 
                 CambioRealizado = true;
@@ -206,7 +173,7 @@ namespace UI.DISEÑO.ESTADO
                 {
                     try
                     {
-                        _mensajeBLL.EnviarMensajeAltaMiembroExistente(
+                        Mensajes.EnviarMensajeAltaMiembroExistente(
                             clienteCapture, planCapture, fechaFin, membresiaId);
                     }
                     catch (Exception ex)

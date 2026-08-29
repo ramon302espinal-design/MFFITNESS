@@ -28,6 +28,13 @@ namespace CORE
             return $"Renovación - {nombre} (Cliente {clienteId})";
         }
 
+        public static string IngresoProgramacion(int clienteId, string? nombreCliente, string? planNombre)
+        {
+            string nombre = NombreSeguro(nombreCliente, clienteId);
+            string plan = string.IsNullOrWhiteSpace(planNombre) ? "Plan" : planNombre.Trim();
+            return $"Programación membresía - {nombre} (Cliente {clienteId}) - {plan}";
+        }
+
         public static string IngresoPagoInicialFinanciado(int clienteId, string? nombreCliente, string detalle)
         {
             string nombre = NombreSeguro(nombreCliente, clienteId);

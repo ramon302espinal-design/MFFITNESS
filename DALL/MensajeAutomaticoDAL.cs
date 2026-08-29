@@ -173,7 +173,8 @@ namespace DL
             FROM Membresias m
             LEFT JOIN Planes p ON p.Id = m.PlanId
             WHERE m.Activa = 1
-              AND CAST(m.FechaFin AS DATE) = CAST(DATEADD(DAY, @DiasAntes, GETDATE()) AS DATE)";
+              AND CAST(m.FechaFin AS DATE) = CAST(DATEADD(DAY, @DiasAntes, GETDATE()) AS DATE)"
+            + MembresiaEstadoSql.FiltroMembresiaSinProgramacionPendiente;
 
             SqlParameter[] parametros =
             {
@@ -190,7 +191,8 @@ namespace DL
             FROM Membresias m
             LEFT JOIN Planes p ON p.Id = m.PlanId
             WHERE m.Activa = 1
-              AND CAST(m.FechaFin AS DATE) = CAST(GETDATE() AS DATE)";
+              AND CAST(m.FechaFin AS DATE) = CAST(GETDATE() AS DATE)"
+            + MembresiaEstadoSql.FiltroMembresiaSinProgramacionPendiente;
 
             return db.ExecuteQuery(query);
         }
@@ -212,9 +214,10 @@ namespace DL
                       FROM HistorialMembresias
                       GROUP BY ClienteId
                   ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
-                  WHERE h.ClienteId = m.ClienteId
+                    WHERE h.ClienteId = m.ClienteId
                     AND h.TipoMovimiento = 'SALIDA'
-              )";
+              )"
+            + MembresiaEstadoSql.FiltroMembresiaSinProgramacionPendiente;
 
             return db.ExecuteQuery(query);
         }

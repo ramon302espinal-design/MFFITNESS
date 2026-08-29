@@ -35,6 +35,13 @@ namespace UI.DISEÑO
         private readonly StringBuilder _bufferEscannerPos = new();
         private DateTime _ultimaTeclaEscannerPos = DateTime.MinValue;
         private readonly PosScannerIntervalGate _intervaloEscannerPos = new();
+        private int _suprimirTeclaCobrarHastaTick;
+        private int _ultimaTeclaSuprimidaTick;
+        private bool _bloquearCierrePosPorCobro;
+        private const int VentanaSuprimirTeclaCobrarMs = 1600;
+        private const int VentanaCancelarCierrePorReboteMs = 500;
+        private const int WmCommand = 0x0111;
+        private const int BnClicked = 0;
         private int _hoverProductoIdPos = -1;
         /// <summary>Id del producto cuya foto está en picProductoPos (no se limpia al salir del listado).</summary>
         private int _fotoProductoIdPos = -1;
@@ -188,8 +195,58 @@ namespace UI.DISEÑO
             ActualizarEstadoToolbarFotoProductoPos(false);
             ConfigurarSaldoAFavor();
 
+            if (btnBack != null)
+                ConfigurarProteccionBtnBack();
+
+            FormClosing -= FrmPagos_ProtegerCierrePorReboteTecla;
+            FormClosing += FrmPagos_ProtegerCierrePorReboteTecla;
+
             if (tabProductos.SelectedTab == tabPago)
                 EnfocarEscannerPos();
+        }
+
+        private void ConfigurarProteccionBtnBack()
+        {
+            btnBack.TabStop = false;
+            btnBack.PreviewKeyDown -= BtnBack_PreviewKeyDown;
+            btnBack.PreviewKeyDown += BtnBack_PreviewKeyDown;
+            btnBack.KeyDown -= BtnBack_BloquearActivacionTeclado;
+            btnBack.KeyDown += BtnBack_BloquearActivacionTeclado;
+        }
+
+        private void BtnBack_PreviewKeyDown(object? sender, PreviewKeyDownEventArgs e)
+        {
+            if (e.KeyCode is Keys.Space or Keys.Enter or Keys.Return)
+                e.IsInputKey = true;
+        }
+
+        private void BtnBack_BloquearActivacionTeclado(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode is Keys.Space or Keys.Enter or Keys.Return)
+            {
+                MarcarTeclaCobrarSuprimida();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void FrmPagos_ProtegerCierrePorReboteTecla(object? sender, FormClosingEventArgs e)
+        {
+            if (e.Cancel)
+                return;
+
+            if (_bloquearCierrePosPorCobro)
+            {
+                e.Cancel = true;
+                DialogResult = DialogResult.None;
+                return;
+            }
+
+            if (DebeSuprimirTeclaCobrarTrasCalculadora() && CierreRecienPrecedidoPorTeclaSuprimida())
+            {
+                e.Cancel = true;
+                DialogResult = DialogResult.None;
+            }
         }
 
         /// <summary>Precarga un EAN antes de ShowDialog (p. ej. escaneo desde inicio).</summary>
@@ -278,6 +335,16 @@ namespace UI.DISEÑO
         /// </summary>
         private void FrmPagos_CapturaEscannerKeyDown(object? sender, KeyEventArgs e)
         {
+            if (DebeSuprimirTeclaTrasCalculadora(e))
+                return;
+
+            if (ModuloAtajosTeclado.TryHandleFinanciamientoProducto(
+                    e, this, btnFinanciamiento, tabProductos, tabPago, panelFinanciamientoProducto))
+                return;
+
+            if (ModuloAtajosTeclado.TryHandleNavegacion(e, this))
+                return;
+
             PosScannerCaptureHelper.HandleKeyDown(
                 e,
                 _bufferEscannerPos,
@@ -885,8 +952,53 @@ namespace UI.DISEÑO
             }
         }
 
+        public override bool PreProcessMessage(ref Message msg)
+        {
+            const int wmKeyDown = 0x0100;
+
+            if (msg.Msg == wmKeyDown && DebeSuprimirTeclaCobrarTrasCalculadora())
+            {
+                Keys key = (Keys)(int)msg.WParam & Keys.KeyCode;
+                if (EsTeclaReboteCobro(key))
+                {
+                    MarcarTeclaCobrarSuprimida();
+                    return true;
+                }
+            }
+
+            return base.PreProcessMessage(ref msg);
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WmCommand
+                && DebeSuprimirTeclaCobrarTrasCalculadora()
+                && EsClicTecladoBtnBack(ref m))
+            {
+                MarcarTeclaCobrarSuprimida();
+                return;
+            }
+
+            base.WndProc(ref m);
+        }
+
+        private bool EsClicTecladoBtnBack(ref Message m)
+        {
+            if (btnBack == null || btnBack.IsDisposed)
+                return false;
+
+            int notificacion = (int)((uint)(nint)m.WParam >> 16) & 0xFFFF;
+            if (notificacion != BnClicked)
+                return false;
+
+            return m.LParam == btnBack.Handle;
+        }
+
+        private static bool EsTeclaReboteCobro(Keys key) =>
+            key is Keys.Space or Keys.Enter or Keys.Return;
+
         /// <summary>
-        /// Enter dispara COBRAR de la pestaña activa (productos o membresía).
+        /// Enter o Espacio dispara COBRAR de la pestaña activa (productos o membresía).
         /// </summary>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
@@ -904,39 +1016,56 @@ namespace UI.DISEÑO
                 }
             }
 
-            if (keyData == Keys.Enter || keyData == Keys.Return)
+            if (keyData == Keys.Enter || keyData == Keys.Return || keyData == Keys.Space)
             {
-                if (txtBuscarProducto != null && txtBuscarProducto.Focused)
-                    return false;
-
-                if (cmbClientePausarVenta != null && cmbClientePausarVenta.Focused)
-                    return false;
-
-                // No cobrar con Enter mientras se busca el miembro deudor.
-                if (txtMiembroDebe != null && txtMiembroDebe.Focused)
-                    return false;
-                if (listMiembros != null && listMiembros.Focused)
-                    return false;
-
-                if (tabProductos.SelectedTab == tabPago)
-                {
-                    if (btnPagarProductos.Enabled && btnPagarProductos.Visible)
-                    {
-                        btnPagarProductos.PerformClick();
-                        return true;
-                    }
-                }
-                else if (tabProductos.SelectedTab == tabMembresia)
-                {
-                    if (btnPagar.Enabled && btnPagar.Visible)
-                    {
-                        btnPagar.PerformClick();
-                        return true;
-                    }
-                }
+                if (IntentarCobrarPestañaActiva())
+                    return true;
             }
 
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private bool IntentarCobrarPestañaActiva()
+        {
+            if (DebeSuprimirTeclaCobrarTrasCalculadora())
+                return true;
+
+            if (txtBuscarProducto != null && txtBuscarProducto.Focused)
+                return false;
+
+            if (cmbClientePausarVenta != null && cmbClientePausarVenta.Focused)
+                return false;
+
+            if (txtMiembroDebe != null && txtMiembroDebe.Focused)
+                return false;
+
+            if (listMiembros != null && listMiembros.Focused)
+                return false;
+
+            if (ActiveControl is TextBoxBase { ReadOnly: false })
+                return false;
+
+            if (ActiveControl is ComboBox { DropDownStyle: ComboBoxStyle.DropDown })
+                return false;
+
+            if (tabProductos.SelectedTab == tabPago)
+            {
+                if (btnPagarProductos.Enabled && btnPagarProductos.Visible)
+                {
+                    btnPagarProductos.PerformClick();
+                    return true;
+                }
+            }
+            else if (tabProductos.SelectedTab == tabMembresia)
+            {
+                if (btnPagar.Enabled && btnPagar.Visible)
+                {
+                    btnPagar.PerformClick();
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -1645,6 +1774,8 @@ namespace UI.DISEÑO
 
         private void btnPagarProductos_Click(object sender, EventArgs e)
         {
+            _bloquearCierrePosPorCobro = true;
+            ActivarProteccionReboteCobro();
             try
             {
                 if (carrito.Rows.Count == 0) return;
@@ -1680,25 +1811,18 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                if (pago.DebeImprimirRecibo)
-                {
-                    string? clienteNombre = cmbCliente.SelectedItem is DataRowView row
-                        ? row["Nombre"]?.ToString()
-                        : null;
-
-                    ReciboPosHelper.MostrarVenta(
-                        this,
-                        pago,
-                        carrito,
-                        clienteNombre,
-                        Sesion.Usuario ?? "ADMIN");
-                }
-
                 FinalizarPosTrasVenta();
                 ProgramarRefrescoDashboard();
-                MessageBox.Show("Venta realizada.");
+                MessageBox.Show(this, "Venta realizada.", "Cobro",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                RefrescarProteccionReboteCobro();
+                EnfocarEscannerPos();
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
+            finally
+            {
+                ProgramarFinProteccionReboteCobro();
+            }
         }
 
         /// <summary>
@@ -2474,12 +2598,62 @@ namespace UI.DISEÑO
                 return false;
             }
 
+            ActivarProteccionReboteCobro();
+
             using var frmPago = new FrmPago(totalAPagar);
             if (frmPago.ShowDialog(this) != DialogResult.OK)
                 return false;
 
+            RefrescarProteccionReboteCobro();
+
             solicitud = frmPago.PagoResultado;
             return solicitud != null;
         }
+
+        private void ActivarProteccionReboteCobro() =>
+            _suprimirTeclaCobrarHastaTick = Environment.TickCount + VentanaSuprimirTeclaCobrarMs;
+
+        private void RefrescarProteccionReboteCobro() =>
+            _suprimirTeclaCobrarHastaTick = Environment.TickCount + VentanaSuprimirTeclaCobrarMs;
+
+        private void MarcarTeclaCobrarSuprimida() =>
+            _ultimaTeclaSuprimidaTick = Environment.TickCount;
+
+        private void ProgramarFinProteccionReboteCobro()
+        {
+            RefrescarProteccionReboteCobro();
+            BeginInvoke(new Action(() =>
+            {
+                EnfocarEscannerPos();
+                BeginInvoke(new Action(() =>
+                {
+                    _bloquearCierrePosPorCobro = false;
+                    _suprimirTeclaCobrarHastaTick = Environment.TickCount + 350;
+                }));
+            }));
+        }
+
+        private bool CierreRecienPrecedidoPorTeclaSuprimida() =>
+            unchecked(Environment.TickCount - _ultimaTeclaSuprimidaTick) < VentanaCancelarCierrePorReboteMs;
+
+        /// <summary>
+        /// Tras cerrar FrmPago con Espacio/Enter, la tecla puede rebotar al POS y activar ◀ u otro botón.
+        /// </summary>
+        private bool DebeSuprimirTeclaTrasCalculadora(KeyEventArgs e)
+        {
+            if (!EsTeclaReboteCobro(e.KeyCode))
+                return false;
+
+            if (!DebeSuprimirTeclaCobrarTrasCalculadora())
+                return false;
+
+            MarcarTeclaCobrarSuprimida();
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return true;
+        }
+
+        private bool DebeSuprimirTeclaCobrarTrasCalculadora() =>
+            Environment.TickCount < _suprimirTeclaCobrarHastaTick;
     }
 }

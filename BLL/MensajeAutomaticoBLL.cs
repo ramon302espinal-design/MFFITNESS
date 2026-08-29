@@ -383,6 +383,22 @@ namespace BLL
             });
         }
 
+        /// <summary>Aviso al activar una membresía previamente programada y pagada.</summary>
+        public bool EnviarMensajeProgramacionActivada(
+            int clienteId,
+            string nombrePlan,
+            DateTime fechaInicio,
+            DateTime fechaVence,
+            int programacionId)
+        {
+            return EnviarMensajeTemplado(clienteId, "PROGRAMACION_ACTIVADA", new Dictionary<string, string>
+            {
+                ["PLAN"] = string.IsNullOrWhiteSpace(nombrePlan) ? "membresia" : nombrePlan.Trim(),
+                ["FECHA_INICIO"] = fechaInicio.ToString("dd/MM/yyyy"),
+                ["FECHA_VENCE"] = fechaVence.ToString("dd/MM/yyyy")
+            }, programacionId);
+        }
+
         /// <summary>Aviso de integración de miembro ya pagado. Sin monto.</summary>
         public bool EnviarMensajeAltaMiembroExistente(
             int clienteId,
@@ -1003,6 +1019,7 @@ namespace BLL
             "PRUEBA_SISTEMA" => "Mensaje de prueba",
             "CONGELACION_MEMBRESIA" => "Membresia congelada",
             "DESCONGELACION_MEMBRESIA" => "Membresia reactivada",
+            "PROGRAMACION_ACTIVADA" => "Membresia programada activada",
             "OFERTA_MEMBRESIA" => "Oferta de membresia aplicada",
             "ALTA_MIEMBRO_EXISTENTE" => "Actualizacion de membresia registrada",
             _ => "Actualizacion de cuenta"

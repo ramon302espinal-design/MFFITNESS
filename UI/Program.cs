@@ -18,6 +18,7 @@ namespace UI
         {
             ConfigurarFormatoHora12();
             ApplicationConfiguration.Initialize();
+            ModuloAtajosTeclado.AsegurarFiltroGlobal();
             Application.AddMessageFilter(new EscapeInicioMessageFilter());
             FacturaMembresiaPdfService.ConfigurarLicencia();
 

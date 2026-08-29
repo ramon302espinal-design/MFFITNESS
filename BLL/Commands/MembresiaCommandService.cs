@@ -128,6 +128,33 @@ namespace BLL.Commands
             }
         }
 
+        public static CommandResult ProgramarMembresia(
+            int clienteId,
+            int planId,
+            decimal monto,
+            DateTime fechaInicioProgramada,
+            DateTime fechaFinProgramada,
+            string? usuario = null,
+            string? nota = null)
+        {
+            try
+            {
+                var operacion = new ProgramacionBLL().ProgramarMembresia(
+                    clienteId,
+                    planId,
+                    monto,
+                    fechaInicioProgramada,
+                    fechaFinProgramada,
+                    ResolveUsuario(usuario),
+                    nota);
+                return CommandResult.Ok("Programación registrada correctamente.", operacion);
+            }
+            catch (Exception ex)
+            {
+                return CommandResult.Fail(ex.Message);
+            }
+        }
+
         private static string ResolveUsuario(string? usuario)
         {
             if (!string.IsNullOrWhiteSpace(usuario))

@@ -44,6 +44,7 @@ namespace UI.DISEÑO
             lblBuscar = new Label();
             txtBuscar = new TextBox();
             panelAcciones = new Panel();
+            btnProgramar = new Button();
             btnAñadirMiembro = new Button();
             btnRenovar = new Button();
             btnDesactivar = new Button();
@@ -268,6 +269,7 @@ namespace UI.DISEÑO
             // 
             // panelAcciones
             // 
+            panelAcciones.Controls.Add(btnProgramar);
             panelAcciones.Controls.Add(btnAñadirMiembro);
             panelAcciones.Controls.Add(btnRenovar);
             panelAcciones.Controls.Add(btnDesactivar);
@@ -279,6 +281,19 @@ namespace UI.DISEÑO
             panelAcciones.Size = new Size(1924, 64);
             panelAcciones.TabIndex = 3;
             panelAcciones.Tag = "classic";
+            // 
+            // btnProgramar
+            // 
+            btnProgramar.Anchor = AnchorStyles.None;
+            btnProgramar.Enabled = false;
+            btnProgramar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnProgramar.Location = new Point(1189, 11);
+            btnProgramar.Name = "btnProgramar";
+            btnProgramar.Size = new Size(150, 42);
+            btnProgramar.TabIndex = 5;
+            btnProgramar.Text = "PROGRAMAR";
+            btnProgramar.UseVisualStyleBackColor = true;
+            btnProgramar.Click += btnProgramar_Click;
             // 
             // btnAñadirMiembro
             // 
@@ -827,6 +842,7 @@ namespace UI.DISEÑO
         private Label lblCTotal;
         private Label lblMTotal;
         private Label label4;
+        private Button btnProgramar;
         private Button btnAñadirMiembro;
     }
 }

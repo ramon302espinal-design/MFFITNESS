@@ -301,6 +301,10 @@ namespace BLL
         public void ActualizarVencimientos()
         {
             dal.ActualizarVencidas();
+            IReadOnlyList<ProgramacionActivadaEventArgs> activadas =
+                new ProgramacionBLL().AplicarProgramacionesPendientes();
+            foreach (ProgramacionActivadaEventArgs info in activadas)
+                AppEventos.ProgramacionActivada(info);
         } 
         // ===============================
         // 🔥 ALERTAS

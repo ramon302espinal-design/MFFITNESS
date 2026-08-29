@@ -200,6 +200,7 @@ namespace UI
         // ===============================
         private void FrmDeudas_Load(object sender, EventArgs e)
         {
+            BusquedaFocusHelper.Wire(this);
 
             ConfigurarGrid();
             ConfigurarFiltros();

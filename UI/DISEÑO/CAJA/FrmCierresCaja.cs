@@ -31,6 +31,8 @@ namespace UI.DISEÑO
 
         private void FrmCierresCaja_Load(object sender, EventArgs e)
         {
+            BusquedaFocusHelper.Wire(this);
+
             _esAdmin = string.Equals(
                 Sesion.Rol?.Trim(),
                 "ADMIN",

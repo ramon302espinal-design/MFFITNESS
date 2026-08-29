@@ -69,8 +69,9 @@ namespace UI.DISEÑO
             ThemeApplier.ApplyRoundedRegion(cardCambio, 20);
             ThemeApplier.ApplyRoundedRegion(btnCerrar, 12);
             ThemeApplier.ApplyRoundedRegion(btnVistaPrevia, 12);
-            ThemeApplier.ApplyRoundedRegion(btnPagar, 15);
             ThemeApplier.ApplyRoundedRegion(pnlMontoInput, 12);
+
+            AcceptButton = btnPagar;
 
             foreach (Button billete in ObtenerBilletes())
                 ThemeApplier.ApplyRoundedRegion(billete, 12);
@@ -106,6 +107,7 @@ namespace UI.DISEÑO
             cmbMetodo.SelectedIndexChanged += cmbMetodo_SelectedIndexChanged;
             btnPagar.Click += (_, _) => ProcesarPago();
             btnCerrar.Click += (_, _) => CerrarSinProcesar();
+            btnCerrar.TabStop = false;
             btnVistaPrevia.Click += btnVistaPrevia_Click;
 
             btnPagar.MouseEnter += (_, _) => btnPagar.BackColor = CobrarButtonStyle.VerdeHover;
@@ -123,6 +125,9 @@ namespace UI.DISEÑO
             txtMontoRecibido.Leave += txtMontoRecibido_Leave;
             txtMontoRecibido.TextChanged += txtMontoRecibido_TextChanged;
             txtMontoRecibido.KeyPress += txtMontoRecibido_KeyPress;
+
+            chkImprimirRecibo.Visible = false;
+            chkImprimirRecibo.Checked = false;
 
             cardTotal.Paint += CardBlanca_Paint;
             cardCambio.Paint += CardCambio_Paint;
@@ -221,11 +226,14 @@ namespace UI.DISEÑO
         {
             base.OnKeyDown(e);
 
-            if (e.KeyCode == Keys.Enter)
+            if (e.KeyCode is Keys.Enter or Keys.Space)
             {
+                if (cmbMetodo.DroppedDown)
+                    return;
+
                 e.Handled = true;
                 e.SuppressKeyPress = true;
-                ProcesarPago();
+                BeginInvoke(new Action(ProcesarPago));
                 return;
             }
 
@@ -521,7 +529,7 @@ namespace UI.DISEÑO
                 TotalAPagar = Math.Round(_totalAPagar, 2, MidpointRounding.AwayFromZero),
                 MontoRecibido = recibido,
                 MetodoSeleccionado = _metodoSeleccionado,
-                DebeImprimirRecibo = chkImprimirRecibo.Checked
+                DebeImprimirRecibo = false
             };
 
             SystemSounds.Asterisk.Play();

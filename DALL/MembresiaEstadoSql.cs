@@ -50,6 +50,23 @@ namespace DL
                               AND g.Activa = 1
                         )";
 
+        public const string ExpresionProgramacionPendiente = @"
+                        EXISTS (
+                            SELECT 1
+                            FROM MembresiasProgramadas mp
+                            WHERE mp.ClienteId = c.ID
+                              AND mp.Estado = N'PENDIENTE'
+                        )";
+
+        /// <summary>Para consultas sobre Membresias (alias m): excluir quien ya pagó por anticipado.</summary>
+        public const string FiltroMembresiaSinProgramacionPendiente = @"
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM MembresiasProgramadas mp
+                    WHERE mp.ClienteId = m.ClienteId
+                      AND mp.Estado = N'PENDIENTE'
+                )";
+
         /// <summary>
         /// CASE Estado (alias c = Clientes, m = última membresía).
         /// SALIDA → DESACTIVADO; congelación activa → CONGELADO; si no, rige FechaFin.
@@ -61,6 +78,8 @@ namespace DL
                         WHEN " + ExpresionCongelado + @" THEN 'CONGELADO'
                         WHEN " + ExpresionUltimaBajaVencido + @" THEN 'VENCIDO'
                         WHEN m.FechaFin IS NULL THEN 'SIN MEMBRESIA'
+                        WHEN CAST(m.FechaFin AS DATE) >= CAST(GETDATE() AS DATE)
+                             AND " + ExpresionProgramacionPendiente + @" THEN 'ACTIVO Y PROGRAMADO'
                         WHEN CAST(m.FechaFin AS DATE) >= CAST(GETDATE() AS DATE) THEN 'ACTIVO'
                         WHEN CAST(m.FechaFin AS DATE) < CAST(GETDATE() AS DATE) THEN 'VENCIDO'
                         ELSE 'SIN MEMBRESIA'

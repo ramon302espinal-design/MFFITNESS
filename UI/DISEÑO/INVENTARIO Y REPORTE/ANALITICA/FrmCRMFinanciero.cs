@@ -24,6 +24,8 @@ namespace UI
             InitializeComponent();
             // Design System CRM (FASE 2.3): no aplicar ThemeApplier redondeado del POS.
             CrmVisualTokens.MarkClassic(this);
+            if (!ThemeHost.IsDesignTime())
+                ModuloAtajosTeclado.WireAtajosEnFormulario(this);
         }
 
         private void FrmCRMFinanciero_Load(object sender, EventArgs e)

@@ -52,11 +52,96 @@ namespace UI.Helpers
             if (System.ComponentModel.LicenseManager.UsageMode == System.ComponentModel.LicenseUsageMode.Designtime)
                 return;
 
+            ModuloAtajosTeclado.AsegurarFiltroGlobal();
+
             OcultarBotonActual(panelNav, moduloActual);
             OrdenarBotones(panelNav);
             WireBack(panelNav, host);
             WireAllNavClicks(panelNav, host);
+            ModuloAtajosTeclado.WireAtajosEnFormulario(host);
+            BusquedaFocusHelper.Wire(host);
             AsegurarRelayout(panelNav, host, moduloActual);
+        }
+
+        public static void AbrirCaja(IWin32Window? owner)
+        {
+            using var frm = new FrmCajaDashboard();
+            MostrarDialogo(frm, owner);
+            ObtenerPresentacion()?.CargarDashboard();
+        }
+
+        public static void AbrirEstado(IWin32Window? owner)
+        {
+            var presentacion = ObtenerPresentacion();
+            if (presentacion == null)
+            {
+                MessageBox.Show(ResolverOwnerForm(owner),
+                    "No se puede abrir Estado. Ábrelo desde el menú principal.",
+                    "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var frm = new FrmEstadoClientes(presentacion);
+            MostrarDialogo(frm, owner);
+            presentacion.CargarDashboard();
+        }
+
+        public static void AbrirDeudas(IWin32Window? owner)
+        {
+            using var frm = new FrmModuloDeudas();
+            MostrarDialogo(frm, owner);
+            ObtenerPresentacion()?.CargarDashboard();
+        }
+
+        public static void AbrirHistorial(IWin32Window? owner)
+        {
+            var presentacion = ObtenerPresentacion();
+            using Form frm = presentacion != null
+                ? new FrmHistorialVentas(presentacion)
+                : new FrmHistorialVentas();
+            MostrarDialogo(frm, owner);
+            presentacion?.CargarDashboard();
+        }
+
+        public static void AbrirInventario(IWin32Window? owner)
+        {
+            using var frm = new FrmProductos { StartPosition = FormStartPosition.CenterScreen };
+            MostrarDialogo(frm, owner);
+        }
+
+        public static void AbrirReportes(IWin32Window? owner)
+        {
+            using var frm = new FrmCRMFinanciero { StartPosition = FormStartPosition.CenterScreen };
+            MostrarDialogo(frm, owner);
+        }
+
+        public static void AbrirClientes(IWin32Window? owner)
+        {
+            var presentacion = ObtenerPresentacion();
+            if (presentacion == null)
+            {
+                MessageBox.Show(ResolverOwnerForm(owner),
+                    "No se puede abrir Clientes. Ábrelo desde el menú principal.",
+                    "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var frm = new FrmClientes(presentacion);
+            MostrarDialogo(frm, owner);
+            presentacion.CargarDashboard();
+        }
+
+        private static Form? ResolverOwnerForm(IWin32Window? owner)
+        {
+            if (owner is Form f && !f.IsDisposed)
+                return f;
+            return Form.ActiveForm is { IsDisposed: false } active ? active : null;
+        }
+
+        private static DialogResult MostrarDialogo(Form frm, IWin32Window? owner)
+        {
+            Form? host = ResolverOwnerForm(owner);
+            return host != null ? frm.ShowDialog(host) : frm.ShowDialog();
         }
 
         public static void OcultarBotonActual(Panel panelNav, string moduloActual)
@@ -159,70 +244,14 @@ namespace UI.Helpers
 
         private static void WireAllNavClicks(Panel panelNav, Form host)
         {
-            WireClick(panelNav, host, "btnNavPagar", () => AbrirPos(host));
-            WireClick(panelNav, host, "btnNavDeudas", () =>
-            {
-                using var frm = new UI.FrmModuloDeudas();
-                frm.ShowDialog(host);
-                ObtenerPresentacion()?.CargarDashboard();
-            });
-            WireClick(panelNav, host, "btnNavEstado", () =>
-            {
-                var presentacion = ObtenerPresentacion();
-                if (presentacion == null)
-                {
-                    MessageBox.Show(host,
-                        "No se puede abrir Estado. Ábrelo desde el menú principal.",
-                        "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                using var frm = new FrmEstadoClientes(presentacion);
-                frm.ShowDialog(host);
-                presentacion.CargarDashboard();
-            });
-            WireClick(panelNav, host, "btnNavCaja", () =>
-            {
-                using var frm = new FrmCajaDashboard();
-                frm.ShowDialog(host);
-                ObtenerPresentacion()?.CargarDashboard();
-            });
-            WireClick(panelNav, host, "btnNavHistorial", () =>
-            {
-                var presentacion = ObtenerPresentacion();
-                using Form frm = presentacion != null
-                    ? new FrmHistorialVentas(presentacion)
-                    : new FrmHistorialVentas(host);
-                frm.ShowDialog(host);
-                presentacion?.CargarDashboard();
-            });
-            WireClick(panelNav, host, "btnNavInventario", () =>
-            {
-                using var frm = new FrmProductos { StartPosition = FormStartPosition.CenterScreen };
-                frm.ShowDialog(host);
-            });
-            WireClick(panelNav, host, "btnNavReportes", () =>
-            {
-                // Misma entrada que FrmPresentacion.btnReportes → CRM Financiero.
-                // FrmReportes (legacy) no se toca.
-                using var frm = new FrmCRMFinanciero { StartPosition = FormStartPosition.CenterScreen };
-                frm.ShowDialog(host);
-            });
-            WireClick(panelNav, host, "btnNavClientes", () =>
-            {
-                var presentacion = ObtenerPresentacion();
-                if (presentacion == null)
-                {
-                    MessageBox.Show(host,
-                        "No se puede abrir Clientes. Ábrelo desde el menú principal.",
-                        "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                using var frm = new FrmClientes(presentacion);
-                frm.ShowDialog(host);
-                presentacion.CargarDashboard();
-            });
+            WireClick(panelNav, host, "btnNavPagar", () => AbrirCobrar(host));
+            WireClick(panelNav, host, "btnNavDeudas", () => AbrirDeudas(host));
+            WireClick(panelNav, host, "btnNavEstado", () => AbrirEstado(host));
+            WireClick(panelNav, host, "btnNavCaja", () => AbrirCaja(host));
+            WireClick(panelNav, host, "btnNavHistorial", () => AbrirHistorial(host));
+            WireClick(panelNav, host, "btnNavInventario", () => AbrirInventario(host));
+            WireClick(panelNav, host, "btnNavReportes", () => AbrirReportes(host));
+            WireClick(panelNav, host, "btnNavClientes", () => AbrirClientes(host));
         }
 
         private static void AsegurarRelayout(Panel panelNav, Form host, string moduloActual)
@@ -395,13 +424,26 @@ namespace UI.Helpers
             return null;
         }
 
-        private static void AbrirPos(Form host)
+        public static void AbrirCobrar(IWin32Window? owner)
         {
+            foreach (Form form in Application.OpenForms)
+            {
+                if (form is FrmPagos pagos && !pagos.IsDisposed)
+                {
+                    pagos.Focus();
+                    pagos.ActivarTabProductosPublico();
+                    return;
+                }
+            }
+
             var presentacion = ObtenerPresentacion();
+            Form? host = ResolverOwnerForm(owner);
             using Form frm = presentacion != null
                 ? new FrmPagos(presentacion)
-                : new FrmPagos(host);
-            frm.ShowDialog(host);
+                : host != null
+                    ? new FrmPagos(host)
+                    : new FrmPagos();
+            MostrarDialogo(frm, owner);
             presentacion?.CargarDashboard();
         }
 

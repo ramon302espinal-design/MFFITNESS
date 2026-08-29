@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Windows.Forms;
 using System.Data;
 using CORE;
@@ -364,6 +365,7 @@ namespace UI.DISEÑO
                 {
                     btnRenovar.Enabled = false;
                     btnCongelar.Enabled = false;
+                    btnProgramar.Enabled = false;
                     return;
                 }
 
@@ -375,12 +377,15 @@ namespace UI.DISEÑO
                 btnCongelar.Enabled =
                     estado.Equals("ACTIVO", StringComparison.OrdinalIgnoreCase) ||
                     estado.Equals("CONGELADO", StringComparison.OrdinalIgnoreCase);
+                btnProgramar.Enabled =
+                    estado.Equals("ACTIVO", StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error en selección del grid: {ex.Message}");
                 btnRenovar.Enabled = false;
                 btnCongelar.Enabled = false;
+                btnProgramar.Enabled = false;
             }
         }
 
@@ -557,6 +562,8 @@ namespace UI.DISEÑO
 
             if (estado == "VENCIDO")
                 fila.DefaultCellStyle.BackColor = Color.LightCoral;
+            else if (estado == "ACTIVO Y PROGRAMADO")
+                fila.DefaultCellStyle.BackColor = Color.PaleGreen;
             else if (estado == "ACTIVO")
                 fila.DefaultCellStyle.BackColor = Color.LightGreen;
             else if (estado == "CONGELADO")
@@ -582,6 +589,11 @@ namespace UI.DISEÑO
                 else if (estado == "CONGELADO")
                 {
                     e.Value = "CLIENTE CONGELADO";
+                    e.FormattingApplied = true;
+                }
+                else if (estado == "ACTIVO Y PROGRAMADO")
+                {
+                    e.Value = "ACTIVO Y PROGRAMADO";
                     e.FormattingApplied = true;
                 }
             }
@@ -699,6 +711,75 @@ namespace UI.DISEÑO
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
+        }
+
+        private void btnProgramar_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var miembros = ObtenerMiembrosActivosDesdeGrid();
+                if (miembros.Count == 0)
+                {
+                    MessageBox.Show(this,
+                        "No hay miembros ACTIVOS en el grid para programar.",
+                        "Programación",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                TryObtenerClienteDeFila(dgvEstado.CurrentRow, out int seleccionado);
+
+                using var frm = new UI.DISEÑO.ESTADO.FrmProgramacion(miembros, seleccionado);
+                frm.ShowDialog(this);
+                if (frm.ProgramacionCompletada)
+                {
+                    CargarEstado();
+                    _presentacion?.CargarDashboard();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "Error al abrir programación: " + ex.Message,
+                    "Programación",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private List<ProgramacionMiembroItemDTO> ObtenerMiembrosActivosDesdeGrid()
+        {
+            var lista = new List<ProgramacionMiembroItemDTO>();
+            foreach (DataGridViewRow fila in dgvEstado.Rows)
+            {
+                if (fila.IsNewRow)
+                    continue;
+
+                string estado = ObtenerValorCelda(fila, "Estado");
+                if (!estado.Equals("ACTIVO", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!TryObtenerClienteDeFila(fila, out int clienteId))
+                    continue;
+
+                DateTime vence = DateTime.Today;
+                var celdaFin = ObtenerCelda(fila, "FechaFin");
+                if (celdaFin?.Value != null && celdaFin.Value != DBNull.Value)
+                    vence = Convert.ToDateTime(celdaFin.Value).Date;
+
+                lista.Add(new ProgramacionMiembroItemDTO
+                {
+                    ClienteId = clienteId,
+                    Nombre = ObtenerValorCelda(fila, "Nombre"),
+                    Membresia = ObtenerValorCelda(fila, "Membresia"),
+                    FechaVencimiento = vence
+                });
+            }
+
+            return lista
+                .OrderBy(m => m.Nombre, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         // ===============================

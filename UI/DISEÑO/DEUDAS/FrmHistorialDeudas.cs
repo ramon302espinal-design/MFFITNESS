@@ -25,6 +25,8 @@ namespace UI
 
         private void FrmHistorialDeudas_Load(object sender, EventArgs e)
         {
+            BusquedaFocusHelper.Wire(this);
+
             // 🔐 Validación de permisos SOLO si el formulario NO está embebido
             // Cuando TopLevel = false, significa que está dentro del módulo unificado
             if (this.TopLevel)

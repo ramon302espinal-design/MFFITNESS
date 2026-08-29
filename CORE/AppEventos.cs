@@ -1,7 +1,19 @@
 using System;
+using System.Collections.Generic;
 
 namespace CORE
 {
+    public sealed class ProgramacionActivadaEventArgs : EventArgs
+    {
+        public int ProgramacionId { get; init; }
+        public int ClienteId { get; init; }
+        public int MembresiaId { get; init; }
+        public string ClienteNombre { get; init; } = string.Empty;
+        public string PlanNombre { get; init; } = string.Empty;
+        public DateTime FechaInicio { get; init; }
+        public DateTime FechaFin { get; init; }
+    }
+
     public static class AppEventos
     {
         // ===============================
@@ -39,6 +51,24 @@ namespace CORE
             if (productoId <= 0)
                 return;
             OnStockCritico?.Invoke(productoId);
+        }
+
+        public static event Action<ProgramacionActivadaEventArgs>? OnProgramacionActivada;
+
+        private static readonly HashSet<int> _programacionEventoEmitido = new();
+
+        public static void ProgramacionActivada(ProgramacionActivadaEventArgs info)
+        {
+            if (info == null || info.ProgramacionId <= 0)
+                return;
+
+            lock (_programacionEventoEmitido)
+            {
+                if (!_programacionEventoEmitido.Add(info.ProgramacionId))
+                    return;
+            }
+
+            OnProgramacionActivada?.Invoke(info);
         }
     }
 }

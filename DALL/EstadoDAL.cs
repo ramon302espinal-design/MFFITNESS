@@ -11,6 +11,7 @@ namespace DL
         public DataTable ObtenerEstadoClientes()
         {
             new CongelacionDAL().EnsureSchema();
+            new MembresiaProgramadaDAL().EnsureSchema();
 
             // Activos, vencidos, desactivados y congelados (misma regla que el dashboard).
             // Clientes recién agregados (sin compra) no aparecen hasta pagar un plan.
@@ -53,7 +54,7 @@ namespace DL
                     GROUP BY ClienteId
                 ) d ON d.ClienteId = c.ID
             ) estado
-            WHERE estado.Estado IN ('ACTIVO', 'VENCIDO', 'DESACTIVADO', 'CONGELADO')
+            WHERE estado.Estado IN ('ACTIVO', 'ACTIVO Y PROGRAMADO', 'VENCIDO', 'DESACTIVADO', 'CONGELADO')
             ORDER BY estado.Nombre";
 
             return db.ExecuteQuery(query);
@@ -81,7 +82,7 @@ namespace DL
                   AND c.Nombre <> N'VISITANTE (SISTEMA)'
                   AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (
                         N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
-                        N'ATLETA', N'VISITA', N'PARCIAL')
+                        N'ATLETA', N'VISITA', N'PARCIAL', N'PROGRAMACION')
                 GROUP BY p.Nombre";
 
             SqlParameter[] parametros =
@@ -114,7 +115,7 @@ namespace DL
                   AND c.Nombre <> N'VISITANTE (SISTEMA)'
                   AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (
                         N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
-                        N'ATLETA', N'VISITA', N'PARCIAL')
+                        N'ATLETA', N'VISITA', N'PARCIAL', N'PROGRAMACION')
                 ORDER BY h.Fecha DESC, c.Nombre";
 
             SqlParameter[] parametros =
