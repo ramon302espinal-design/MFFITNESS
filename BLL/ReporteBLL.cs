@@ -458,13 +458,13 @@ namespace BLL
 
                 string[] headers =
                 {
-                    "Cliente", "Tipo", "Descripción", "Pago inicial",
-                    "Fecha límite", "Monto", "Fecha", "Usuario"
+                    "Cliente", "Tipo", "Descripción", "Pago inicial", "Origen",
+                    "Precio total", "Fecha límite", "Monto", "Fecha", "Usuario"
                 };
 
                 Table tabla = new Table(UnitValue.CreatePercentArray(new float[]
                 {
-                    16, 10, 22, 10, 10, 10, 12, 10
+                    14, 8, 18, 9, 8, 9, 9, 8, 10, 7
                 })).UseAllAvailableWidth();
 
                 foreach (string h in headers)
@@ -477,6 +477,8 @@ namespace BLL
                 }
 
                 bool tieneAporte = datos.Columns.Contains("AporteInicial");
+                bool tieneOrigen = datos.Columns.Contains("OrigenPrecio");
+                bool tienePrecioTotal = datos.Columns.Contains("PrecioTotal");
                 bool tieneLimite = datos.Columns.Contains("FechaLimitePago");
 
                 foreach (DataRow row in datos.Rows)
@@ -487,6 +489,10 @@ namespace BLL
                     string cliente = Convert.ToString(row["Nombre"]) ?? "";
                     string descripcion = Convert.ToString(row["Descripcion"]) ?? "";
                     string aporte = tieneAporte ? (Convert.ToString(row["AporteInicial"]) ?? "") : "";
+                    string origen = tieneOrigen ? (Convert.ToString(row["OrigenPrecio"]) ?? "") : "";
+                    string precioTotal = !tienePrecioTotal || row["PrecioTotal"] == DBNull.Value
+                        ? "-"
+                        : $"RD$ {Convert.ToDecimal(row["PrecioTotal"]):N2}";
                     string limite = !tieneLimite || row["FechaLimitePago"] == DBNull.Value
                         ? "-"
                         : Convert.ToDateTime(row["FechaLimitePago"]).ToString("dd/MM/yyyy");
@@ -511,6 +517,8 @@ namespace BLL
                     Celda(tipo, resaltarTipo: true);
                     Celda(descripcion);
                     Celda(string.IsNullOrWhiteSpace(aporte) ? "-" : aporte);
+                    Celda(string.IsNullOrWhiteSpace(origen) ? "-" : origen);
+                    Celda(precioTotal);
                     Celda(limite);
                     Celda($"RD$ {monto:N2}");
                     Celda(fecha);

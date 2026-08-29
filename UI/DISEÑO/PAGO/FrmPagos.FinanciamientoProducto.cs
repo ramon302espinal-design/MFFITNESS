@@ -592,7 +592,9 @@ namespace UI.DISEÑO
                     ? dtpVenceDeudaProducto.Value.Date
                     : null;
 
-                string metodo = pagoInicio > 0 ? "Efectivo" : "Credito";
+                string metodo = saldo > 0
+                    ? (pagoInicio > 0 ? "Financiado" : "Credito")
+                    : "Efectivo";
 
                 var result = VentasCommandService.RegistrarVentaPOS(
                     clienteId,

@@ -35,11 +35,11 @@ namespace UI.DISEÑO
             label1 = new Label();
             tabProductos = new TabPage();
             txtBuscarProductos = new TextBox();
+            label5 = new Label();
             dgvDetalleProductos = new DataGridView();
             label3 = new Label();
             dgvVentasProductos = new DataGridView();
             label2 = new Label();
-            label5 = new Label();
             panelNav.SuspendLayout();
             tabControl1.SuspendLayout();
             tabMembresia.SuspendLayout();
@@ -270,7 +270,6 @@ namespace UI.DISEÑO
             // 
             // txtBuscarProductos
             // 
-            txtBuscarProductos.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtBuscarProductos.Font = new Font("Segoe UI", 11F);
             txtBuscarProductos.Location = new Point(100, 52);
             txtBuscarProductos.Name = "txtBuscarProductos";
@@ -278,6 +277,16 @@ namespace UI.DISEÑO
             txtBuscarProductos.Size = new Size(780, 32);
             txtBuscarProductos.TabIndex = 5;
             txtBuscarProductos.TextChanged += txtBuscarProductos_TextChanged;
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            label5.Location = new Point(20, 56);
+            label5.Name = "label5";
+            label5.Size = new Size(77, 25);
+            label5.TabIndex = 4;
+            label5.Text = "Buscar:";
             // 
             // dgvDetalleProductos
             // 
@@ -320,16 +329,6 @@ namespace UI.DISEÑO
             label2.Size = new Size(157, 32);
             label2.TabIndex = 0;
             label2.Text = "PRODUCTOS";
-            // 
-            // label5
-            // 
-            label5.AutoSize = true;
-            label5.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            label5.Location = new Point(20, 56);
-            label5.Name = "label5";
-            label5.Size = new Size(77, 25);
-            label5.TabIndex = 4;
-            label5.Text = "Buscar:";
             // 
             // FrmHistorialVentas
             // 

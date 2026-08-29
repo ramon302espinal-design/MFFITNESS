@@ -110,13 +110,15 @@ namespace BLL
                         ?? DateTime.Today.AddDays(30);
                     string concepto = string.IsNullOrWhiteSpace(conceptoDeuda)
                         ? $"Venta de productos (Id {ventaId})"
-                        : conceptoDeuda.Trim();
+                        : $"{conceptoDeuda.Trim()} (Venta Id {ventaId})";
                     result.DeudaId = deudaBLL.CrearDeudaConId(
                         clienteId.Value,
                         concepto,
                         saldo,
                         fechaVencimiento,
-                        usuario);
+                        usuario,
+                        montoPagado,
+                        total);
                 }
 
                 return result;

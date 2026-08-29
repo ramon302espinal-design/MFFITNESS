@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using UI.Theme;
 
@@ -13,6 +14,9 @@ namespace UI.Helpers
     {
         private static readonly ConditionalWeakTable<Form, object> FormsCableadas = new();
         private static readonly object CableMarker = new();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
 
         public static void Wire(Form host)
         {
@@ -101,18 +105,103 @@ namespace UI.Helpers
                 RecolectarRecursivo(c, set);
         }
 
+        /// <summary>Resuelve el control destino del mensaje WM_KEY* (más fiable que Form.ActiveControl).</summary>
+        internal static Control? ResolverControlConFoco(IntPtr hwnd, Form? formulario)
+        {
+            Control? desdeFocus = ObtenerControlDesdeHandle(GetFocus());
+
+            // GetFocus gana cuando hay un TextBox real (forms embebidos + KeyPreview del host).
+            if (EsEntradaTextoActiva(desdeFocus))
+                return desdeFocus;
+
+            Control? desdeMensaje = ObtenerControlDesdeHandle(hwnd);
+            if (desdeMensaje != null)
+                return desdeMensaje;
+
+            if (desdeFocus != null)
+                return desdeFocus;
+
+            if (formulario != null)
+            {
+                Control? recursivo = BuscarControlConFocoRecursivo(formulario);
+                if (recursivo != null)
+                    return recursivo;
+            }
+
+            return formulario?.ActiveControl;
+        }
+
+        private static Control? ObtenerControlDesdeHandle(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero)
+                return null;
+
+            try
+            {
+                return Control.FromHandle(hwnd);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Control? BuscarControlConFocoRecursivo(Control root)
+        {
+            if (root.Focused)
+                return root;
+
+            foreach (Control hijo in root.Controls)
+            {
+                Control? encontrado = BuscarControlConFocoRecursivo(hijo);
+                if (encontrado != null)
+                    return encontrado;
+            }
+
+            return null;
+        }
+
+        /// <summary>True si el foco está en un campo editable (TextBox, Combo editable, ListBox).</summary>
+        internal static bool EsEntradaTextoActiva(Control? activo)
+        {
+            if (activo == null)
+                return false;
+
+            for (Control? c = activo; c != null; c = c.Parent)
+            {
+                if (c is TextBoxBase { ReadOnly: false })
+                    return true;
+
+                if (c is ComboBox cb && (cb.DropDownStyle == ComboBoxStyle.DropDown || cb.DroppedDown))
+                    return true;
+
+                if (c is ListBox lb && lb.Focused)
+                    return true;
+            }
+
+            return false;
+        }
+
+        internal static bool EsEntradaTextoActiva(IntPtr hwnd, Form? formulario) =>
+            EsEntradaTextoActiva(ResolverControlConFoco(hwnd, formulario));
+
         private static bool EsCampoBusqueda(TextBoxBase tb)
         {
             if (tb.ReadOnly)
                 return false;
 
             string name = tb.Name ?? string.Empty;
-            if (name.Contains("buscar", StringComparison.OrdinalIgnoreCase))
+            if (name.Contains("busca", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (string.Equals(tb.Tag as string, "busqueda", StringComparison.OrdinalIgnoreCase))
                 return true;
 
             if (tb is TextBox tbox && !string.IsNullOrWhiteSpace(tbox.PlaceholderText))
             {
-                return tbox.PlaceholderText.Contains("buscar", StringComparison.OrdinalIgnoreCase);
+                string ph = tbox.PlaceholderText;
+                return ph.Contains("buscar", StringComparison.OrdinalIgnoreCase)
+                    || ph.Contains("filtrar", StringComparison.OrdinalIgnoreCase);
             }
 
             return false;

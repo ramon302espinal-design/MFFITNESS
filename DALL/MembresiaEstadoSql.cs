@@ -95,5 +95,43 @@ namespace DL
 
         public const string PredicadoVencido = @"
                 (" + CasoEstado + @") = 'VENCIDO'";
+
+        /// <summary>
+        /// Vigentes para dashboard / KPI: ACTIVO + ACTIVO Y PROGRAMADO (misma etiqueta que el grid).
+        /// </summary>
+        public const string PredicadoActivoVigente = @"
+                (" + CasoEstado + @") IN (N'ACTIVO', N'ACTIVO Y PROGRAMADO')";
+
+        /// <summary>Excluye el cliente técnico del POS (no es miembro real).</summary>
+        public const string FiltroSinVisitanteSistema = @"
+                c.Nombre <> N'VISITANTE (SISTEMA)'";
+
+        /// <summary>Tipos de HistorialMembresias que representan cobro/alta (SSOT con KPI mes).</summary>
+        public const string TiposMovimientoCobroMembresiaIn = @"
+                N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
+                N'PROGRAMACION', N'ATLETA', N'VISITA', N'PARCIAL'";
+
+        /// <summary>
+        /// Monto cobrado en el ciclo de la última membresía (alias c, m).
+        /// HistorialMembresias del periodo + abonos Deudas ligadas a MembresiaId.
+        /// CAST a DATETIME2: FechaInicio puede ser DATE y DATEADD(minute) no aplica a DATE.
+        /// </summary>
+        public const string ExpresionMontoPagadoMembresiaVigente = @"
+                    ISNULL((
+                        SELECT SUM(ISNULL(h.Monto, 0))
+                        FROM HistorialMembresias h
+                        WHERE h.ClienteId = c.ID
+                          AND m.Id IS NOT NULL
+                          AND m.FechaInicio IS NOT NULL
+                          AND h.Fecha >= DATEADD(MINUTE, -30, CAST(m.FechaInicio AS DATETIME2))
+                          AND (m.FechaFin IS NULL OR h.Fecha <= DATEADD(DAY, 1, CAST(m.FechaFin AS DATE)))
+                          AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (" + TiposMovimientoCobroMembresiaIn + @")
+                    ), 0)
+                    + ISNULL((
+                        SELECT SUM(ISNULL(de.MontoPagado, 0))
+                        FROM Deudas de
+                        WHERE de.ClienteId = c.ID
+                          AND de.MembresiaId = m.Id
+                    ), 0)";
     }
 }

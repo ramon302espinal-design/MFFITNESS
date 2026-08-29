@@ -24,7 +24,10 @@ namespace BLL
                 return "ABDOMEN PLANO";
             if (string.Equals(n, "GLUTEOS GRANDE", StringComparison.OrdinalIgnoreCase))
                 return "GLUTEOS GRANDE";
-            return string.Empty;
+            if (PlanNombres.EsOferta(n) || PlanNombres.EsAtleta(n) || PlanNombres.EsVisita(n))
+                return "OTROS";
+            // Planes nuevos del catálogo: cuentan en TOTAL (panel7) aunque no tengan panel propio.
+            return string.IsNullOrEmpty(n) ? string.Empty : "OTROS";
         }
 
         internal static DataTable CrearTablaResumen()
@@ -46,7 +49,8 @@ namespace BLL
                 ["PRO"] = (0, 0m),
                 ["3X"] = (0, 0m),
                 ["ABDOMEN PLANO"] = (0, 0m),
-                ["GLUTEOS GRANDE"] = (0, 0m)
+                ["GLUTEOS GRANDE"] = (0, 0m),
+                ["OTROS"] = (0, 0m)
             };
 
             foreach (var (plan, cantidad, monto) in filas)

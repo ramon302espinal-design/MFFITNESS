@@ -232,12 +232,16 @@ namespace DL
         // ===============================
         public int ClientesVencidos()
         {
-            // Misma definición de VENCIDO que FrmEstadoClientes.
+            new CongelacionDAL().EnsureSchema();
+            new MembresiaProgramadaDAL().EnsureSchema();
+
+            // Misma definición de VENCIDO que FrmEstadoClientes / dashboard.
             string query = $@"
     SELECT COUNT(*)
     FROM Clientes c
     {MembresiaEstadoSql.OuterApplyUltimaMembresia}
-    WHERE {MembresiaEstadoSql.PredicadoVencido}";
+    WHERE {MembresiaEstadoSql.PredicadoVencido}
+      AND {MembresiaEstadoSql.FiltroSinVisitanteSistema}";
 
             object result = db.ExecuteScalar(query);
             return result != null ? Convert.ToInt32(result) : 0;
@@ -612,12 +616,16 @@ namespace DL
         // ===============================
         public int ObtenerTotalActivos()
         {
-            // Misma definición de ACTIVO que FrmEstadoClientes (tarjeta "CLIENTES ACTIVOS").
+            new CongelacionDAL().EnsureSchema();
+            new MembresiaProgramadaDAL().EnsureSchema();
+
+            // ACTIVO + ACTIVO Y PROGRAMADO (misma etiqueta que el grid Estado).
             string query = $@"
     SELECT COUNT(*)
     FROM Clientes c
     {MembresiaEstadoSql.OuterApplyUltimaMembresia}
-    WHERE {MembresiaEstadoSql.PredicadoActivo}";
+    WHERE {MembresiaEstadoSql.PredicadoActivoVigente}
+      AND {MembresiaEstadoSql.FiltroSinVisitanteSistema}";
 
             object result = db.ExecuteScalar(query);
             return result != null ? Convert.ToInt32(result) : 0;

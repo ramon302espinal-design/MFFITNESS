@@ -37,7 +37,8 @@ namespace DL
                     CASE WHEN d.ClienteId IS NULL THEN 'N/A' ELSE 'ACTIVA' END AS EstadoDeuda,
                     ISNULL(d.Saldo, 0) AS SaldoPendiente,
                     ISNULL(d.MontoFinanciado, 0) AS MontoFinanciado,
-                    d.FechaVencimiento AS VencimientoDeuda
+                    d.FechaVencimiento AS VencimientoDeuda,
+                    {MembresiaEstadoSql.ExpresionMontoPagadoMembresiaVigente} AS MontoPagado
                 FROM Clientes c
                 {MembresiaEstadoSql.OuterApplyUltimaMembresia}
                 LEFT JOIN Planes p ON p.Id = m.PlanId
@@ -53,11 +54,46 @@ namespace DL
                     WHERE Estado = 'ACTIVA' AND Saldo > 0
                     GROUP BY ClienteId
                 ) d ON d.ClienteId = c.ID
+                WHERE {MembresiaEstadoSql.FiltroSinVisitanteSistema}
             ) estado
             WHERE estado.Estado IN ('ACTIVO', 'ACTIVO Y PROGRAMADO', 'VENCIDO', 'DESACTIVADO', 'CONGELADO')
             ORDER BY estado.Nombre";
 
             return db.ExecuteQuery(query);
+        }
+
+        /// <summary>
+        /// Conteos SSOT para dashboard: mismos estados que <see cref="ObtenerEstadoClientes"/>.
+        /// Activos = ACTIVO + ACTIVO Y PROGRAMADO.
+        /// </summary>
+        public (int Activos, int Vencidos, int Congelados, int Desactivados) ObtenerConteosDashboard()
+        {
+            new CongelacionDAL().EnsureSchema();
+            new MembresiaProgramadaDAL().EnsureSchema();
+
+            string query = $@"
+                SELECT
+                    SUM(CASE WHEN e.Estado IN (N'ACTIVO', N'ACTIVO Y PROGRAMADO') THEN 1 ELSE 0 END) AS Activos,
+                    SUM(CASE WHEN e.Estado = N'VENCIDO' THEN 1 ELSE 0 END) AS Vencidos,
+                    SUM(CASE WHEN e.Estado = N'CONGELADO' THEN 1 ELSE 0 END) AS Congelados,
+                    SUM(CASE WHEN e.Estado = N'DESACTIVADO' THEN 1 ELSE 0 END) AS Desactivados
+                FROM (
+                    SELECT {MembresiaEstadoSql.CasoEstado} AS Estado
+                    FROM Clientes c
+                    {MembresiaEstadoSql.OuterApplyUltimaMembresia}
+                    WHERE {MembresiaEstadoSql.FiltroSinVisitanteSistema}
+                ) e";
+
+            DataTable dt = db.ExecuteQuery(query);
+            if (dt.Rows.Count == 0)
+                return (0, 0, 0, 0);
+
+            DataRow row = dt.Rows[0];
+            return (
+                row["Activos"] == DBNull.Value ? 0 : Convert.ToInt32(row["Activos"]),
+                row["Vencidos"] == DBNull.Value ? 0 : Convert.ToInt32(row["Vencidos"]),
+                row["Congelados"] == DBNull.Value ? 0 : Convert.ToInt32(row["Congelados"]),
+                row["Desactivados"] == DBNull.Value ? 0 : Convert.ToInt32(row["Desactivados"]));
         }
 
         /// <summary>
@@ -80,9 +116,7 @@ namespace DL
                 WHERE h.Fecha >= @Desde
                   AND h.Fecha < @Hasta
                   AND c.Nombre <> N'VISITANTE (SISTEMA)'
-                  AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (
-                        N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
-                        N'ATLETA', N'VISITA', N'PARCIAL', N'PROGRAMACION')
+                  AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (" + MembresiaEstadoSql.TiposMovimientoCobroMembresiaIn + @")
                 GROUP BY p.Nombre";
 
             SqlParameter[] parametros =
@@ -113,9 +147,7 @@ namespace DL
                 WHERE h.Fecha >= @Desde
                   AND h.Fecha < @Hasta
                   AND c.Nombre <> N'VISITANTE (SISTEMA)'
-                  AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (
-                        N'PAGO', N'RENOVACION', N'ALTA_EXISTENTE', N'ALTA',
-                        N'ATLETA', N'VISITA', N'PARCIAL', N'PROGRAMACION')
+                  AND UPPER(LTRIM(RTRIM(h.TipoMovimiento))) IN (" + MembresiaEstadoSql.TiposMovimientoCobroMembresiaIn + @")
                 ORDER BY h.Fecha DESC, c.Nombre";
 
             SqlParameter[] parametros =

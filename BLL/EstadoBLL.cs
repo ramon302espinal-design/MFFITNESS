@@ -41,12 +41,11 @@ namespace BLL
             detalle.Columns.Add("Monto", typeof(decimal));
 
             DataTable estado = estadoDAL.ObtenerEstadoClientes();
-            Dictionary<string, decimal> precios = ObtenerPreciosPlanes();
 
             foreach (DataRow row in estado.Rows)
             {
                 string est = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
-                if (!string.Equals(est, "ACTIVO", StringComparison.OrdinalIgnoreCase))
+                if (!EsEstadoActivoVigente(est))
                     continue;
 
                 string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
@@ -55,7 +54,7 @@ namespace BLL
                     continue;
 
                 string cliente = Convert.ToString(row["Nombre"])?.Trim() ?? string.Empty;
-                decimal monto = precios.TryGetValue(plan, out decimal p) ? p : 0m;
+                decimal monto = row["MontoPagado"] == DBNull.Value ? 0m : Convert.ToDecimal(row["MontoPagado"]);
                 DateTime fecha = DateTime.Today;
                 if (row["FechaFin"] != null && row["FechaFin"] != DBNull.Value)
                     fecha = Convert.ToDateTime(row["FechaFin"]).Date;
@@ -112,5 +111,14 @@ namespace BLL
 
             return map;
         }
+
+        /// <summary>ACTIVO o ACTIVO Y PROGRAMADO (vigente para KPI / dashboard).</summary>
+        public static bool EsEstadoActivoVigente(string? estado) =>
+            string.Equals(estado?.Trim(), "ACTIVO", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(estado?.Trim(), "ACTIVO Y PROGRAMADO", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Bucket KPI panel7 / reportes (SSOT con <see cref="EstadoReporteHelper"/>).</summary>
+        public static string ClasificarPlanParaKpi(string? nombrePlan) =>
+            EstadoReporteHelper.ClasificarPlan(nombrePlan);
     }
 }

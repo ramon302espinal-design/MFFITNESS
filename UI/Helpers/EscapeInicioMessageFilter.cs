@@ -39,7 +39,7 @@ namespace UI.Helpers
                 if (activa is FrmPresentacion)
                     return false;
 
-                if (EstaEscribiendoTexto(activa))
+                if (BusquedaFocusHelper.EsEntradaTextoActiva(m.HWnd, activa))
                     return false;
 
                 // Calculadora POS: Backspace borra dígitos del monto.
@@ -118,27 +118,6 @@ namespace UI.Helpers
 
         private static bool EsBotonBack(Button btn) =>
             btn.Name is "btnBack" or "btnNavBack";
-
-        private static bool EstaEscribiendoTexto(Form host)
-        {
-            Control? activo = host.ActiveControl;
-            if (activo == null)
-                return false;
-
-            for (Control? c = activo; c != null; c = c.Parent)
-            {
-                if (c is TextBoxBase { ReadOnly: false })
-                    return true;
-
-                if (c is ComboBox cb && (cb.DropDownStyle == ComboBoxStyle.DropDown || cb.DroppedDown))
-                    return true;
-
-                if (c is ListBox lb && lb.Focused)
-                    return true;
-            }
-
-            return false;
-        }
 
         private void VolverAPresentacion()
         {

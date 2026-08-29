@@ -67,12 +67,27 @@ namespace UI.DISEÑO.Controles
         /// </summary>
         public void ActualizarTotalMiembros(int total)
         {
+            ActualizarTotalMiembros(total, activos: -1, vencidos: -1, soloCliente: -1);
+        }
+
+        /// <summary>
+        /// Total del catálogo + desglose SSOT (misma regla que Estado / Presentación).
+        /// </summary>
+        public void ActualizarTotalMiembros(int total, int activos, int vencidos, int soloCliente)
+        {
             if (total < 0)
                 total = 0;
 
-            lblTotalMiembros.Text = total == 1
-                ? "1 MIEMBRO REGISTRADO"
-                : $"{total} MIEMBROS REGISTRADOS";
+            if (activos < 0)
+            {
+                lblTotalMiembros.Text = total == 1
+                    ? "1 CLIENTE REGISTRADO"
+                    : $"{total} CLIENTES REGISTRADOS";
+                return;
+            }
+
+            lblTotalMiembros.Text =
+                $"{total} CLIENTES · {activos} ACTIVOS · {vencidos} VENCIDOS · {soloCliente} SOLO CLIENTE";
         }
 
         public void Mostrar(

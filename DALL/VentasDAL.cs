@@ -1,6 +1,9 @@
 using Microsoft.Data.SqlClient;
 using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace DL
 {
@@ -44,6 +47,18 @@ namespace DL
                         v.MontoPagado,
                         v.Saldo,
                         v.MetodoPago,
+                        CASE
+                            WHEN v.Saldo > 0 THEN 'FINANCIADO'
+                            ELSE 'CONTADO'
+                        END AS TipoOperacion,
+                        CASE
+                            WHEN v.Saldo > 0 AND v.MontoPagado > 0 THEN
+                                CONCAT('Financiado · Abono RD$ ', FORMAT(v.MontoPagado, 'N2'),
+                                       ' · Saldo RD$ ', FORMAT(v.Saldo, 'N2'))
+                            WHEN v.Saldo > 0 THEN
+                                CONCAT('Financiado · Saldo RD$ ', FORMAT(v.Saldo, 'N2'))
+                            ELSE v.MetodoPago
+                        END AS FormaPago,
                         v.Usuario,
                         ISNULL(prod.Productos, '') AS Productos
                      FROM Ventas v
@@ -144,6 +159,115 @@ namespace DL
                 // parámetros
                 cmd.ExecuteNonQuery();
             }
+        }
+
+        /// <summary>
+        /// Tras pagar o revertir una deuda de venta a crédito, alinea Ventas.MontoPagado
+        /// (Saldo = Total - MontoPagado) con el saldo vigente de la deuda.
+        /// </summary>
+        public void SincronizarMontoPagadoDesdeDeuda(SqlConnection conn, SqlTransaction tx, int deudaId)
+        {
+            using var cmdGet = new SqlCommand(@"
+                SELECT ClienteId, Saldo, Concepto, MontoTotal, FechaCreacion
+                FROM Deudas
+                WHERE Id = @DeudaId", conn, tx);
+            cmdGet.Parameters.AddWithValue("@DeudaId", deudaId);
+
+            using var reader = cmdGet.ExecuteReader();
+            if (!reader.Read())
+                return;
+
+            int clienteId = Convert.ToInt32(reader["ClienteId"]);
+            decimal saldoDeuda = Convert.ToDecimal(reader["Saldo"]);
+            string concepto = reader["Concepto"]?.ToString() ?? string.Empty;
+            decimal montoTotal = Convert.ToDecimal(reader["MontoTotal"]);
+            DateTime fechaCreacion = reader["FechaCreacion"] == DBNull.Value
+                ? DateTime.Now
+                : Convert.ToDateTime(reader["FechaCreacion"]);
+            reader.Close();
+
+            if (!EsConceptoDeudaVentaProducto(concepto))
+                return;
+
+            int? ventaId = TryExtraerVentaIdDeConcepto(concepto);
+
+            using var cmdUpd = new SqlCommand(@"
+                SET QUOTED_IDENTIFIER ON;
+                UPDATE v
+                SET v.MontoPagado = v.Total - @SaldoDeuda
+                FROM Ventas v
+                WHERE v.ClienteId = @ClienteId
+                  AND v.Total >= @SaldoDeuda
+                  AND (
+                        (@VentaId IS NOT NULL AND v.Id = @VentaId)
+                     OR (@VentaId IS NULL AND v.Id = (
+                            SELECT TOP 1 v2.Id
+                            FROM Ventas v2
+                            WHERE v2.ClienteId = @ClienteId
+                              AND v2.Total >= @MontoTotal
+                            ORDER BY
+                              CASE WHEN v2.MontoPagado < v2.Total OR @SaldoDeuda = 0 THEN 0 ELSE 1 END,
+                              ABS(DATEDIFF(SECOND, v2.Fecha, @FechaCreacion)),
+                              v2.Id DESC
+                        ))
+                  )", conn, tx);
+
+            cmdUpd.Parameters.AddWithValue("@SaldoDeuda", saldoDeuda);
+            cmdUpd.Parameters.AddWithValue("@ClienteId", clienteId);
+            cmdUpd.Parameters.AddWithValue("@MontoTotal", montoTotal);
+            cmdUpd.Parameters.AddWithValue("@FechaCreacion", fechaCreacion);
+            cmdUpd.Parameters.AddWithValue("@VentaId", (object?)ventaId ?? DBNull.Value);
+            cmdUpd.ExecuteNonQuery();
+        }
+
+        public static bool EsConceptoDeudaVentaProducto(string? concepto)
+        {
+            if (string.IsNullOrWhiteSpace(concepto))
+                return false;
+
+            string c = concepto.Trim();
+            if (TryExtraerVentaIdDeConcepto(c).HasValue)
+                return true;
+
+            return c.Contains("Venta a cr", StringComparison.OrdinalIgnoreCase)
+                || c.StartsWith("Venta de productos", StringComparison.OrdinalIgnoreCase)
+                || c.EndsWith(" a credito", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static int? TryExtraerVentaIdDeConcepto(string? concepto)
+        {
+            if (string.IsNullOrWhiteSpace(concepto))
+                return null;
+
+            Match match = Regex.Match(
+                concepto,
+                @"\((?:Venta\s+)?Id\s+(\d+)\)",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+            if (!match.Success)
+                return null;
+
+            return int.TryParse(match.Groups[1].Value, out int ventaId) && ventaId > 0
+                ? ventaId
+                : null;
+        }
+
+        /// <summary>Totales de venta por Id (precio legítimo de producto financiado).</summary>
+        public Dictionary<int, decimal> ObtenerTotalesPorIds(IEnumerable<int> ventaIds)
+        {
+            var resultado = new Dictionary<int, decimal>();
+            var ids = ventaIds?.Distinct().Where(id => id > 0).ToList();
+            if (ids == null || ids.Count == 0)
+                return resultado;
+
+            string inClause = string.Join(",", ids);
+            string query = $"SELECT Id, Total FROM Ventas WHERE Id IN ({inClause})";
+            DataTable dt = db.ExecuteQuery(query);
+
+            foreach (DataRow row in dt.Rows)
+                resultado[Convert.ToInt32(row["Id"])] = Convert.ToDecimal(row["Total"]);
+
+            return resultado;
         }
     }
 }

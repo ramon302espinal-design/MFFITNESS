@@ -14,6 +14,7 @@ namespace BLL
     {
         private readonly SaldoClienteDAL dal = new SaldoClienteDAL();
         private readonly VentasBLL ventasBLL = new VentasBLL();
+        private readonly ClienteDAL clienteDal = new ClienteDAL();
 
         public DataTable ObtenerActivos() => dal.ObtenerActivos();
 
@@ -45,6 +46,9 @@ namespace BLL
         {
             if (clienteId <= 0)
                 throw new Exception("Seleccione un miembro válido.");
+
+            if (!clienteDal.EsMiembroRegistrado(clienteId))
+                throw new Exception("Solo miembros registrados pueden recibir abono de saldo a favor.");
 
             if (string.IsNullOrWhiteSpace(clienteNombre))
                 clienteNombre = "Cliente";
@@ -98,7 +102,7 @@ namespace BLL
 
             string conceptoCaja = CajaConceptoHelper.IngresoSaldoAFavor(clienteId, nombre, total);
 
-            return dal.CobrarSaldoConCaja(
+            int saldoId = dal.CobrarSaldoConCaja(
                 clienteId,
                 nombre,
                 total,
@@ -107,6 +111,10 @@ namespace BLL
                 metodoPago,
                 conceptoCaja,
                 lineas);
+
+            MovimientoFinancieroNotifier.PagoConCaja();
+
+            return saldoId;
         }
 
         /// <summary>Despacha productos reservados: venta + stock, sin caja.</summary>
@@ -171,6 +179,8 @@ namespace BLL
                 catch { /* best effort */ }
                 throw;
             }
+
+            MovimientoFinancieroNotifier.VentaSinCaja();
 
             return operacion;
         }

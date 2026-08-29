@@ -28,15 +28,23 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
         public DataTable ListarClientes()
         {
             EnsureSexoColumn();
+            new CongelacionDAL().EnsureSchema();
+            new MembresiaProgramadaDAL().EnsureSchema();
 
-            string query = @"SELECT 
-                        ID as Id,
-                        Nombre,
-                        Telefono,
-                        Direccion,
-                        FechaNacimiento,
-                        Sexo
-                     FROM dbo.Clientes";
+            // Estado SSOT = misma regla que dgvEstado (ACTIVO, CONGELADO, VENCIDO, etc.).
+            string query = $@"
+                SELECT
+                    c.ID AS Id,
+                    c.Nombre,
+                    c.Telefono,
+                    c.Direccion,
+                    c.FechaNacimiento,
+                    c.Sexo,
+                    {MembresiaEstadoSql.CasoEstado} AS Estado
+                FROM dbo.Clientes c
+                {MembresiaEstadoSql.OuterApplyUltimaMembresia}
+                WHERE c.Nombre <> N'VISITANTE (SISTEMA)'
+                ORDER BY c.Nombre";
 
             return db.ExecuteQuery(query);
         }
@@ -86,19 +94,69 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
         }
 
         /// <summary>
-        /// Clientes del catálogo excepto los que ya están ACTIVO (SSOT Estado).
+        /// Miembros con al menos una fila en Membresias (excluye SOLO CLIENTE / SIN MEMBRESIA).
+        /// Para pausar venta y abono de saldo a favor.
+        /// </summary>
+        public DataTable ListarMiembrosRegistradosParaPos()
+        {
+            EnsureSexoColumn();
+
+            string query = @"
+                SELECT
+                    c.ID AS Id,
+                    c.Nombre,
+                    c.Telefono,
+                    c.Direccion,
+                    c.FechaNacimiento,
+                    c.Sexo
+                FROM dbo.Clientes c
+                WHERE c.Nombre <> N'VISITANTE (SISTEMA)'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM dbo.Membresias m
+                      WHERE m.ClienteId = c.ID
+                  )
+                ORDER BY c.Nombre";
+
+            return db.ExecuteQuery(query);
+        }
+
+        /// <summary>True si el cliente tiene historial de membresía registrada (tabla Membresias).</summary>
+        public bool EsMiembroRegistrado(int clienteId)
+        {
+            if (clienteId <= 0)
+                return false;
+
+            object? result = db.ExecuteScalar(
+                @"SELECT CASE
+                      WHEN EXISTS (
+                          SELECT 1
+                          FROM dbo.Membresias m
+                          WHERE m.ClienteId = @Id
+                      ) THEN 1
+                      ELSE 0
+                  END",
+                new[] { new SqlParameter("@Id", clienteId) });
+
+            return result != null && result != DBNull.Value && Convert.ToInt32(result) == 1;
+        }
+
+        /// <summary>
+        /// Clientes del catálogo excepto los que ya están ACTIVO / ACTIVO Y PROGRAMADO (SSOT Estado).
         /// Usado para integrar miembros ya pagados fuera de la app.
         /// </summary>
         public DataTable ListarClientesNoActivos()
         {
             EnsureSexoColumn();
             new CongelacionDAL().EnsureSchema();
+            new MembresiaProgramadaDAL().EnsureSchema();
 
             string query = $@"
                 SELECT c.ID AS Id, c.Nombre
                 FROM dbo.Clientes c
                 {MembresiaEstadoSql.OuterApplyUltimaMembresia}
-                WHERE ({MembresiaEstadoSql.CasoEstado}) <> 'ACTIVO'
+                WHERE ({MembresiaEstadoSql.CasoEstado}) NOT IN (N'ACTIVO', N'ACTIVO Y PROGRAMADO')
+                  AND c.Nombre <> N'VISITANTE (SISTEMA)'
                 ORDER BY c.Nombre";
 
             return db.ExecuteQuery(query);
@@ -164,6 +222,7 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
                 return "SIN MEMBRESIA";
 
             new CongelacionDAL().EnsureSchema();
+            new MembresiaProgramadaDAL().EnsureSchema();
 
             string query = $@"
                 SELECT {MembresiaEstadoSql.CasoEstado} AS Estado

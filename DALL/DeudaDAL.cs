@@ -11,6 +11,7 @@ namespace DL
     public class DeudaDAL
     {
         private DBHelper db = new DBHelper();
+        private readonly VentasDAL ventasDAL = new VentasDAL();
         public void RevertirPago(int pagoId, string usuario, int cajaId)
         {
             using (SqlConnection conn = new SqlConnection(db.ConnectionString))
@@ -73,6 +74,8 @@ namespace DL
                         cmdDeuda.Parameters.Add("@Monto", SqlDbType.Decimal).Value = monto;
                         cmdDeuda.Parameters.Add("@DeudaId", SqlDbType.Int).Value = deudaId;
                         cmdDeuda.ExecuteNonQuery();
+
+                        ventasDAL.SincronizarMontoPagadoDesdeDeuda(conn, tx, deudaId);
 
                         // 🔹 HISTORIAL
                         SqlCommand cmdHistorial = new SqlCommand(@"
@@ -186,6 +189,8 @@ namespace DL
                         cmdDeuda.Parameters.Add("@DeudaId", SqlDbType.Int).Value = deudaId;
                         cmdDeuda.ExecuteNonQuery();
 
+                        ventasDAL.SincronizarMontoPagadoDesdeDeuda(conn, tx, deudaId);
+
                         // 🔹 HISTORIAL
                         SqlCommand cmdHistorial = new SqlCommand(@"
                 INSERT INTO HistorialDeudas
@@ -247,8 +252,25 @@ namespace DL
         // ===============================
         // INSERTAR DEUDA
         // ===============================
-        public int InsertarDeuda(int clienteId, string concepto, decimal monto, DateTime vencimiento, string usuario)
+        /// <param name="pagoInicial">
+        /// Aporte al financiar (venta a crédito / productos). Solo historial PAGO_INICIAL;
+        /// la caja la registra quien cobra (p. ej. VentasBLL).
+        /// </param>
+        /// <param name="montoTotalFinanciado">Total del financiamiento (saldo + pago inicial).</param>
+        public int InsertarDeuda(
+            int clienteId,
+            string concepto,
+            decimal monto,
+            DateTime vencimiento,
+            string usuario,
+            decimal pagoInicial = 0,
+            decimal montoTotalFinanciado = 0)
         {
+            pagoInicial = decimal.Round(Math.Max(0m, pagoInicial), 2);
+            decimal totalFinanciado = montoTotalFinanciado > 0
+                ? decimal.Round(montoTotalFinanciado, 2)
+                : decimal.Round(monto + pagoInicial, 2);
+
             string query = @"
     INSERT INTO Deudas
     (ClienteId, Concepto, MontoTotal, MontoPagado, Saldo, FechaVencimiento, Estado, Usuario)
@@ -267,7 +289,14 @@ namespace DL
 
             int deudaId = Convert.ToInt32(db.ExecuteScalar(query, p));
 
-            // 🔥 REGISTRAR HISTORIAL
+            string descripcionDeuda = concepto;
+            if (pagoInicial > 0)
+            {
+                descripcionDeuda =
+                    $"{concepto} | Total: {totalFinanciado:N2} | Pago inicial: {pagoInicial:N2} | " +
+                    $"Saldo pendiente: {monto:N2} | Fecha límite: {vencimiento:dd/MM/yyyy}";
+            }
+
             string historialQuery = @"
     INSERT INTO HistorialDeudas
     (DeudaId, ClienteId, TipoMovimiento, Monto, Descripcion, Fecha, Usuario)
@@ -279,11 +308,32 @@ namespace DL
         new SqlParameter("@DeudaId", deudaId),
         new SqlParameter("@ClienteId", clienteId),
         new SqlParameter("@Monto", monto),
-        new SqlParameter("@Concepto", concepto),
+        new SqlParameter("@Concepto", descripcionDeuda),
         new SqlParameter("@Usuario", usuario)
     };
 
             db.ExecuteNonQuery(historialQuery, h);
+
+            if (pagoInicial > 0)
+            {
+                string historialPagoInicialQuery = @"
+    INSERT INTO HistorialDeudas
+    (DeudaId, ClienteId, TipoMovimiento, Monto, Descripcion, Fecha, Usuario)
+    VALUES
+    (@DeudaId, @ClienteId, 'PAGO_INICIAL', @Monto, @Descripcion, GETDATE(), @Usuario)";
+
+                SqlParameter[] hp =
+                {
+                    new SqlParameter("@DeudaId", deudaId),
+                    new SqlParameter("@ClienteId", clienteId),
+                    new SqlParameter("@Monto", pagoInicial),
+                    new SqlParameter("@Descripcion", $"Pago inicial al financiar - {concepto}"),
+                    new SqlParameter("@Usuario", usuario)
+                };
+
+                db.ExecuteNonQuery(historialPagoInicialQuery, hp);
+            }
+
             return deudaId;
         }
 
@@ -1410,6 +1460,35 @@ VALUES
             SqlParameter[] p = { new SqlParameter("@ClienteId", SqlDbType.Int) { Value = clienteId } };
 
             return Convert.ToDecimal(db.ExecuteScalar(query, p));
+        }
+
+        /// <summary>
+        /// Contexto de precio legítimo por deuda (membresía / producto) para enriquecer historial.
+        /// </summary>
+        public DataTable ObtenerContextoFinanciamientoPorDeudas(IReadOnlyCollection<int> deudaIds)
+        {
+            var dt = new DataTable();
+            if (deudaIds == null || deudaIds.Count == 0)
+                return dt;
+
+            string ids = string.Join(",", deudaIds);
+            string query = $@"
+                SELECT d.Id AS DeudaId,
+                       d.MembresiaId,
+                       d.Concepto,
+                       d.MontoTotal AS SaldoDeuda,
+                       ISNULL((
+                           SELECT SUM(CASE
+                               WHEN h.TipoMovimiento = 'PAGO_INICIAL' THEN h.Monto
+                               WHEN h.TipoMovimiento = 'REVERSO_PAGO_INICIAL' THEN -h.Monto
+                               ELSE 0 END)
+                           FROM HistorialDeudas h
+                           WHERE h.DeudaId = d.Id
+                       ), 0) AS PagoInicialFinanciamiento
+                FROM Deudas d
+                WHERE d.Id IN ({ids})";
+
+            return db.ExecuteQuery(query);
         }
     }
 }

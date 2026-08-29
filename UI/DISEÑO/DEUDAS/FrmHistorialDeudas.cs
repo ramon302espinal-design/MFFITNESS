@@ -109,7 +109,6 @@ namespace UI
             try
             {
                 dtHistorialCompleto = historialBLL.ObtenerHistorial(null, null, null, null);
-                EnriquecerHistorialFinanciamiento(dtHistorialCompleto);
                 AplicarFiltros();
             }
             catch (ObjectDisposedException)
@@ -136,81 +135,6 @@ namespace UI
         public void ActualizarDatos()
         {
             CargarHistorial();
-        }
-
-        private void EnriquecerHistorialFinanciamiento(DataTable dt)
-        {
-            if (dt == null) return;
-
-            if (!dt.Columns.Contains("AporteInicial"))
-                dt.Columns.Add("AporteInicial", typeof(string));
-
-            // Pago inicial vigente por deuda: lo aportado menos lo reversado en ediciones.
-            var pagosInicialesPorDeuda = new Dictionary<int, decimal>();
-            if (dt.Columns.Contains("DeudaId"))
-            {
-                foreach (DataRow row in dt.Rows)
-                {
-                    string tipoFila = row["Tipo"]?.ToString() ?? string.Empty;
-                    bool esInicial = tipoFila == "PAGO_INICIAL";
-                    bool esReverso = tipoFila == "REVERSO_PAGO_INICIAL";
-
-                    if ((!esInicial && !esReverso) || row["DeudaId"] == DBNull.Value)
-                        continue;
-
-                    int deudaId = Convert.ToInt32(row["DeudaId"]);
-                    decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
-
-                    pagosInicialesPorDeuda.TryGetValue(deudaId, out decimal acumulado);
-                    pagosInicialesPorDeuda[deudaId] = esInicial ? acumulado + monto : acumulado - monto;
-                }
-            }
-
-            foreach (DataRow row in dt.Rows)
-            {
-                string tipo = row["Tipo"]?.ToString() ?? string.Empty;
-
-                if (tipo == "PAGO_INICIAL")
-                {
-                    row["AporteInicial"] = $"Sí ({Convert.ToDecimal(row["Monto"]):N2})";
-                    continue;
-                }
-
-                if (tipo == "REVERSO_PAGO_INICIAL")
-                {
-                    row["AporteInicial"] = $"Reverso (-{Convert.ToDecimal(row["Monto"]):N2})";
-                    continue;
-                }
-
-                if (tipo != "DEUDA")
-                {
-                    row["AporteInicial"] = string.Empty;
-                    continue;
-                }
-
-                string descripcion = row["Descripcion"]?.ToString() ?? string.Empty;
-                bool esFinanciamiento =
-                    descripcion.Contains("Financiamiento", StringComparison.OrdinalIgnoreCase) ||
-                    descripcion.Contains("Saldo plan", StringComparison.OrdinalIgnoreCase) ||
-                    descripcion.Contains("Pago inicial:", StringComparison.OrdinalIgnoreCase);
-
-                if (!esFinanciamiento)
-                {
-                    row["AporteInicial"] = "-";
-                    continue;
-                }
-
-                if (dt.Columns.Contains("DeudaId") &&
-                    row["DeudaId"] != DBNull.Value &&
-                    pagosInicialesPorDeuda.TryGetValue(Convert.ToInt32(row["DeudaId"]), out decimal montoInicial) &&
-                    montoInicial > 0m)
-                {
-                    row["AporteInicial"] = $"Sí ({montoInicial:N2})";
-                    continue;
-                }
-
-                row["AporteInicial"] = "No ($0.00)";
-            }
         }
 
         // ===============================
@@ -302,7 +226,23 @@ namespace UI
             {
                 col.HeaderText = "Pago Inicial";
                 col.Width = 120;
-                col.DisplayIndex = 3;
+                col.DisplayIndex = 4;
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "OrigenPrecio", col =>
+            {
+                col.HeaderText = "Origen";
+                col.Width = 90;
+                col.DisplayIndex = 5;
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "PrecioTotal", col =>
+            {
+                col.HeaderText = "Precio Total";
+                col.DefaultCellStyle.Format = "C2";
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                col.Width = 110;
+                col.DisplayIndex = 6;
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Monto", col =>
@@ -310,8 +250,11 @@ namespace UI
                 col.HeaderText = "Monto";
                 col.DefaultCellStyle.Format = "C2";
                 col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                col.Width = 120;
+                col.Width = 100;
+                col.DisplayIndex = 7;
             });
+
+            DataGridViewHelper.HideColumn(dgvHistorial, "SaldoDeuda");
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Fecha", col =>
             {
@@ -345,7 +288,13 @@ namespace UI
                 decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
 
                 if (tipo == "DEUDA")
-                    totalDeudas += monto;
+                {
+                    if (row.Row.Table.Columns.Contains("SaldoDeuda")
+                        && row["SaldoDeuda"] != DBNull.Value)
+                        totalDeudas += Convert.ToDecimal(row["SaldoDeuda"]);
+                    else
+                        totalDeudas += monto;
+                }
                 else if (tipo == "PAGO" || tipo == "PAGO_INICIAL")
                     totalPagos += monto;
                 else if (tipo == "REVERSO_PAGO" || tipo == "REVERSO_PAGO_INICIAL")
@@ -391,7 +340,7 @@ namespace UI
                 return;
 
             string columna = dgvHistorial.Columns[e.ColumnIndex].Name;
-            if (columna != "Tipo" && columna != "Monto")
+            if (columna != "Tipo" && columna != "Monto" && columna != "PrecioTotal")
                 return;
 
             if (!TryColorMovimiento(ObtenerTipoFila(e.RowIndex), out Color color))
@@ -556,12 +505,16 @@ namespace UI
             tabla.Columns.Add("Tipo", typeof(string));
             tabla.Columns.Add("Descripcion", typeof(string));
             tabla.Columns.Add("AporteInicial", typeof(string));
+            tabla.Columns.Add("OrigenPrecio", typeof(string));
+            tabla.Columns.Add("PrecioTotal", typeof(decimal));
             tabla.Columns.Add("FechaLimitePago", typeof(DateTime));
             tabla.Columns.Add("Monto", typeof(decimal));
             tabla.Columns.Add("Fecha", typeof(DateTime));
             tabla.Columns.Add("Usuario", typeof(string));
 
             bool tieneAporte = dgvHistorial.Columns.Contains("AporteInicial");
+            bool tieneOrigen = dgvHistorial.Columns.Contains("OrigenPrecio");
+            bool tienePrecioTotal = dgvHistorial.Columns.Contains("PrecioTotal");
             bool tieneLimite = dgvHistorial.Columns.Contains("FechaLimitePago");
 
             foreach (DataGridViewRow row in dgvHistorial.Rows)
@@ -575,6 +528,14 @@ namespace UI
                 nr["AporteInicial"] = tieneAporte
                     ? row.Cells["AporteInicial"].Value?.ToString() ?? ""
                     : "";
+                nr["OrigenPrecio"] = tieneOrigen
+                    ? row.Cells["OrigenPrecio"].Value?.ToString() ?? ""
+                    : "";
+                nr["PrecioTotal"] = tienePrecioTotal
+                    && row.Cells["PrecioTotal"].Value != null
+                    && row.Cells["PrecioTotal"].Value != DBNull.Value
+                    ? Convert.ToDecimal(row.Cells["PrecioTotal"].Value)
+                    : (object)DBNull.Value;
                 nr["FechaLimitePago"] = tieneLimite && row.Cells["FechaLimitePago"].Value != null
                     && row.Cells["FechaLimitePago"].Value != DBNull.Value
                     ? Convert.ToDateTime(row.Cells["FechaLimitePago"].Value)
@@ -674,6 +635,14 @@ namespace UI
                 string aporteInicial = dgvHistorial.Columns.Contains("AporteInicial")
                     ? row.Cells["AporteInicial"].Value?.ToString() ?? ""
                     : "";
+                string origen = dgvHistorial.Columns.Contains("OrigenPrecio")
+                    ? row.Cells["OrigenPrecio"].Value?.ToString() ?? ""
+                    : "";
+                string precioTotal = dgvHistorial.Columns.Contains("PrecioTotal")
+                    && row.Cells["PrecioTotal"].Value != null
+                    && row.Cells["PrecioTotal"].Value != DBNull.Value
+                    ? Convert.ToDecimal(row.Cells["PrecioTotal"].Value).ToString("C2")
+                    : "";
                 string monto = row.Cells["Monto"].Value != null ? 
                     Convert.ToDecimal(row.Cells["Monto"].Value).ToString("C2") : "$0.00";
                 string fecha = row.Cells["Fecha"].Value != null ? 
@@ -685,6 +654,10 @@ namespace UI
                 sb.AppendLine($"Descripción: {descripcion}");
                 if (!string.IsNullOrWhiteSpace(aporteInicial))
                     sb.AppendLine($"Pago inicial: {aporteInicial}");
+                if (!string.IsNullOrWhiteSpace(origen))
+                    sb.AppendLine($"Origen: {origen}");
+                if (!string.IsNullOrWhiteSpace(precioTotal))
+                    sb.AppendLine($"Precio total: {precioTotal}");
                 sb.AppendLine($"Monto: {monto}");
                 sb.AppendLine($"Fecha: {fecha}");
                 sb.AppendLine($"Usuario: {usuario}");

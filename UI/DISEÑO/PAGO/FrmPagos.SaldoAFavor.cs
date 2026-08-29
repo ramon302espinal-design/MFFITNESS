@@ -348,9 +348,6 @@ namespace UI.DISEÑO
                 RefrescarMiembrosConSaldo(seleccionarSaldoId: saldoId);
                 MostrarDetalleSaldoActivo(saldoId, nombre);
 
-                AppEventos.CajaCambiada();
-                AppEventos.PagoRegistrado();
-
                 MessageBox.Show(
                     $"Saldo a favor registrado para {nombre}.\n\n" +
                     $"Cobrado: RD$ {montoAplicado:N2}\n" +
@@ -408,8 +405,6 @@ namespace UI.DISEÑO
                 LimpiarVistaSaldoAbono();
                 CargarProductos();
                 ProgramarRefrescoDashboard();
-
-                AppEventos.PagoRegistrado();
 
                 MessageBox.Show(
                     $"Productos despachados para {nombre}.\n\nVenta Id {operacion.VentaId}",

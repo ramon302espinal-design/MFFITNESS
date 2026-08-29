@@ -465,7 +465,7 @@ namespace BLL
                     FechaFinMembresia = fin
                 };
 
-                // WhatsApp/PDF se envían después del cobro (UI en segundo plano).
+                // Notificación centralizada en PagoBLL.RegistrarPagoConResultado.
                 return result;
             }
             catch
@@ -572,6 +572,8 @@ namespace BLL
                         nota);
                 }
             });
+
+            MovimientoFinancieroNotifier.PagoConCaja();
 
             return new MembresiaOperacionResult
             {
@@ -723,8 +725,7 @@ namespace BLL
                 new CongelacionDAL().CerrarActiva(conn, tx, clienteId, DateTime.Today);
             });
 
-            if (result.DeudaId > 0)
-                AppEventos.DeudaModificada();
+            MovimientoFinancieroNotifier.MembresiaFinanciada(result.CajaMovimientoId, result.DeudaId);
 
             EnviarWhatsAppEnBackground(() =>
                 EnviarWhatsAppFinanciamiento(clienteId, planId, pagoInicial, fechaVencimientoDeuda, result));

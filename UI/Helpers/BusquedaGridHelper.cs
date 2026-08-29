@@ -24,6 +24,7 @@ namespace UI.Helpers
                    $"OR Nombre LIKE {like} " +
                    $"OR Telefono LIKE {like} " +
                    $"OR Direccion LIKE {like} " +
+                   $"OR Estado LIKE {like} " +
                    $"OR Convert(FechaNacimiento, 'System.String') LIKE {like}";
         }
 
@@ -36,6 +37,7 @@ namespace UI.Helpers
                    $"OR Nombre LIKE {like} " +
                    $"OR Membresia LIKE {like} " +
                    $"OR Estado LIKE {like} " +
+                   $"OR Convert(MontoPagado, 'System.String') LIKE {like} " +
                    $"OR Convert(FechaInicio, 'System.String') LIKE {like} " +
                    $"OR Convert(FechaFin, 'System.String') LIKE {like}";
         }
@@ -276,6 +278,8 @@ namespace UI.Helpers
                     $"OR Telefono LIKE {like} " +
                     $"OR Productos LIKE {like} " +
                     $"OR MetodoPago LIKE {like} " +
+                    $"OR TipoOperacion LIKE {like} " +
+                    $"OR FormaPago LIKE {like} " +
                     $"OR Usuario LIKE {like} " +
                     $"OR Convert(Total, 'System.String') LIKE {like} " +
                     $"OR Convert(MontoPagado, 'System.String') LIKE {like} " +

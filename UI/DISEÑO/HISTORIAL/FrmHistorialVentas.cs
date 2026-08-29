@@ -231,16 +231,46 @@ namespace UI.DISEÑO
                 if (row.Index >= 0 && row.Index < dgvVentasProductos.RowCount)
                     dgvVentasProductos.FirstDisplayedScrollingRowIndex = row.Index;
 
-                dgvDetalleProductos.DataSource = ventasBLL.ListarDetalleVenta(ventaId);
+                CargarDetalleVentaProducto(ventaId, row);
                 return true;
             }
 
             return false;
         }
 
+        private void CargarDetalleVentaProducto(int ventaId, DataGridViewRow? filaVenta = null)
+        {
+            dgvDetalleProductos.DataSource = ventasBLL.ListarDetalleVenta(ventaId);
+            dgvDetalleProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvDetalleProductos.ReadOnly = true;
+            dgvDetalleProductos.RowHeadersVisible = false;
+
+            decimal totalVenta = 0m;
+            decimal saldoVenta = 0m;
+
+            if (filaVenta?.DataBoundItem is DataRowView fila)
+            {
+                totalVenta = fila["Total"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["Total"]);
+                saldoVenta = fila["Saldo"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["Saldo"]);
+            }
+            else if (dgvVentasProductos.CurrentRow?.DataBoundItem is DataRowView filaActual)
+            {
+                totalVenta = filaActual["Total"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["Total"]);
+                saldoVenta = filaActual["Saldo"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["Saldo"]);
+            }
+
+            if (label3 != null)
+            {
+                label3.Text = saldoVenta > 0
+                    ? $"DETALLE · FINANCIADO · Total RD$ {totalVenta:N2} · Abono RD$ {totalVenta - saldoVenta:N2} · Saldo RD$ {saldoVenta:N2}"
+                    : "DETALLE DE PRODUCTOS";
+            }
+        }
+
         private void FrmHistorialVentas_Load(object sender, EventArgs e)
         {
             CORE.AppEventos.OnPagoRegistrado += ActualizarHistorial;
+            CORE.AppEventos.OnDeudaModificada += ActualizarHistorial;
             CargarHistorialPagos();
             CargarVentas();
             CargarHistorialMembresia();
@@ -454,6 +484,19 @@ namespace UI.DISEÑO
 
             DataGridViewHelper.HideColumn(dgvVentasProductos, "ClienteId");
             DataGridViewHelper.HideColumn(dgvVentasProductos, "Telefono");
+            DataGridViewHelper.HideColumn(dgvVentasProductos, "MetodoPago");
+
+            if (dgvVentasProductos.Columns["TipoOperacion"] is DataGridViewColumn colTipo)
+            {
+                colTipo.HeaderText = "Operación";
+                colTipo.DisplayIndex = 1;
+            }
+
+            if (dgvVentasProductos.Columns["FormaPago"] is DataGridViewColumn colForma)
+            {
+                colForma.HeaderText = "Forma de pago";
+                colForma.DisplayIndex = 8;
+            }
 
             if (dgvVentasProductos.Columns["Productos"] is DataGridViewColumn colProd)
             {
@@ -476,10 +519,12 @@ namespace UI.DISEÑO
                 }
             }
 
+            if (dgvVentasProductos.Columns["Total"] != null)
+                dgvVentasProductos.Columns["Total"]!.HeaderText = "Precio Total";
             if (dgvVentasProductos.Columns["MontoPagado"] != null)
-                dgvVentasProductos.Columns["MontoPagado"]!.HeaderText = "Pagado";
-            if (dgvVentasProductos.Columns["MetodoPago"] != null)
-                dgvVentasProductos.Columns["MetodoPago"]!.HeaderText = "Método";
+                dgvVentasProductos.Columns["MontoPagado"]!.HeaderText = "Pago Inicial / Pagado";
+            if (dgvVentasProductos.Columns["Saldo"] != null)
+                dgvVentasProductos.Columns["Saldo"]!.HeaderText = "Saldo Pendiente";
             if (dgvVentasProductos.Columns["Usuario"] != null)
                 dgvVentasProductos.Columns["Usuario"]!.HeaderText = "Atendió";
 
@@ -487,6 +532,24 @@ namespace UI.DISEÑO
             dgvVentasProductos.ReadOnly = true;
             dgvVentasProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvVentasProductos.RowHeadersVisible = false;
+            dgvVentasProductos.CellFormatting -= DgvVentasProductos_CellFormatting;
+            dgvVentasProductos.CellFormatting += DgvVentasProductos_CellFormatting;
+        }
+
+        private void DgvVentasProductos_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || dgvVentasProductos.Columns[e.ColumnIndex].Name != "TipoOperacion")
+                return;
+
+            if (dgvVentasProductos.Rows[e.RowIndex].DataBoundItem is not DataRowView fila)
+                return;
+
+            string tipo = fila["TipoOperacion"]?.ToString() ?? string.Empty;
+            if (!string.Equals(tipo, "FINANCIADO", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            e.CellStyle.ForeColor = Color.DarkOrange;
+            e.CellStyle.Font = new Font(dgvVentasProductos.Font, FontStyle.Bold);
         }
 
         private void dgvVentasProductos_SelectionChanged(object sender, EventArgs e)
@@ -495,16 +558,19 @@ namespace UI.DISEÑO
             if (val == null || val == DBNull.Value)
             {
                 dgvDetalleProductos.DataSource = null;
+                if (label3 != null)
+                    label3.Text = "DETALLE DE PRODUCTOS";
                 return;
             }
 
             int ventaId = Convert.ToInt32(val);
-            dgvDetalleProductos.DataSource = ventasBLL.ListarDetalleVenta(ventaId);
+            CargarDetalleVentaProducto(ventaId, dgvVentasProductos.CurrentRow);
         }
 
         private void FrmHistorialVentas_FormClosed(object sender, FormClosedEventArgs e)
         {
             CORE.AppEventos.OnPagoRegistrado -= ActualizarHistorial;
+            CORE.AppEventos.OnDeudaModificada -= ActualizarHistorial;
         }
     }
 }

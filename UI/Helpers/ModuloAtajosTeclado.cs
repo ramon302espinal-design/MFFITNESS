@@ -5,7 +5,7 @@ using UI.DISEÑO;
 namespace UI.Helpers
 {
     /// <summary>
-    /// Atajos globales: 1 Cobrar · C Caja · E Estado · D Deudas · H Historial · R Reportes · I Inventario · M Clientes.
+    /// Atajos globales: P Cobrar · C Caja · E Estado · D Deudas · H Historial · R Reportes · I Inventario · M Clientes.
     /// FrmPagos productos: Shift → financiar · Espacio/Enter → COBRAR.
     /// </summary>
     internal static class ModuloAtajosTeclado
@@ -25,9 +25,12 @@ namespace UI.Helpers
             _filtroGlobalInstalado = true;
         }
 
-        public static bool TryHandleNavegacion(KeyEventArgs e, Form host)
+        public static bool TryHandleNavegacion(KeyEventArgs e, Form host, IntPtr hwndOrigen = default)
         {
-            if (!EsTeclaModuloSola(e) || EstaEscribiendoTexto(host))
+            if (!EsTeclaModuloSola(e))
+                return false;
+
+            if (BusquedaFocusHelper.EsEntradaTextoActiva(hwndOrigen, host))
                 return false;
 
             Keys key = e.KeyCode;
@@ -82,7 +85,7 @@ namespace UI.Helpers
             if (!btnFinanciamiento.Enabled || !btnFinanciamiento.Visible)
                 return false;
 
-            if (EstaEscribiendoTexto(host))
+            if (BusquedaFocusHelper.EsEntradaTextoActiva(default, host))
                 return false;
 
             if (panelFinanciamientoProducto != null
@@ -126,8 +129,7 @@ namespace UI.Helpers
         {
             switch (key)
             {
-                case Keys.D1:
-                case Keys.NumPad1:
+                case Keys.P:
                     ModuloNavBar.AbrirCobrar(host);
                     break;
                 case Keys.C:
@@ -156,8 +158,7 @@ namespace UI.Helpers
 
         private static bool EsTeclaAtajo(Keys key) => key switch
         {
-            Keys.D1 or Keys.NumPad1 => true,
-            Keys.C or Keys.E or Keys.D or Keys.H or Keys.R or Keys.I or Keys.M => true,
+            Keys.P or Keys.C or Keys.E or Keys.D or Keys.H or Keys.R or Keys.I or Keys.M => true,
             _ => false
         };
 
@@ -177,27 +178,6 @@ namespace UI.Helpers
 
         private static bool EsTeclaModuloSola(KeyEventArgs e) =>
             !e.Alt && !e.Control && !e.Shift;
-
-        private static bool EstaEscribiendoTexto(Form host)
-        {
-            Control? activo = host.ActiveControl;
-            if (activo == null)
-                return false;
-
-            for (Control? c = activo; c != null; c = c.Parent)
-            {
-                if (c is TextBoxBase { ReadOnly: false })
-                    return true;
-
-                if (c is ComboBox cb && (cb.DropDownStyle == ComboBoxStyle.DropDown || cb.DroppedDown))
-                    return true;
-
-                if (c is ListBox lb && lb.Focused)
-                    return true;
-            }
-
-            return false;
-        }
 
         private static Form? ResolverFormularioDesdeMensaje(Message m)
         {
@@ -237,7 +217,7 @@ namespace UI.Helpers
                 Keys keyData = keyCode | Control.ModifierKeys;
                 var e = new KeyEventArgs(keyData);
 
-                return TryHandleNavegacion(e, form);
+                return TryHandleNavegacion(e, form, m.HWnd);
             }
         }
     }

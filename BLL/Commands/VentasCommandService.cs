@@ -45,13 +45,7 @@ namespace BLL.Commands
         /// </summary>
         private static void NotificarEventosPostVentaProducto(VentaOperacionResult operacion)
         {
-            AppEventos.PagoRegistrado();
-
-            if (operacion.CajaMovimientoId > 0)
-                AppEventos.CajaCambiada();
-
-            if (operacion.DeudaId > 0)
-                AppEventos.DeudaModificada();
+            MovimientoFinancieroNotifier.VentaProducto(operacion.CajaMovimientoId, operacion.DeudaId);
         }
 
         private static string ResolveUsuario(string? usuario)

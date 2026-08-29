@@ -144,6 +144,7 @@ namespace UI.DISEÑO
                     }
 
                     cajaBLL.AbrirCaja(montoInicial, Sesion.Usuario ?? "ADMIN");
+                    MovimientoFinancieroNotifier.SoloCaja();
                     MessageBox.Show("Caja abierta correctamente.");
                     return true;
                 }
@@ -409,6 +410,7 @@ namespace UI.DISEÑO
         {
             ClienteBLL clienteBLLLocal = new ClienteBLL();
             DataTable dt = clienteBLLLocal.ObtenerClientesParaPos();
+            DataTable dtMiembrosRegistrados = clienteBLLLocal.ObtenerMiembrosRegistradosParaPos();
 
             // ValueMember ANTES del DataSource; columna real = "Id" (no "ID").
             cmbCliente.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -419,10 +421,10 @@ namespace UI.DISEÑO
 
             // Copia independiente del catálogo para búsqueda TextBox + ListBox (no ComboBox).
             CargarCatalogoMiembrosDebe(dt);
-            CargarCombosSaldoAFavor(dt);
+            CargarCombosSaldoAFavor(dtMiembrosRegistrados);
 
             if (cmbClientePausarVenta != null)
-                CargarComboClientePausarVenta(dt);
+                CargarComboClientePausarVenta(dtMiembrosRegistrados);
         }
 
         /// <summary>
@@ -2072,10 +2074,6 @@ namespace UI.DISEÑO
 
             ProgramarRefrescoTrasPago();
 
-            // Deudas, dashboard e historial escuchan este evento para refrescar el saldo nuevo.
-            if (saldo > 0)
-                CORE.AppEventos.DeudaModificada();
-
             if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
             {
                 string? nota = saldo > 0
@@ -2168,7 +2166,6 @@ namespace UI.DISEÑO
                 MessageBoxIcon.Information);
 
             ProgramarRefrescoTrasPago();
-            CORE.AppEventos.CajaCambiada();
         }
 
         private void CobrarMembresiaCompleta(
@@ -2281,7 +2278,6 @@ namespace UI.DISEÑO
             {
                 try
                 {
-                    CORE.AppEventos.PagoRegistrado();
                     _presentacion?.CargarDashboard();
                 }
                 catch (Exception ex)

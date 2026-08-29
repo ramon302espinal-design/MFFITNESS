@@ -2,6 +2,7 @@ using BLL;
 using BLL.Commands;
 using CORE;
 using System;
+using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
@@ -119,6 +120,67 @@ namespace UI.DISEÑO
             dgvClientes.RowHeadersVisible = false;
 
             ThemeApplier.ApplyReadOnlyGridBehavior(dgvClientes);
+
+            dgvClientes.CellFormatting -= dgvClientes_CellFormatting;
+            dgvClientes.CellFormatting += dgvClientes_CellFormatting;
+        }
+
+        private void ConfigurarColumnasClientes()
+        {
+            if (dgvClientes.Columns.Contains("Sexo"))
+                dgvClientes.Columns["Sexo"].Visible = false;
+
+            if (dgvClientes.Columns.Contains("Estado"))
+            {
+                dgvClientes.Columns["Estado"].HeaderText = "Estado";
+                dgvClientes.Columns["Estado"].DisplayIndex = Math.Min(2, dgvClientes.Columns.Count - 1);
+                dgvClientes.Columns["Estado"].FillWeight = 90;
+            }
+
+            if (dgvClientes.Columns.Contains("Nombre"))
+                dgvClientes.Columns["Nombre"].FillWeight = 140;
+        }
+
+        private void dgvClientes_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            if (dgvClientes.Columns.Count == 0 || e.RowIndex >= dgvClientes.Rows.Count)
+                return;
+
+            DataGridViewRow fila = dgvClientes.Rows[e.RowIndex];
+            if (fila.IsNewRow || !dgvClientes.Columns.Contains("Estado"))
+                return;
+
+            string estado = Convert.ToString(fila.Cells["Estado"].Value)?.Trim().ToUpperInvariant() ?? string.Empty;
+
+            // Colores alineados con dgvEstado.
+            if (estado == "VENCIDO")
+                fila.DefaultCellStyle.BackColor = Color.LightCoral;
+            else if (estado == "ACTIVO Y PROGRAMADO")
+                fila.DefaultCellStyle.BackColor = Color.PaleGreen;
+            else if (estado == "ACTIVO")
+                fila.DefaultCellStyle.BackColor = Color.LightGreen;
+            else if (estado == "CONGELADO")
+                fila.DefaultCellStyle.BackColor = Color.LightSkyBlue;
+            else if (estado is "DESACTIVADO" or "SIN MEMBRESIA")
+                fila.DefaultCellStyle.BackColor = Color.LightGray;
+
+            if (!string.Equals(dgvClientes.Columns[e.ColumnIndex].Name, "Estado", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            e.Value = estado switch
+            {
+                "ACTIVO" => "ACTIVO",
+                "ACTIVO Y PROGRAMADO" => "ACTIVO Y PROGRAMADO",
+                "CONGELADO" => "CONGELADO",
+                "DESACTIVADO" => "DESACTIVADO",
+                "VENCIDO" => "VENCIDO",
+                "SIN MEMBRESIA" => "SOLO CLIENTE",
+                _ => string.IsNullOrEmpty(estado) ? "SOLO CLIENTE" : estado
+            };
+            e.FormattingApplied = true;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -312,9 +374,7 @@ namespace UI.DISEÑO
             _bsClientes.DataSource = service.ObtenerClientes();
             AplicarFiltroBusqueda();
             ActualizarTotalMiembrosRegistrados();
-
-            if (dgvClientes.Columns.Contains("Sexo"))
-                dgvClientes.Columns["Sexo"].Visible = false;
+            ConfigurarColumnasClientes();
 
             if (resaltarId.HasValue && resaltarId.Value > 0)
             {
@@ -329,14 +389,40 @@ namespace UI.DISEÑO
         private void ActualizarTotalMiembrosRegistrados()
         {
             int total = 0;
-            if (_bsClientes.DataSource is System.Data.DataTable dt)
-                total = dt.Rows.Count;
-            else if (_bsClientes.DataSource is System.Data.DataView dv)
-                total = dv.Table?.Rows.Count ?? 0;
-            else if (_bsClientes.List != null)
-                total = _bsClientes.List.Count;
+            int activos = 0;
+            int vencidos = 0;
+            int soloCliente = 0;
 
-            ucFichaResumen.ActualizarTotalMiembros(total);
+            DataTable? tabla = null;
+            if (_bsClientes.DataSource is DataTable dt)
+                tabla = dt;
+            else if (_bsClientes.DataSource is DataView dv)
+                tabla = dv.Table;
+
+            if (tabla != null)
+            {
+                total = tabla.Rows.Count;
+                if (tabla.Columns.Contains("Estado"))
+                {
+                    foreach (DataRow row in tabla.Rows)
+                    {
+                        string estado = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
+                        if (EstadoBLL.EsEstadoActivoVigente(estado))
+                            activos++;
+                        else if (string.Equals(estado, "VENCIDO", StringComparison.OrdinalIgnoreCase))
+                            vencidos++;
+                        else if (string.Equals(estado, "SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase)
+                                 || string.IsNullOrEmpty(estado))
+                            soloCliente++;
+                    }
+                }
+            }
+            else if (_bsClientes.List != null)
+            {
+                total = _bsClientes.List.Count;
+            }
+
+            ucFichaResumen.ActualizarTotalMiembros(total, activos, vencidos, soloCliente);
         }
 
         private void AplicarFiltroBusqueda()

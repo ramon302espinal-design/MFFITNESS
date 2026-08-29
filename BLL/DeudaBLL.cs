@@ -30,6 +30,7 @@ namespace BLL
             int cajaId = Convert.ToInt32(caja["Id"]);
 
             dal.RevertirPago(pagoId, usuario, cajaId);
+            MovimientoFinancieroNotifier.ReversoPago();
         }
 
         // ===============================
@@ -44,14 +45,39 @@ namespace BLL
         /// <param name="vencimiento">Fecha de vencimiento</param>
         /// <param name="usuario">Usuario que registra la deuda</param>
         /// <exception cref="Exception">Si el cliente o monto son inválidos</exception>
-        public int CrearDeudaConId(int clienteId, string concepto, decimal monto, DateTime vencimiento, string usuario)
+        public int CrearDeudaConId(
+            int clienteId,
+            string concepto,
+            decimal monto,
+            DateTime vencimiento,
+            string usuario,
+            decimal pagoInicial = 0,
+            decimal totalFinanciado = 0)
         {
             if (clienteId <= 0) throw new Exception("Cliente inválido");
             if (monto <= 0) throw new Exception("El monto de la deuda debe ser mayor a cero.");
 
+            if (pagoInicial < 0)
+                throw new Exception("El pago inicial no puede ser negativo.");
+
+            pagoInicial = decimal.Round(pagoInicial, 2);
+            totalFinanciado = totalFinanciado > 0
+                ? decimal.Round(totalFinanciado, 2)
+                : decimal.Round(monto + pagoInicial, 2);
+
+            if (pagoInicial > totalFinanciado)
+                throw new Exception("El pago inicial no puede superar el total financiado.");
+
             ValidarDeudaDuplicada(clienteId, concepto, monto);
 
-            int deudaId = dal.InsertarDeuda(clienteId, concepto, monto, vencimiento, usuario);
+            int deudaId = dal.InsertarDeuda(
+                clienteId,
+                concepto,
+                monto,
+                vencimiento,
+                usuario,
+                pagoInicial,
+                totalFinanciado);
 
             // WhatsApp fuera del hilo de UI/cobro (crear deuda o venta a crédito).
             int clienteIdBg = clienteId;
@@ -71,7 +97,7 @@ namespace BLL
                 }
             });
 
-            AppEventos.DeudaModificada();
+            MovimientoFinancieroNotifier.DeudaCreada(huboCaja: pagoInicial > 0);
             return deudaId;
         }
 
@@ -133,7 +159,7 @@ namespace BLL
                 }
             });
 
-            AppEventos.DeudaModificada();
+            MovimientoFinancieroNotifier.PagoDeuda();
             return pagoId;
         }
 
@@ -143,7 +169,7 @@ namespace BLL
                 throw new Exception("Deuda inválida");
 
             dal.AnularDeuda(deudaId, usuario);
-            AppEventos.DeudaModificada();
+            MovimientoFinancieroNotifier.DeudaAnulada();
         }
 
         /// <summary>
@@ -153,7 +179,7 @@ namespace BLL
         public DataTable ObtenerDeudas(bool incluirHistorial = false)
         {
             var dt = dal.ObtenerDeudas(soloActivas: !incluirHistorial);
-            EnriquecerAporteInicial(dt);
+            FinanciamientoSSOT.EnriquecerGridDeudas(dt);
             EnriquecerFechasPlanMembresia(dt);
             return dt;
         }
@@ -241,33 +267,6 @@ namespace BLL
             }
 
             return reporte;
-        }
-
-        private static void EnriquecerAporteInicial(DataTable dt)
-        {
-            if (dt == null) return;
-
-            if (!dt.Columns.Contains("AporteInicial"))
-                dt.Columns.Add("AporteInicial", typeof(string));
-
-            bool tienePagoInicial = dt.Columns.Contains("PagoInicialFinanciamiento");
-
-            foreach (DataRow row in dt.Rows)
-            {
-                if (row["MembresiaId"] == DBNull.Value || row["MembresiaId"] == null)
-                {
-                    row["AporteInicial"] = "-";
-                    continue;
-                }
-
-                decimal pagoInicial = 0;
-                if (tienePagoInicial && row["PagoInicialFinanciamiento"] != DBNull.Value)
-                    pagoInicial = Convert.ToDecimal(row["PagoInicialFinanciamiento"]);
-
-                row["AporteInicial"] = pagoInicial > 0
-                    ? $"Sí ({pagoInicial:N2})"
-                    : "No ($0.00)";
-            }
         }
 
         /// <summary>
@@ -771,7 +770,7 @@ namespace BLL
             if (caja != null)
                 cajaId = Convert.ToInt32(caja["Id"]);
 
-            return dal.ActualizarDeudaFinanciamiento(
+            var edicion = dal.ActualizarDeudaFinanciamiento(
                 deudaId,
                 concepto,
                 totalFinanciado,
@@ -781,6 +780,11 @@ namespace BLL
                 string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago,
                 cajaId,
                 string.IsNullOrWhiteSpace(usuario) ? "ADMIN" : usuario);
+
+            MovimientoFinancieroNotifier.EdicionFinanciamiento(
+                edicion.ReversoCaja || edicion.IngresoCaja);
+
+            return edicion;
         }
 
         // ===============================

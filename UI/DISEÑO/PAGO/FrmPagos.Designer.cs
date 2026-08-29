@@ -564,8 +564,6 @@ namespace UI.DISEÑO
             // 
             // cmbClientePausarVenta
             // 
-            cmbClientePausarVenta.AutoCompleteMode = AutoCompleteMode.None;
-            cmbClientePausarVenta.DropDownStyle = ComboBoxStyle.DropDown;
             cmbClientePausarVenta.Font = new Font("Segoe UI", 10F);
             cmbClientePausarVenta.FormattingEnabled = true;
             cmbClientePausarVenta.Location = new Point(12, 38);
@@ -574,11 +572,11 @@ namespace UI.DISEÑO
             cmbClientePausarVenta.TabIndex = 2;
             cmbClientePausarVenta.Text = "Buscar miembro...";
             cmbClientePausarVenta.DropDown += cmbClientePausarVenta_DropDown;
+            cmbClientePausarVenta.SelectedIndexChanged += cmbClientePausarVenta_SelectedIndexChanged;
+            cmbClientePausarVenta.TextUpdate += cmbClientePausarVenta_TextUpdate;
             cmbClientePausarVenta.DropDownClosed += cmbClientePausarVenta_DropDownClosed;
             cmbClientePausarVenta.Enter += cmbClientePausarVenta_Enter;
             cmbClientePausarVenta.KeyDown += cmbClientePausarVenta_KeyDown;
-            cmbClientePausarVenta.SelectedIndexChanged += cmbClientePausarVenta_SelectedIndexChanged;
-            cmbClientePausarVenta.TextUpdate += cmbClientePausarVenta_TextUpdate;
             cmbClientePausarVenta.MouseDown += cmbClientePausarVenta_MouseDown;
             // 
             // lblMiembrosPausados

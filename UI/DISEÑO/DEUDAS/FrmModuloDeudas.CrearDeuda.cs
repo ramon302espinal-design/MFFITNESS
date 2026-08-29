@@ -835,8 +835,6 @@ namespace UI
                     return;
                 }
 
-                AppEventos.PagoRegistrado();
-                AppEventos.DeudaModificada();
                 MostrarExitoYLimpiar(nombrePlan, pagoInicio, saldo);
             }
             catch (Exception ex)

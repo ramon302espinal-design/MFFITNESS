@@ -550,10 +550,6 @@ namespace UI
                 if (frm.ShowDialog(this) != DialogResult.OK)
                     return;
 
-                // El ajuste del pago inicial mueve caja: ambos eventos refrescan
-                // deudas, dashboard, POS/caja e historiales.
-                AppEventos.PagoRegistrado();
-                AppEventos.DeudaModificada();
                 CargarDeudas();
                 SeleccionarDeuda(deudaId);
             }
@@ -661,10 +657,22 @@ namespace UI
                 col.Width = 120;
             });
 
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "OrigenPrecio", col =>
+            {
+                col.HeaderText = "Origen";
+                col.Width = 90;
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "PrecioTotal", col =>
+            {
+                col.DefaultCellStyle.Format = "N2";
+                col.HeaderText = "Precio Total";
+            });
+
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "MontoTotal", col =>
             {
                 col.DefaultCellStyle.Format = "N2";
-                col.HeaderText = "Monto Financiado";
+                col.HeaderText = "Capital Deuda";
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "MontoPagado", col =>
@@ -718,15 +726,17 @@ namespace UI
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Nombre", 0);
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Concepto", 1);
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Plan", 2);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "AporteInicial", 3);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoTotal", 4);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoPagado", 5);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Saldo", 6);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaVencimiento", 7);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "DiasRestantes", 8);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Estado", 9);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaInicioMembresia", 10);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaFinMembresia", 11);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "OrigenPrecio", 3);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "AporteInicial", 4);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "PrecioTotal", 5);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoTotal", 6);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoPagado", 7);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Saldo", 8);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaVencimiento", 9);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "DiasRestantes", 10);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Estado", 11);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaInicioMembresia", 12);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaFinMembresia", 13);
 
             if (_seleccionClientePendiente)
                 AplicarSeleccionClientePendiente();
@@ -877,9 +887,6 @@ namespace UI
                     MessageBox.Show(result.Message, "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // Refresco inmediato: si quedó PAGADA / saldo 0, desaparece del grid.
-                    AppEventos.PagoRegistrado();
-                    AppEventos.DeudaModificada();
                     CargarDeudas();
                 }
             }

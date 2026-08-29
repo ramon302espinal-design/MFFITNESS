@@ -12,6 +12,7 @@ namespace BLL
         private readonly ClienteDAL clienteDAL = new ClienteDAL();
         private readonly ClienteFichaSaludDAL fichaDAL = new ClienteFichaSaludDAL();
 
+        /// <summary>Catálogo de clientes con Estado SSOT (misma regla que dgvEstado).</summary>
         public DataTable ObtenerClientes()
         {
             return clienteDAL.ListarClientes();
@@ -23,13 +24,22 @@ namespace BLL
             return clienteDAL.ListarClientesParaPos();
         }
 
+        /// <summary>Miembros registrados (con Membresias); excluye SOLO CLIENTE.</summary>
+        public DataTable ObtenerMiembrosRegistradosParaPos()
+        {
+            return clienteDAL.ListarMiembrosRegistradosParaPos();
+        }
+
+        public bool EsMiembroRegistrado(int clienteId) =>
+            clienteDAL.EsMiembroRegistrado(clienteId);
+
         /// <summary>Cliente técnico para ATLETA/VISITA sin miembro en combo.</summary>
         public int ObtenerOCrearVisitanteSistema()
         {
             return clienteDAL.ObtenerOCrearVisitanteSistema();
         }
 
-        /// <summary>Clientes elegibles para alta sin cobro (excluye ACTIVO).</summary>
+        /// <summary>Clientes elegibles para alta sin cobro (excluye ACTIVO y ACTIVO Y PROGRAMADO).</summary>
         public DataTable ObtenerClientesNoActivos()
         {
             return clienteDAL.ListarClientesNoActivos();

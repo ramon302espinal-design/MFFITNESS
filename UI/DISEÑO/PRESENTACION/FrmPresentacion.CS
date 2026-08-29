@@ -760,7 +760,7 @@ namespace UI.DISEÑO
                 // Usamos el nuevo BLL que centraliza todo el Core
                 DashboardBLL dashboardBLL = new DashboardBLL();
 
-                // 1. Datos de Clientes (misma regla que Estado: Activo / Vencido)
+                // 1. Clientes: SSOT EstadoDAL (ACTIVO+PROGRAMADO / VENCIDO = mismo grid Estado/Clientes)
                 lblClientesActivos.Text = dashboardBLL.ClientesActivos().ToString();
                 lblClientesVencidos.Text = dashboardBLL.ClientesVencidos().ToString();
 

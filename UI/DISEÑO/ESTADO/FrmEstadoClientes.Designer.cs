@@ -108,7 +108,7 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1924, 52);
+            panelNav.Size = new Size(1672, 52);
             panelNav.TabIndex = 0;
             // 
             // btnNavClientes
@@ -214,7 +214,7 @@ namespace UI.DISEÑO
             panelBusqueda.Location = new Point(0, 52);
             panelBusqueda.Name = "panelBusqueda";
             panelBusqueda.Padding = new Padding(12, 8, 12, 8);
-            panelBusqueda.Size = new Size(1924, 56);
+            panelBusqueda.Size = new Size(1672, 56);
             panelBusqueda.TabIndex = 1;
             // 
             // btnDescargarPDF
@@ -226,7 +226,7 @@ namespace UI.DISEÑO
             btnDescargarPDF.FlatStyle = FlatStyle.Flat;
             btnDescargarPDF.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnDescargarPDF.ForeColor = Color.White;
-            btnDescargarPDF.Location = new Point(1240, 12);
+            btnDescargarPDF.Location = new Point(988, 12);
             btnDescargarPDF.Name = "btnDescargarPDF";
             btnDescargarPDF.Size = new Size(330, 36);
             btnDescargarPDF.TabIndex = 71;
@@ -240,7 +240,7 @@ namespace UI.DISEÑO
             cbmMesesPanel.DropDownStyle = ComboBoxStyle.DropDownList;
             cbmMesesPanel.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             cbmMesesPanel.FormattingEnabled = true;
-            cbmMesesPanel.Location = new Point(1580, 12);
+            cbmMesesPanel.Location = new Point(1328, 12);
             cbmMesesPanel.Name = "cbmMesesPanel";
             cbmMesesPanel.Size = new Size(320, 33);
             cbmMesesPanel.TabIndex = 70;
@@ -262,7 +262,7 @@ namespace UI.DISEÑO
             txtBuscar.Location = new Point(122, 10);
             txtBuscar.Name = "txtBuscar";
             txtBuscar.PlaceholderText = "Nombre, plan, estado...";
-            txtBuscar.Size = new Size(897, 41);
+            txtBuscar.Size = new Size(645, 41);
             txtBuscar.TabIndex = 1;
             txtBuscar.TabStop = false;
             txtBuscar.TextChanged += txtBuscar_TextChanged;
@@ -278,7 +278,7 @@ namespace UI.DISEÑO
             panelAcciones.Location = new Point(0, 841);
             panelAcciones.Name = "panelAcciones";
             panelAcciones.Padding = new Padding(12, 8, 12, 8);
-            panelAcciones.Size = new Size(1924, 64);
+            panelAcciones.Size = new Size(1672, 64);
             panelAcciones.TabIndex = 3;
             panelAcciones.Tag = "classic";
             // 
@@ -287,7 +287,7 @@ namespace UI.DISEÑO
             btnProgramar.Anchor = AnchorStyles.None;
             btnProgramar.Enabled = false;
             btnProgramar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnProgramar.Location = new Point(1189, 11);
+            btnProgramar.Location = new Point(1063, 11);
             btnProgramar.Name = "btnProgramar";
             btnProgramar.Size = new Size(150, 42);
             btnProgramar.TabIndex = 5;
@@ -299,7 +299,7 @@ namespace UI.DISEÑO
             // 
             btnAñadirMiembro.Anchor = AnchorStyles.None;
             btnAñadirMiembro.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnAñadirMiembro.Location = new Point(528, 10);
+            btnAñadirMiembro.Location = new Point(402, 10);
             btnAñadirMiembro.Name = "btnAñadirMiembro";
             btnAñadirMiembro.Size = new Size(178, 42);
             btnAñadirMiembro.TabIndex = 3;
@@ -312,7 +312,7 @@ namespace UI.DISEÑO
             btnRenovar.Anchor = AnchorStyles.None;
             btnRenovar.Enabled = false;
             btnRenovar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnRenovar.Location = new Point(731, 11);
+            btnRenovar.Location = new Point(605, 11);
             btnRenovar.Name = "btnRenovar";
             btnRenovar.Size = new Size(142, 42);
             btnRenovar.TabIndex = 0;
@@ -324,7 +324,7 @@ namespace UI.DISEÑO
             // 
             btnDesactivar.Anchor = AnchorStyles.None;
             btnDesactivar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnDesactivar.Location = new Point(893, 11);
+            btnDesactivar.Location = new Point(767, 11);
             btnDesactivar.Name = "btnDesactivar";
             btnDesactivar.Size = new Size(126, 42);
             btnDesactivar.TabIndex = 1;
@@ -337,7 +337,7 @@ namespace UI.DISEÑO
             btnCongelar.Anchor = AnchorStyles.None;
             btnCongelar.Enabled = false;
             btnCongelar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnCongelar.Location = new Point(1039, 11);
+            btnCongelar.Location = new Point(913, 11);
             btnCongelar.Name = "btnCongelar";
             btnCongelar.Size = new Size(126, 42);
             btnCongelar.TabIndex = 2;
@@ -351,6 +351,7 @@ namespace UI.DISEÑO
             dgvEstado.AllowUserToDeleteRows = false;
             dgvEstado.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             dgvEstado.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvEstado.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvEstado.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvEstado.Location = new Point(0, 108);
             dgvEstado.MultiSelect = false;
@@ -359,7 +360,7 @@ namespace UI.DISEÑO
             dgvEstado.RowHeadersWidth = 51;
             dgvEstado.RowTemplate.Height = 32;
             dgvEstado.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvEstado.Size = new Size(1586, 342);
+            dgvEstado.Size = new Size(1390, 476);
             dgvEstado.TabIndex = 2;
             dgvEstado.CellDoubleClick += dgvEstado_CellDoubleClick;
             dgvEstado.CellFormatting += dgvEstado_CellFormatting;
@@ -391,7 +392,7 @@ namespace UI.DISEÑO
             panel2.Controls.Add(labelStock);
             panel2.ForeColor = Color.Crimson;
             panel2.ImeMode = ImeMode.On;
-            panel2.Location = new Point(139, 456);
+            panel2.Location = new Point(27, 590);
             panel2.Name = "panel2";
             panel2.Size = new Size(249, 140);
             panel2.TabIndex = 64;
@@ -441,7 +442,7 @@ namespace UI.DISEÑO
             panel1.Controls.Add(label3);
             panel1.ForeColor = Color.Crimson;
             panel1.ImeMode = ImeMode.On;
-            panel1.Location = new Point(139, 602);
+            panel1.Location = new Point(821, 590);
             panel1.Name = "panel1";
             panel1.Size = new Size(249, 140);
             panel1.TabIndex = 65;
@@ -491,7 +492,7 @@ namespace UI.DISEÑO
             panel3.Controls.Add(label6);
             panel3.ForeColor = Color.Crimson;
             panel3.ImeMode = ImeMode.On;
-            panel3.Location = new Point(394, 602);
+            panel3.Location = new Point(1076, 590);
             panel3.Name = "panel3";
             panel3.Size = new Size(249, 140);
             panel3.TabIndex = 67;
@@ -541,7 +542,7 @@ namespace UI.DISEÑO
             panel4.Controls.Add(label9);
             panel4.ForeColor = Color.Crimson;
             panel4.ImeMode = ImeMode.On;
-            panel4.Location = new Point(394, 456);
+            panel4.Location = new Point(282, 590);
             panel4.Name = "panel4";
             panel4.Size = new Size(249, 140);
             panel4.TabIndex = 66;
@@ -591,7 +592,7 @@ namespace UI.DISEÑO
             panel5.Controls.Add(label12);
             panel5.ForeColor = Color.Crimson;
             panel5.ImeMode = ImeMode.On;
-            panel5.Location = new Point(649, 456);
+            panel5.Location = new Point(537, 590);
             panel5.Name = "panel5";
             panel5.Size = new Size(278, 140);
             panel5.TabIndex = 68;
@@ -642,7 +643,7 @@ namespace UI.DISEÑO
             panel6.Controls.Add(label15);
             panel6.ForeColor = Color.Crimson;
             panel6.ImeMode = ImeMode.On;
-            panel6.Location = new Point(649, 602);
+            panel6.Location = new Point(1331, 590);
             panel6.Name = "panel6";
             panel6.Size = new Size(278, 140);
             panel6.TabIndex = 69;
@@ -693,7 +694,7 @@ namespace UI.DISEÑO
             panel7.Controls.Add(label4);
             panel7.ForeColor = Color.Crimson;
             panel7.ImeMode = ImeMode.On;
-            panel7.Location = new Point(933, 456);
+            panel7.Location = new Point(1330, 735);
             panel7.Name = "panel7";
             panel7.Size = new Size(278, 140);
             panel7.TabIndex = 69;
@@ -751,7 +752,7 @@ namespace UI.DISEÑO
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1924, 905);
+            ClientSize = new Size(1672, 905);
             Controls.Add(panel7);
             Controls.Add(panel6);
             Controls.Add(panel5);

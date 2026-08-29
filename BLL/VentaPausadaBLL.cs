@@ -10,6 +10,7 @@ namespace BLL
     public class VentaPausadaBLL
     {
         private readonly VentaPausadaDAL dal = new VentaPausadaDAL();
+        private readonly ClienteDAL clienteDal = new ClienteDAL();
 
         public DataTable ObtenerPausadasActivas() => dal.ObtenerPausadasActivas();
 
@@ -38,6 +39,9 @@ namespace BLL
         {
             if (clienteId <= 0)
                 throw new Exception("Seleccione un miembro válido para pausar la venta.");
+
+            if (!clienteDal.EsMiembroRegistrado(clienteId))
+                throw new Exception("Solo miembros registrados pueden pausar una venta.");
 
             if (string.IsNullOrWhiteSpace(clienteNombre))
                 clienteNombre = "Cliente";

@@ -188,26 +188,9 @@ namespace UI.DISEÑO
             }
         }
 
-        /// <summary>M-A y MENSUALIDAD → bucket MENSUALIDAD; planes especiales con bucket propio.</summary>
-        private static string ClasificarPlanKpi(string nombrePlan)
-        {
-            string n = (nombrePlan ?? string.Empty).Trim();
-            if (string.Equals(n, "M-A", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(n, "MENSUALIDAD", StringComparison.OrdinalIgnoreCase))
-                return "MENSUALIDAD";
-            if (string.Equals(n, "PREMIUM", StringComparison.OrdinalIgnoreCase))
-                return "PREMIUM";
-            if (string.Equals(n, "PRO", StringComparison.OrdinalIgnoreCase))
-                return "PRO";
-            if (string.Equals(n, "3x", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(n, "3X", StringComparison.OrdinalIgnoreCase))
-                return "3X";
-            if (string.Equals(n, "ABDOMEN PLANO", StringComparison.OrdinalIgnoreCase))
-                return "ABDOMEN PLANO";
-            if (string.Equals(n, "GLUTEOS GRANDE", StringComparison.OrdinalIgnoreCase))
-                return "GLUTEOS GRANDE";
-            return string.Empty;
-        }
+        /// <summary>M-A y MENSUALIDAD → bucket MENSUALIDAD; planes especiales con bucket propio; resto → OTROS (solo TOTAL).</summary>
+        private static string ClasificarPlanKpi(string nombrePlan) =>
+            EstadoBLL.ClasificarPlanParaKpi(nombrePlan);
 
         private Dictionary<string, decimal> ObtenerPreciosPlanes()
         {
@@ -247,7 +230,7 @@ namespace UI.DISEÑO
             string[] requeridas =
             {
                 "ID", "Nombre", "Membresia", "FechaInicio", "FechaFin", "Estado",
-                "EstadoDeuda", "SaldoPendiente", "MontoFinanciado", "VencimientoDeuda"
+                "EstadoDeuda", "SaldoPendiente", "MontoFinanciado", "VencimientoDeuda", "MontoPagado"
             };
 
             foreach (string col in requeridas)
@@ -298,6 +281,16 @@ namespace UI.DISEÑO
                     col.HeaderText = "Plan";
                     col.Width = 130;
                     col.MinimumWidth = 100;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvEstado, "MontoPagado", col =>
+                {
+                    col.HeaderText = "Monto Pagado";
+                    col.DefaultCellStyle.Format = "C2";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    col.Width = 120;
+                    col.DefaultCellStyle.ForeColor = Color.DarkGreen;
+                    col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Estado", col =>
@@ -375,7 +368,7 @@ namespace UI.DISEÑO
                     estado.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase) ||
                     estado.Equals("SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase);
                 btnCongelar.Enabled =
-                    estado.Equals("ACTIVO", StringComparison.OrdinalIgnoreCase) ||
+                    EstadoBLL.EsEstadoActivoVigente(estado) ||
                     estado.Equals("CONGELADO", StringComparison.OrdinalIgnoreCase);
                 btnProgramar.Enabled =
                     estado.Equals("ACTIVO", StringComparison.OrdinalIgnoreCase);
@@ -1056,7 +1049,7 @@ namespace UI.DISEÑO
                 if (tablaEstado != null)
                     ActualizarKpisPlanesActivos(tablaEstado);
                 else
-                    AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
+                    AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
                 return;
             }
 
@@ -1068,14 +1061,14 @@ namespace UI.DISEÑO
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"KPI mes estado: {ex.Message}");
-                AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
+                AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
             }
         }
 
         private void ActualizarKpisPlanesActivos(DataTable tabla)
         {
-            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0, cAbdomen = 0, cGluteos = 0;
-            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m, mAbdomen = 0m, mGluteos = 0m;
+            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0, cAbdomen = 0, cGluteos = 0, cOtros = 0;
+            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m, mAbdomen = 0m, mGluteos = 0m, mOtros = 0m;
 
             Dictionary<string, decimal> precios = ObtenerPreciosPlanes();
 
@@ -1084,7 +1077,7 @@ namespace UI.DISEÑO
                 foreach (DataRow row in tabla.Rows)
                 {
                     string estado = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
-                    if (!string.Equals(estado, "ACTIVO", StringComparison.OrdinalIgnoreCase))
+                    if (!EstadoBLL.EsEstadoActivoVigente(estado))
                         continue;
 
                     string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
@@ -1099,19 +1092,20 @@ namespace UI.DISEÑO
                         ref cPro, ref mPro,
                         ref c3x, ref m3x,
                         ref cAbdomen, ref mAbdomen,
-                        ref cGluteos, ref mGluteos);
+                        ref cGluteos, ref mGluteos,
+                        ref cOtros, ref mOtros);
                 }
             }
 
             AplicarKpisAControles(
                 cMensualidad, mMensualidad, cPremium, mPremium, cPro, mPro,
-                c3x, m3x, cAbdomen, mAbdomen, cGluteos, mGluteos);
+                c3x, m3x, cAbdomen, mAbdomen, cGluteos, mGluteos, cOtros, mOtros);
         }
 
         private void ActualizarKpisPlanesHistorico(DataTable kpis)
         {
-            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0, cAbdomen = 0, cGluteos = 0;
-            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m, mAbdomen = 0m, mGluteos = 0m;
+            int cMensualidad = 0, cPremium = 0, cPro = 0, c3x = 0, cAbdomen = 0, cGluteos = 0, cOtros = 0;
+            decimal mMensualidad = 0m, mPremium = 0m, mPro = 0m, m3x = 0m, mAbdomen = 0m, mGluteos = 0m, mOtros = 0m;
 
             foreach (DataRow row in kpis.Rows)
             {
@@ -1128,12 +1122,13 @@ namespace UI.DISEÑO
                     ref cPro, ref mPro,
                     ref c3x, ref m3x,
                     ref cAbdomen, ref mAbdomen,
-                    ref cGluteos, ref mGluteos);
+                    ref cGluteos, ref mGluteos,
+                    ref cOtros, ref mOtros);
             }
 
             AplicarKpisAControles(
                 cMensualidad, mMensualidad, cPremium, mPremium, cPro, mPro,
-                c3x, m3x, cAbdomen, mAbdomen, cGluteos, mGluteos);
+                c3x, m3x, cAbdomen, mAbdomen, cGluteos, mGluteos, cOtros, mOtros);
         }
 
         private void AcumularKpiPlan(
@@ -1143,7 +1138,8 @@ namespace UI.DISEÑO
             ref int cPro, ref decimal mPro,
             ref int c3x, ref decimal m3x,
             ref int cAbdomen, ref decimal mAbdomen,
-            ref int cGluteos, ref decimal mGluteos)
+            ref int cGluteos, ref decimal mGluteos,
+            ref int cOtros, ref decimal mOtros)
         {
             switch (ClasificarPlanKpi(plan))
             {
@@ -1171,6 +1167,10 @@ namespace UI.DISEÑO
                     cGluteos += cantidad;
                     mGluteos += monto;
                     break;
+                case "OTROS":
+                    cOtros += cantidad;
+                    mOtros += monto;
+                    break;
             }
         }
 
@@ -1180,7 +1180,8 @@ namespace UI.DISEÑO
             int cPro, decimal mPro,
             int c3x, decimal m3x,
             int cAbdomen, decimal mAbdomen,
-            int cGluteos, decimal mGluteos)
+            int cGluteos, decimal mGluteos,
+            int cOtros, decimal mOtros)
         {
             SetKpi(lblCMensualidad, cMensualidad.ToString("N0", CulturaDo));
             SetKpi(lblMMensualidad, "RD$ " + mMensualidad.ToString("N2", CulturaDo));
@@ -1195,8 +1196,8 @@ namespace UI.DISEÑO
             SetKpi(lblCGluteosGrande, cGluteos.ToString("N0", CulturaDo));
             SetKpi(lblMGluteosGrande, "RD$ " + mGluteos.ToString("N2", CulturaDo));
 
-            int cTotal = cMensualidad + cPremium + cPro + c3x + cAbdomen + cGluteos;
-            decimal mTotal = mMensualidad + mPremium + mPro + m3x + mAbdomen + mGluteos;
+            int cTotal = cMensualidad + cPremium + cPro + c3x + cAbdomen + cGluteos + cOtros;
+            decimal mTotal = mMensualidad + mPremium + mPro + m3x + mAbdomen + mGluteos + mOtros;
             SetKpi(lblCTotal, cTotal.ToString("N0", CulturaDo));
             SetKpi(lblMTotal, "RD$ " + mTotal.ToString("N2", CulturaDo));
         }

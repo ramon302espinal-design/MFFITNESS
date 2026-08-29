@@ -77,6 +77,8 @@ namespace BLL
                 }
             });
 
+            MovimientoFinancieroNotifier.Notificar(huboPago: true, huboCaja: cajaMovId > 0);
+
             return (pagoId, cajaMovId);
         }
 
@@ -86,6 +88,7 @@ namespace BLL
                 throw new Exception("Pago inválido.");
 
             pagoDAL.RevertirPagoMembresia(pagoId, cajaMovimientoId, usuario);
+            MovimientoFinancieroNotifier.ReversoPago();
         }
     }
 }

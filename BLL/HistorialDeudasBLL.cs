@@ -8,6 +8,8 @@ namespace BLL
     public class HistorialBLL
     {
         private readonly DBHelper db = new DBHelper();
+        private readonly DeudaDAL deudaDAL = new DeudaDAL();
+        private readonly VentasDAL ventasDAL = new VentasDAL();
 
         public DataTable ObtenerHistorial(int? clienteId, string? tipo, DateTime? desde, DateTime? hasta)
         {
@@ -29,6 +31,7 @@ namespace BLL
                     conn.Open();
                     da.Fill(dt);
 
+                    FinanciamientoSSOT.EnriquecerHistorialDeudas(dt, deudaDAL, ventasDAL);
                     return dt;
                 }
             }
@@ -37,5 +40,9 @@ namespace BLL
                 throw new Exception("Error al obtener historial: " + ex.Message);
             }
         }
+
+        /// <summary>Expuesto para re-enriquecer un DataTable ya cargado (p. ej. filtros UI).</summary>
+        public void EnriquecerFinanciamiento(DataTable dt) =>
+            FinanciamientoSSOT.EnriquecerHistorialDeudas(dt, deudaDAL, ventasDAL);
     }
 }

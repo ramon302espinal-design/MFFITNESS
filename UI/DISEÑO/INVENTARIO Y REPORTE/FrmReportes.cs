@@ -519,6 +519,8 @@ namespace UI
 
         private void FrmReportes_Load(object sender, EventArgs e)
         {
+            BusquedaFocusHelper.Wire(this);
+
             _cargandoUi = true;
             try
             {

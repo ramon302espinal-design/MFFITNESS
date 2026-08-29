@@ -6,7 +6,7 @@ namespace BLL
     public class DashboardBLL
     {
         private readonly CajaDAL cajaDAL = new CajaDAL();
-        private readonly MembresiaDAL membDAL = new MembresiaDAL();
+        private readonly EstadoDAL estadoDAL = new EstadoDAL();
 
         public decimal IngresosHoy()
         {
@@ -18,14 +18,16 @@ namespace BLL
             return cajaDAL.ObtenerTotalIngresosMesActual();
         }
 
+        /// <summary>ACTIVO + ACTIVO Y PROGRAMADO (SSOT = dgvEstado / dgvClientes).</summary>
         public int ClientesActivos()
         {
-            return membDAL.ObtenerTotalActivos();
+            return estadoDAL.ObtenerConteosDashboard().Activos;
         }
 
+        /// <summary>VENCIDO (SSOT = dgvEstado / dgvClientes).</summary>
         public int ClientesVencidos()
         {
-            return membDAL.ClientesVencidos();
+            return estadoDAL.ObtenerConteosDashboard().Vencidos;
         }
     }
 }
