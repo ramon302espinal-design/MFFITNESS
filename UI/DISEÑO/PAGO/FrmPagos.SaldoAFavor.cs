@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Windows.Forms;
 using BLL;
+using BLL.Commands;
 using BLL.Models;
 using CORE;
 using UI.Theme;
@@ -399,7 +400,17 @@ namespace UI.DISEÑO
                 if (confirmar != DialogResult.Yes)
                     return;
 
-                var operacion = saldoClienteBLL.DespacharSaldo(saldoId, Sesion.Usuario);
+                var result = VentasCommandService.RegistrarDespachoSaldoAFavor(
+                    saldoId,
+                    Sesion.Usuario);
+
+                if (!result.Success)
+                {
+                    MessageBox.Show(result.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                int ventaId = result.Payload is int idVenta ? idVenta : 0;
 
                 RefrescarMiembrosConSaldo();
                 LimpiarVistaSaldoAbono();
@@ -407,7 +418,7 @@ namespace UI.DISEÑO
                 ProgramarRefrescoDashboard();
 
                 MessageBox.Show(
-                    $"Productos despachados para {nombre}.\n\nVenta Id {operacion.VentaId}",
+                    $"Productos despachados para {nombre}.\n\nVenta Id {ventaId}",
                     "Despachar reserva",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);

@@ -53,6 +53,14 @@ namespace CORE
             OnStockCritico?.Invoke(productoId);
         }
 
+        /// <summary>Congelar, desactivar, programación aplicada, ajuste de fecha, etc.</summary>
+        public static event Action? OnEstadoMembresiaCambiada;
+
+        public static void EstadoMembresiaCambiada()
+        {
+            OnEstadoMembresiaCambiada?.Invoke();
+        }
+
         public static event Action<ProgramacionActivadaEventArgs>? OnProgramacionActivada;
 
         private static readonly HashSet<int> _programacionEventoEmitido = new();

@@ -36,18 +36,27 @@ namespace UI
                 _seleccionClientePendiente = true;
             }
         }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            EmbeddedFormHelper.CorregirSiEmbebido(this);
+            base.OnLoad(e);
+        }
         private void dgvDeudas_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (dgvDeudas.Rows.Count == 0 || e.RowIndex < 0) return;
+            if (e.RowIndex < 0 || e.ColumnIndex < 0 || e.ColumnIndex >= dgvDeudas.Columns.Count)
+                return;
+
+            if (dgvDeudas.Rows.Count == 0)
+                return;
 
             if (e.CellStyle == null)
                 e.CellStyle = new DataGridViewCellStyle(dgvDeudas.DefaultCellStyle);
 
+            string nombreColumna = dgvDeudas.Columns[e.ColumnIndex].Name;
+
             // 🔥 FORMATO COLUMNA ESTADO
-            if (e.ColumnIndex >= 0
-                && dgvDeudas.Columns[e.ColumnIndex] is DataGridViewColumn estadoColumn
-                && estadoColumn.Name == "Estado"
-                && e.Value != null)
+            if (nombreColumna == "Estado" && e.Value != null)
             {
                 string estado = (e.Value?.ToString() ?? string.Empty).ToUpper();
 
@@ -72,9 +81,13 @@ namespace UI
             }
 
             // 🔥 FORMATO COLUMNA DÍAS RESTANTES
-            if (dgvDeudas.Columns[e.ColumnIndex].Name == "DiasRestantes" && e.Value != null)
+            if (nombreColumna == "DiasRestantes" && e.Value != null)
             {
-                int dias = Convert.ToInt32(e.Value);
+                if (e.Value is not int dias)
+                {
+                    if (!int.TryParse(e.Value.ToString(), out dias))
+                        return;
+                }
 
                 e.CellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
                 e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -102,7 +115,7 @@ namespace UI
             }
 
             // 🆕 RESALTAR COLUMNA PLAN CUANDO NO ES N/A
-            if (dgvDeudas.Columns[e.ColumnIndex].Name == "Plan" && e.Value != null)
+            if (nombreColumna == "Plan" && e.Value != null)
             {
                 string plan = e.Value.ToString();
                 if (plan != "N/A")
@@ -113,7 +126,7 @@ namespace UI
                 }
             }
 
-            if (dgvDeudas.Columns[e.ColumnIndex].Name == "AporteInicial" && e.Value != null)
+            if (nombreColumna == "AporteInicial" && e.Value != null)
             {
                 string aporte = e.Value.ToString() ?? string.Empty;
                 e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -130,8 +143,6 @@ namespace UI
             }
 
             // 🔥 MONTOS: EL SALDO MANDA. EN DEUDAS PAGADAS LOS IMPORTES SON HISTÓRICOS
-            string nombreColumna = dgvDeudas.Columns[e.ColumnIndex].Name;
-
             if (nombreColumna == "Saldo" && e.Value != null && e.Value != DBNull.Value)
             {
                 decimal saldoFila = Convert.ToDecimal(e.Value);
@@ -257,6 +268,22 @@ namespace UI
             dgvDeudas.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
 
             dgvDeudas.DataSource = _bsDeudas;
+            dgvDeudas.DataBindingComplete += DgvDeudas_DespuesDeEnlazar;
+        }
+
+        private void DgvDeudas_DespuesDeEnlazar(object? sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            if (IsDisposed || Disposing || dgvDeudas.IsDisposed)
+                return;
+
+            FormatearGrid();
+        }
+
+        private void DgvDeudas_HandleCreated(object? sender, EventArgs e)
+        {
+            dgvDeudas.HandleCreated -= DgvDeudas_HandleCreated;
+            if (_bsDeudas.DataSource != null && dgvDeudas.Columns.Count > 0)
+                FormatearGrid();
         }
 
         // ===============================
@@ -271,8 +298,7 @@ namespace UI
             {
                 try
                 {
-                    if (IsHandleCreated)
-                        BeginInvoke(new Action(CargarDeudas));
+                    BeginInvoke(new Action(CargarDeudas));
                 }
                 catch (ObjectDisposedException)
                 {
@@ -280,7 +306,7 @@ namespace UI
                 return;
             }
 
-            if (dgvDeudas == null || dgvDeudas.IsDisposed || !IsHandleCreated)
+            if (dgvDeudas == null || dgvDeudas.IsDisposed)
                 return;
 
             try
@@ -313,9 +339,13 @@ namespace UI
 
                 _bsDeudas.DataSource = dt;
                 AplicarFiltros();
-
-                FormatearGrid();
                 ActualizarResumenCliente(dt);
+
+                if (!dgvDeudas.IsHandleCreated)
+                {
+                    dgvDeudas.HandleCreated -= DgvDeudas_HandleCreated;
+                    dgvDeudas.HandleCreated += DgvDeudas_HandleCreated;
+                }
             }
             catch (ObjectDisposedException)
             {
@@ -643,6 +673,8 @@ namespace UI
         {
             if (dgvDeudas.Columns.Count == 0) return;
 
+            DataGridViewHelper.RunColumnLayout(dgvDeudas, () =>
+            {
             DataGridViewHelper.HideColumn(dgvDeudas, "Id");
             DataGridViewHelper.HideColumn(dgvDeudas, "ClienteId");
             DataGridViewHelper.HideColumn(dgvDeudas, "FechaCreacion");
@@ -654,13 +686,13 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "AporteInicial", col =>
             {
                 col.HeaderText = "Pago Inicial";
-                col.Width = 120;
+                DataGridViewHelper.SetColumnWidth(col, 120);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "OrigenPrecio", col =>
             {
                 col.HeaderText = "Origen";
-                col.Width = 90;
+                DataGridViewHelper.SetColumnWidth(col, 90);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "PrecioTotal", col =>
@@ -692,27 +724,27 @@ namespace UI
             {
                 col.DefaultCellStyle.Format = "dd/MM/yyyy";
                 col.HeaderText = "Fecha Límite Pago";
-                col.Width = 130;
+                DataGridViewHelper.SetColumnWidth(col, 130);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "FechaInicioMembresia", col =>
             {
                 col.DefaultCellStyle.Format = "dd/MM/yyyy";
                 col.HeaderText = "Inicio Plan";
-                col.Width = 100;
+                DataGridViewHelper.SetColumnWidth(col, 100);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "FechaFinMembresia", col =>
             {
                 col.DefaultCellStyle.Format = "dd/MM/yyyy";
                 col.HeaderText = "Vence Plan";
-                col.Width = 100;
+                DataGridViewHelper.SetColumnWidth(col, 100);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "Plan", col =>
             {
                 col.HeaderText = "Plan Financiado";
-                col.Width = 120;
+                DataGridViewHelper.SetColumnWidth(col, 120);
                 col.DefaultCellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
                 col.DefaultCellStyle.ForeColor = Color.DarkBlue;
             });
@@ -737,6 +769,7 @@ namespace UI
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Estado", 11);
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaInicioMembresia", 12);
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaFinMembresia", 13);
+            });
 
             if (_seleccionClientePendiente)
                 AplicarSeleccionClientePendiente();
@@ -987,6 +1020,11 @@ namespace UI
         {
             AppEventos.OnPagoRegistrado -= CargarDeudas;
             AppEventos.OnDeudaModificada -= CargarDeudas;
+            if (dgvDeudas != null)
+            {
+                dgvDeudas.DataBindingComplete -= DgvDeudas_DespuesDeEnlazar;
+                dgvDeudas.HandleCreated -= DgvDeudas_HandleCreated;
+            }
             base.OnFormClosed(e);
         }
     }

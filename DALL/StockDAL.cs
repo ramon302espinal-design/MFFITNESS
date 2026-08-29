@@ -111,6 +111,39 @@ namespace DL
             }
         }
 
+        /// <summary>Salida de stock dentro de una TX padre (venta POS atómica).</summary>
+        public int RegistrarSalidaEnTransaccion(
+            SqlConnection conn,
+            SqlTransaction transaction,
+            int productoId,
+            int cantidad,
+            string usuario,
+            string descripcion)
+        {
+            if (cantidad <= 0)
+                throw new Exception("La cantidad debe ser mayor a cero.");
+
+            int stockAnterior = ObtenerStockActual(productoId, conn, transaction);
+            if (stockAnterior < cantidad)
+                throw new Exception("Stock insuficiente para realizar la venta.");
+
+            int stockNuevo = stockAnterior - cantidad;
+            int movimientoId = InsertarMovimiento(
+                productoId, "SALIDA", cantidad, stockAnterior, stockNuevo,
+                usuario, descripcion, null, null, conn, transaction);
+            ActualizarStock(productoId, cantidad, false, conn, transaction);
+            return movimientoId;
+        }
+
+        public void RevertirMovimientoEnTransaccion(
+            SqlConnection conn,
+            SqlTransaction transaction,
+            int movimientoId,
+            string usuario)
+        {
+            RevertirMovimientoCore(conn, transaction, movimientoId, usuario);
+        }
+
         public void RevertirMovimiento(int movimientoId, string usuario)
         {
             using SqlConnection conn = db.GetConnection();
@@ -119,6 +152,22 @@ namespace DL
 
             try
             {
+                RevertirMovimientoCore(conn, transaction, movimientoId, usuario);
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        private void RevertirMovimientoCore(
+            SqlConnection conn,
+            SqlTransaction transaction,
+            int movimientoId,
+            string usuario)
+        {
                 SqlCommand cmdGet = new SqlCommand(@"
                     SELECT ProductoId, TipoMovimiento, Cantidad, Descripcion
                     FROM MovimientosStock
@@ -187,14 +236,6 @@ namespace DL
                 InsertarMovimiento(
                     productoId, tipoInverso, cantidad, stockAnterior, stockNuevo,
                     usuario, descripcionReverso, null, null, conn, transaction);
-
-                transaction.Commit();
-            }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
         }
 
         private static decimal? ResolverCostoEntrada(decimal? costoInformado, decimal costoVigente)

@@ -17,6 +17,7 @@ namespace UI
         private FrmHistorialDeudas? historialForm;
         private readonly int? _clienteIdParaGestion;
         private bool _navegacionInicialPendiente;
+        private bool _refrescoTabsPendiente;
 
         public FrmModuloDeudas() : this(null)
         {
@@ -50,6 +51,12 @@ namespace UI
 
             ConfigurarTabControl();
             AplicarPermisosTabs();
+            SuscribirEventosModulo();
+
+            // Fase 5.1: crear formularios hijos de inmediato para que escuchen AppEventos
+            // aunque el usuario no haya visitado Dashboard/Historial todavía.
+            PrecargarFormulariosHijos();
+            BusquedaFocusHelper.WireFormulariosEmbebidos(this);
 
             // Si solo puede ver historial (ej. rol CONSULTA), no abrir Gestión.
             if (_navegacionInicialPendiente && _clienteIdParaGestion.HasValue && PuedeGestionarDeudas())
@@ -211,6 +218,70 @@ namespace UI
         }
 
         // ===============================
+        // FASE 5 — SYNC ENTRE TABS
+        // ===============================
+        private void SuscribirEventosModulo()
+        {
+            AppEventos.OnPagoRegistrado += OnMovimientoFinancieroModulo;
+            AppEventos.OnDeudaModificada += OnMovimientoFinancieroModulo;
+        }
+
+        private void DesuscribirEventosModulo()
+        {
+            AppEventos.OnPagoRegistrado -= OnMovimientoFinancieroModulo;
+            AppEventos.OnDeudaModificada -= OnMovimientoFinancieroModulo;
+        }
+
+        private void OnMovimientoFinancieroModulo()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            _refrescoTabsPendiente = true;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(RefrescarFormulariosHijos));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                return;
+            }
+
+            RefrescarFormulariosHijos();
+        }
+
+        private void RefrescarFormulariosHijos()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            dashboardForm?.ActualizarDatos();
+            gestionForm?.ActualizarDatos();
+            historialForm?.ActualizarDatos();
+            _refrescoTabsPendiente = false;
+        }
+
+        /// <summary>
+        /// Instancia formularios embebidos permitidos al abrir el módulo (no espera al primer click en tab).
+        /// </summary>
+        private void PrecargarFormulariosHijos()
+        {
+            if (tabControl.TabPages.Contains(tabDashboard) && PuedeVerDashboardDeudas())
+                AsegurarDashboard(refrescarSiExiste: false);
+
+            if (tabControl.TabPages.Contains(tabGestion) && PuedeGestionarDeudas())
+                AsegurarGestion(refrescarSiExiste: false);
+
+            if (tabControl.TabPages.Contains(tabHistorial) && PuedeVerHistorialDeudas())
+                AsegurarHistorial(refrescarSiExiste: false);
+        }
+
+        // ===============================
         // EVENTO: CAMBIO DE TAB
         // ===============================
         private void tabControl_SelectedIndexChanged(object? sender, EventArgs e)
@@ -218,6 +289,7 @@ namespace UI
             if (tabControl.SelectedTab == null)
                 return;
 
+            // Fase 5.2: siempre refrescar al cambiar tab (cubre eventos mientras estaba oculto).
             if (tabControl.SelectedTab == tabDashboard)
                 CargarDashboard();
             else if (tabControl.SelectedTab == tabGestion)
@@ -233,21 +305,24 @@ namespace UI
         // ===============================
         private void CargarDashboard()
         {
+            AsegurarDashboard(refrescarSiExiste: true);
+        }
+
+        private void AsegurarDashboard(bool refrescarSiExiste)
+        {
             if (dashboardForm == null || dashboardForm.IsDisposed)
             {
-                dashboardForm = new FrmDeudaDashboard
-                {
-                    TopLevel = false,
-                    FormBorderStyle = FormBorderStyle.None,
-                    Dock = DockStyle.Fill
-                };
-                tabDashboard.Controls.Add(dashboardForm);
-                dashboardForm.Show();
+                dashboardForm = new FrmDeudaDashboard();
+                EmbeddedFormHelper.MontarEn(tabDashboard, dashboardForm);
+                BusquedaFocusHelper.Wire(dashboardForm);
+
+                if (tabControl.SelectedTab == tabDashboard)
+                    dashboardForm.ActualizarDatos();
             }
             else
             {
-                // Refrescar datos cuando se vuelva a seleccionar el tab
-                dashboardForm.ActualizarDatos();
+                if (refrescarSiExiste || _refrescoTabsPendiente)
+                    dashboardForm.ActualizarDatos();
                 dashboardForm.BringToFront();
             }
         }
@@ -257,29 +332,36 @@ namespace UI
         // ===============================
         private void CargarGestion()
         {
+            AsegurarGestion(refrescarSiExiste: true);
+        }
+
+        private void AsegurarGestion(bool refrescarSiExiste)
+        {
             int? clienteId = _navegacionInicialPendiente ? _clienteIdParaGestion : null;
 
             if (gestionForm == null || gestionForm.IsDisposed)
             {
-                gestionForm = new FrmDeudas(clienteId)
-                {
-                    TopLevel = false,
-                    FormBorderStyle = FormBorderStyle.None,
-                    Dock = DockStyle.Fill
-                };
-                tabGestion.Controls.Add(gestionForm);
-                gestionForm.Show();
+                gestionForm = new FrmDeudas(clienteId);
+                EmbeddedFormHelper.MontarEn(tabGestion, gestionForm);
+                BusquedaFocusHelper.Wire(gestionForm);
+
+                if (tabControl.SelectedTab == tabGestion)
+                    gestionForm.ActualizarDatos();
 
                 if (_navegacionInicialPendiente)
                     _navegacionInicialPendiente = false;
             }
-            else
+            else if (refrescarSiExiste || _refrescoTabsPendiente)
             {
-                if (_clienteIdParaGestion.HasValue)
+                if (_clienteIdParaGestion.HasValue && _navegacionInicialPendiente)
                     gestionForm.SeleccionarCliente(_clienteIdParaGestion.Value);
                 else
                     gestionForm.ActualizarDatos();
 
+                gestionForm.BringToFront();
+            }
+            else
+            {
                 gestionForm.BringToFront();
             }
         }
@@ -299,20 +381,24 @@ namespace UI
         // ===============================
         private void CargarHistorial()
         {
+            AsegurarHistorial(refrescarSiExiste: true);
+        }
+
+        private void AsegurarHistorial(bool refrescarSiExiste)
+        {
             if (historialForm == null || historialForm.IsDisposed)
             {
-                historialForm = new FrmHistorialDeudas
-                {
-                    TopLevel = false,
-                    FormBorderStyle = FormBorderStyle.None,
-                    Dock = DockStyle.Fill
-                };
-                tabHistorial.Controls.Add(historialForm);
-                historialForm.Show();
+                historialForm = new FrmHistorialDeudas();
+                EmbeddedFormHelper.MontarEn(tabHistorial, historialForm);
+                BusquedaFocusHelper.Wire(historialForm);
+
+                if (tabControl.SelectedTab == tabHistorial)
+                    historialForm.ActualizarDatos();
             }
             else
             {
-                historialForm.ActualizarDatos();
+                if (refrescarSiExiste || _refrescoTabsPendiente)
+                    historialForm.ActualizarDatos();
                 historialForm.BringToFront();
             }
         }
@@ -322,6 +408,7 @@ namespace UI
         // ===============================
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            DesuscribirEventosModulo();
             CerrarFormularioHijo(ref dashboardForm);
             CerrarFormularioHijo(ref gestionForm);
             CerrarFormularioHijo(ref historialForm);

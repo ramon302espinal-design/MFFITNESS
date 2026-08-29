@@ -77,6 +77,7 @@ namespace UI.DISEÑO
                     colNombre.HeaderText = "Cliente";
                 if (dgvMovimientos.Columns["TipoMovimiento"] is DataGridViewColumn colTipo)
                     colTipo.HeaderText = "Tipo";
+                AplicarTipoVisibleMovimientos();
                 if (dgvMovimientos.Columns["Concepto"] is DataGridViewColumn colConcepto)
                     colConcepto.HeaderText = "Concepto";
                 if (dgvMovimientos.Columns["Monto"] is DataGridViewColumn colMonto)
@@ -104,6 +105,32 @@ namespace UI.DISEÑO
             AppEventos.OnPagoRegistrado += CargarMovimientos;
             AppEventos.OnDeudaModificada += CargarMovimientos;
             AppEventos.OnCajaCambiada += CargarMovimientos;
+        }
+
+        /// <summary>
+        /// Los egresos de corrección (p. ej. reverso de pago inicial) se muestran como REVERSO.
+        /// </summary>
+        private void AplicarTipoVisibleMovimientos()
+        {
+            if (!dgvMovimientos.Columns.Contains("TipoMovimiento")
+                || !dgvMovimientos.Columns.Contains("Concepto"))
+                return;
+
+            bool tieneMetodo = dgvMovimientos.Columns.Contains("MetodoPago");
+
+            foreach (DataGridViewRow row in dgvMovimientos.Rows)
+            {
+                if (row.IsNewRow)
+                    continue;
+
+                string tipo = row.Cells["TipoMovimiento"].Value?.ToString() ?? string.Empty;
+                string concepto = row.Cells["Concepto"].Value?.ToString() ?? string.Empty;
+                string metodo = tieneMetodo
+                    ? row.Cells["MetodoPago"].Value?.ToString() ?? string.Empty
+                    : string.Empty;
+
+                row.Cells["TipoMovimiento"].Value = CajaConceptoHelper.TipoVisible(tipo, concepto, metodo);
+            }
         }
 
         /// <summary>

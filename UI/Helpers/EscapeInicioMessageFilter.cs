@@ -57,9 +57,18 @@ namespace UI.Helpers
                 if (activa is FrmPresentacion)
                     return false;
 
+                if (BusquedaFocusHelper.EsEntradaTextoActiva(m.HWnd, activa))
+                    return false;
+
                 _navegando = true;
                 activa.BeginInvoke(new Action(VolverAPresentacion));
                 return true;
+            }
+
+            if (tecla == Keys.End)
+            {
+                if (BusquedaFocusHelper.EsEntradaTextoActiva(m.HWnd, activa))
+                    return false;
             }
 
             // END: salir de sesión (misma lógica que btnCerrarSesion).

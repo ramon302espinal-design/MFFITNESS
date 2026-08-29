@@ -5,29 +5,23 @@ namespace BLL
 {
     public class DashboardBLL
     {
-        private readonly CajaDAL cajaDAL = new CajaDAL();
+        private readonly CajaBLL cajaBLL = new CajaBLL();
         private readonly EstadoDAL estadoDAL = new EstadoDAL();
 
         public decimal IngresosHoy()
         {
-            return cajaDAL.ObtenerTotalIngresosPorFecha(DateTime.Now);
+            return cajaBLL.IngresosNetosDelDia();
         }
 
         public decimal IngresosMes()
         {
-            return cajaDAL.ObtenerTotalIngresosMesActual();
+            return cajaBLL.IngresosNetosMes();
         }
 
         /// <summary>ACTIVO + ACTIVO Y PROGRAMADO (SSOT = dgvEstado / dgvClientes).</summary>
-        public int ClientesActivos()
-        {
-            return estadoDAL.ObtenerConteosDashboard().Activos;
-        }
+        public int ClientesActivos() => EstadoConteosSSOT.Obtener().Activos;
 
         /// <summary>VENCIDO (SSOT = dgvEstado / dgvClientes).</summary>
-        public int ClientesVencidos()
-        {
-            return estadoDAL.ObtenerConteosDashboard().Vencidos;
-        }
+        public int ClientesVencidos() => EstadoConteosSSOT.Obtener().Vencidos;
     }
 }

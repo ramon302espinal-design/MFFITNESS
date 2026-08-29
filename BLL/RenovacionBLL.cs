@@ -94,6 +94,8 @@ namespace BLL
                 new CongelacionDAL().CerrarActiva(conn, tx, clienteId, DateTime.Today);
             });
 
+            MovimientoFinancieroNotifier.PagoConCaja();
+
             return result;
         }
 
@@ -121,6 +123,8 @@ namespace BLL
                         membresiaDAL.ReactivarMembresiaPorId(previa.Id, previa.FechaFin);
                 }
             }
+
+            MovimientoFinancieroNotifier.EstadoMembresia();
         }
     }
 }

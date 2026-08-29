@@ -60,6 +60,7 @@ namespace UI.Helpers
             WireAllNavClicks(panelNav, host);
             ModuloAtajosTeclado.WireAtajosEnFormulario(host);
             BusquedaFocusHelper.Wire(host);
+            BusquedaFocusHelper.WireFormulariosEmbebidos(host);
             AsegurarRelayout(panelNav, host, moduloActual);
         }
 
@@ -113,6 +114,7 @@ namespace UI.Helpers
         {
             using var frm = new FrmCRMFinanciero { StartPosition = FormStartPosition.CenterScreen };
             MostrarDialogo(frm, owner);
+            ObtenerPresentacion()?.CargarDashboard();
         }
 
         public static void AbrirClientes(IWin32Window? owner)

@@ -65,7 +65,10 @@ $localSettings = Join-Path $InstallDir 'appsettings.Local.json'
 @'
 {
   "Database": {
-    "DefaultEnvironment": "Production"
+    "DefaultEnvironment": "Production",
+    "ConnectionStrings": {
+      "Production": "Server=(localdb)\\MSSQLLocalDB;Database=MF CYBER DB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+    }
   }
 }
 '@ | Set-Content -Path $localSettings -Encoding UTF8

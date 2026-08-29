@@ -22,6 +22,7 @@ namespace UI
             btnGenerarPDF = new Button();
             cmbReporte = new ComboBox();
             panelPie = new Panel();
+            lblEstadoSync = new Label();
             lblTotal = new Label();
             dgvMostrarDatos = new DataGridView();
             panelHeader.SuspendLayout();
@@ -103,12 +104,13 @@ namespace UI
             // 
             // panelPie
             // 
+            panelPie.Controls.Add(lblEstadoSync);
             panelPie.Controls.Add(lblTotal);
             panelPie.Dock = DockStyle.Bottom;
             panelPie.Location = new Point(0, 644);
             panelPie.Name = "panelPie";
             panelPie.Padding = new Padding(12, 8, 12, 8);
-            panelPie.Size = new Size(1100, 56);
+            panelPie.Size = new Size(1100, 72);
             panelPie.TabIndex = 2;
             panelPie.Tag = "classic";
             // 
@@ -123,6 +125,17 @@ namespace UI
             lblTotal.Tag = "classic";
             lblTotal.Text = "0";
             lblTotal.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // lblEstadoSync
+            // 
+            lblEstadoSync.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lblEstadoSync.Font = new Font("Segoe UI", 8F);
+            lblEstadoSync.ForeColor = Color.FromArgb(64, 64, 64);
+            lblEstadoSync.Location = new Point(12, 44);
+            lblEstadoSync.Name = "lblEstadoSync";
+            lblEstadoSync.Size = new Size(1076, 20);
+            lblEstadoSync.TabIndex = 1;
+            lblEstadoSync.Text = "Reportes POS = movimientos del período.";
             // 
             // dgvMostrarDatos
             // 
@@ -172,6 +185,7 @@ namespace UI
         private Button btnGenerarExcel;
         private DataGridView dgvMostrarDatos;
         private Label lblTotal;
+        private Label lblEstadoSync;
         private Label label4;
         private TextBox txtBusca;
     }

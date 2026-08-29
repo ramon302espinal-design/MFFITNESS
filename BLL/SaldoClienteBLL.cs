@@ -180,8 +180,7 @@ namespace BLL
                 throw;
             }
 
-            MovimientoFinancieroNotifier.VentaSinCaja();
-
+            // Notificación: VentasCommandService.RegistrarDespachoSaldoAFavor
             return operacion;
         }
     }

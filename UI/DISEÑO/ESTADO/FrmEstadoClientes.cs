@@ -38,6 +38,8 @@ namespace UI.DISEÑO
         private System.Windows.Forms.Timer timerActualizacion = new System.Windows.Forms.Timer();
         private bool cargando = false;
         private bool _estadoUiInicializado;
+        private Label? _lblEstadoConteos;
+        private DateTime _ultimaSyncEstado = DateTime.MinValue;
 
         /// <summary>Constructor para el diseñador de WinForms.</summary>
         public FrmEstadoClientes()
@@ -103,11 +105,16 @@ namespace UI.DISEÑO
             _estadoUiInicializado = true;
 
             InicializarComboMesesPanel();
+            InicializarEtiquetaConteos();
 
             AppEventos.OnPagoRegistrado -= OnDatosEstadoCambiaron;
             AppEventos.OnDeudaModificada -= OnDatosEstadoCambiaron;
+            AppEventos.OnEstadoMembresiaCambiada -= OnDatosEstadoCambiaron;
+            AppEventos.OnProgramacionActivada -= OnProgramacionActivadaEstado;
             AppEventos.OnPagoRegistrado += OnDatosEstadoCambiaron;
             AppEventos.OnDeudaModificada += OnDatosEstadoCambiaron;
+            AppEventos.OnEstadoMembresiaCambiada += OnDatosEstadoCambiaron;
+            AppEventos.OnProgramacionActivada += OnProgramacionActivadaEstado;
 
             CargarEstado();
 
@@ -127,13 +134,61 @@ namespace UI.DISEÑO
         {
             AppEventos.OnPagoRegistrado -= OnDatosEstadoCambiaron;
             AppEventos.OnDeudaModificada -= OnDatosEstadoCambiaron;
+            AppEventos.OnEstadoMembresiaCambiada -= OnDatosEstadoCambiaron;
+            AppEventos.OnProgramacionActivada -= OnProgramacionActivadaEstado;
             timerActualizacion.Stop();
             base.OnFormClosed(e);
         }
 
         private void OnDatosEstadoCambiaron()
         {
+            _ultimaSyncEstado = DateTime.Now;
             CargarEstado();
+        }
+
+        private void OnProgramacionActivadaEstado(ProgramacionActivadaEventArgs info)
+        {
+            _ultimaSyncEstado = DateTime.Now;
+            CargarEstado();
+        }
+
+        private void InicializarEtiquetaConteos()
+        {
+            if (_lblEstadoConteos != null || panelBusqueda == null || panelBusqueda.IsDisposed)
+                return;
+
+            _lblEstadoConteos = new Label
+            {
+                AutoSize = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 8F),
+                ForeColor = Color.FromArgb(64, 64, 64),
+                Location = new Point(12, 38),
+                Name = "lblEstadoConteos",
+                Size = new Size(panelBusqueda.Width - 680, 18),
+                Text = "Conteos alineados con home (SSOT Estado)."
+            };
+            panelBusqueda.Controls.Add(_lblEstadoConteos);
+            panelBusqueda.Height = Math.Max(panelBusqueda.Height, 64);
+        }
+
+        private void ActualizarEtiquetaConteos(DataTable tabla)
+        {
+            if (_lblEstadoConteos == null || _lblEstadoConteos.IsDisposed)
+                return;
+
+            bool ok = EstadoConteosSSOT.CoincidenConTabla(tabla, out string resumen);
+            string sync = _ultimaSyncEstado == DateTime.MinValue
+                ? "sin eventos en sesión"
+                : $"sync {_ultimaSyncEstado:HH:mm:ss}";
+
+            _lblEstadoConteos.Text =
+                (ok ? "✓ " : "⚠ ") +
+                resumen +
+                " · Home usa mismos conteos · WhatsApp solo deudas con saldo · " + sync;
+            _lblEstadoConteos.ForeColor = ok
+                ? Color.FromArgb(64, 64, 64)
+                : Color.FromArgb(180, 83, 9);
         }
 
         private void TimerActualizacion_Tick(object? sender, EventArgs e) 
@@ -173,6 +228,7 @@ namespace UI.DISEÑO
                 FormatearGrid();
                 ActualizarKpisSegunPeriodo(tabla);
                 ActualizarEtiquetaTiempo();
+                ActualizarEtiquetaConteos(tabla);
                 dgvEstado.ClearSelection();
             }
             catch (Exception ex)
@@ -246,14 +302,19 @@ namespace UI.DISEÑO
         // ===============================
         private void FormatearGrid()
         {
+            if (dgvEstado.Columns.Count == 0)
+                return;
+
             try
             {
+                DataGridViewHelper.RunColumnLayout(dgvEstado, () =>
+                {
                 DataGridViewHelper.HideColumn(dgvEstado, "ID");
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Nombre", col =>
                 {
                     col.HeaderText = "Cliente";
-                    col.Width = 200;
+                    DataGridViewHelper.SetColumnWidth(col, 200);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "FechaInicio", col =>
@@ -262,7 +323,7 @@ namespace UI.DISEÑO
                     col.DefaultCellStyle.Format = "dd/MM/yyyy";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     col.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
-                    col.Width = 110;
+                    DataGridViewHelper.SetColumnWidth(col, 110);
                     col.MinimumWidth = 110;
                 });
 
@@ -272,14 +333,14 @@ namespace UI.DISEÑO
                     col.DefaultCellStyle.Format = "dd/MM/yyyy";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     col.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
-                    col.Width = 110;
+                    DataGridViewHelper.SetColumnWidth(col, 110);
                     col.MinimumWidth = 110;
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Membresia", col =>
                 {
                     col.HeaderText = "Plan";
-                    col.Width = 130;
+                    DataGridViewHelper.SetColumnWidth(col, 130);
                     col.MinimumWidth = 100;
                 });
 
@@ -288,7 +349,7 @@ namespace UI.DISEÑO
                     col.HeaderText = "Monto Pagado";
                     col.DefaultCellStyle.Format = "C2";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                    col.Width = 120;
+                    DataGridViewHelper.SetColumnWidth(col, 120);
                     col.DefaultCellStyle.ForeColor = Color.DarkGreen;
                     col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
                 });
@@ -296,13 +357,13 @@ namespace UI.DISEÑO
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Estado", col =>
                 {
                     col.HeaderText = "Estado";
-                    col.Width = 160;
+                    DataGridViewHelper.SetColumnWidth(col, 160);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "EstadoDeuda", col =>
                 {
                     col.HeaderText = "Estado Deuda";
-                    col.Width = 110;
+                    DataGridViewHelper.SetColumnWidth(col, 110);
                     col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
                 });
 
@@ -311,7 +372,7 @@ namespace UI.DISEÑO
                     col.HeaderText = "Saldo Pendiente";
                     col.DefaultCellStyle.Format = "C2";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                    col.Width = 120;
+                    DataGridViewHelper.SetColumnWidth(col, 120);
                     col.DefaultCellStyle.ForeColor = Color.Red;
                     col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
                 });
@@ -321,14 +382,15 @@ namespace UI.DISEÑO
                     col.HeaderText = "Monto Financiado";
                     col.DefaultCellStyle.Format = "C2";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                    col.Width = 130;
+                    DataGridViewHelper.SetColumnWidth(col, 130);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "VencimientoDeuda", col =>
                 {
                     col.HeaderText = "Vence Deuda";
                     col.DefaultCellStyle.Format = "dd/MM/yyyy";
-                    col.Width = 100;
+                    DataGridViewHelper.SetColumnWidth(col, 100);
+                });
                 });
             }
             catch (Exception ex)
@@ -390,7 +452,9 @@ namespace UI.DISEÑO
             var fila = dgvEstado.Rows[e.RowIndex];
             string estadoDeuda = ObtenerValorCelda(fila, "EstadoDeuda");
 
-            if (!estadoDeuda.Equals("ACTIVA", StringComparison.OrdinalIgnoreCase))
+            if (!estadoDeuda.Equals("ACTIVA", StringComparison.OrdinalIgnoreCase)
+                && !estadoDeuda.Equals("FINANCIADA", StringComparison.OrdinalIgnoreCase)
+                && !estadoDeuda.Equals("CRÉDITO", StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (!TryObtenerClienteDeFila(fila, out int clienteId))
@@ -605,12 +669,25 @@ namespace UI.DISEÑO
 
             if (string.Equals(colName, "EstadoDeuda", StringComparison.OrdinalIgnoreCase))
             {
-                string estadoDeuda = e.Value?.ToString() ?? "";
-                if (estadoDeuda == "ACTIVA")
+                string estadoDeuda = e.Value?.ToString() ?? string.Empty;
+                if (estadoDeuda.Equals("ACTIVA", StringComparison.OrdinalIgnoreCase))
                 {
+                    decimal montoFin = 0m;
+                    var celFin = ObtenerCelda(fila, "MontoFinanciado");
+                    if (celFin?.Value != null && celFin.Value != DBNull.Value)
+                        decimal.TryParse(celFin.Value.ToString(), out montoFin);
+
+                    e.Value = montoFin > 0m ? "FINANCIADA" : "CRÉDITO";
+                    e.FormattingApplied = true;
                     e.CellStyle.BackColor = Color.LightYellow;
                     e.CellStyle.ForeColor = Color.DarkOrange;
                     e.CellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
+                }
+                else if (estadoDeuda.Equals("N/A", StringComparison.OrdinalIgnoreCase))
+                {
+                    e.Value = "AL DÍA";
+                    e.FormattingApplied = true;
+                    e.CellStyle.ForeColor = Color.DarkGreen;
                 }
             }
 

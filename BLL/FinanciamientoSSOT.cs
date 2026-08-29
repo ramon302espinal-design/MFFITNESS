@@ -233,6 +233,43 @@ namespace BLL
                     precioPorDeuda[deudaId] = resumen;
             }
 
+            // Fase 5.4: si el filtro oculta filas DEUDA pero quedan PAGO/PAGO_INICIAL visibles,
+            // resolver precio desde contexto de Deudas aunque no haya movimiento DEUDA en el dataset.
+            foreach (int deudaId in deudaIds)
+            {
+                if (precioPorDeuda.ContainsKey(deudaId))
+                    continue;
+                if (!contextoPorDeuda.TryGetValue(deudaId, out DataRow? ctx))
+                    continue;
+
+                string concepto = ctx["Concepto"]?.ToString() ?? string.Empty;
+                bool esMembresia = ctx["MembresiaId"] != DBNull.Value && ctx["MembresiaId"] != null;
+                decimal pagoInicial = pagosInicialesPorDeuda.TryGetValue(deudaId, out decimal pi) ? pi : 0m;
+                if (pagoInicial <= 0m && ctx["PagoInicialFinanciamiento"] != DBNull.Value)
+                    pagoInicial = Convert.ToDecimal(ctx["PagoInicialFinanciamiento"]);
+
+                decimal capitalDeuda = ctx["SaldoDeuda"] != DBNull.Value
+                    ? Convert.ToDecimal(ctx["SaldoDeuda"])
+                    : 0m;
+
+                decimal? ventaTotal = VentasDAL.TryExtraerVentaIdDeConcepto(concepto) is int ventaId
+                    && totalesVenta.TryGetValue(ventaId, out decimal vt)
+                    ? vt
+                    : null;
+
+                Resumen resumen = ResolverDeuda(
+                    concepto,
+                    capitalDeuda,
+                    capitalDeuda,
+                    pagoInicial,
+                    esMembresia,
+                    ventaTotal,
+                    concepto);
+
+                if (resumen.EsFinanciado)
+                    precioPorDeuda[deudaId] = resumen;
+            }
+
             foreach (DataRow row in dt.Rows)
             {
                 string tipo = row["Tipo"]?.ToString() ?? string.Empty;

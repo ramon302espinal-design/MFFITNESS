@@ -27,8 +27,8 @@ namespace UI.DISEÑO
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             AppEventos.OnCajaCambiada -= RefrescarEstadoCaja;
-            AppEventos.OnPagoRegistrado -= ActualizarIngresosYBalance;
-            AppEventos.OnDeudaModificada -= ActualizarIngresosYBalance;
+            AppEventos.OnPagoRegistrado -= ActualizarDashboardEnVivo;
+            AppEventos.OnDeudaModificada -= ActualizarDashboardEnVivo;
             // NO detener FacturaGastosAppHost aquí: la IA sigue en Presentación.
             base.OnFormClosed(e);
         }
@@ -72,12 +72,11 @@ namespace UI.DISEÑO
             ActualizarEstadoCaja(cajaAbierta);
 
             AppEventos.OnCajaCambiada += RefrescarEstadoCaja;
-            // Edición de deudas / pagos: solo ingresos y balance. El reverso no toca
-            // monto inicial ni el panel de gastos.
-            AppEventos.OnPagoRegistrado += ActualizarIngresosYBalance;
-            AppEventos.OnDeudaModificada += ActualizarIngresosYBalance;
+            AppEventos.OnPagoRegistrado += ActualizarDashboardEnVivo;
+            AppEventos.OnDeudaModificada += ActualizarDashboardEnVivo;
 
             ActualizarDashboard();
+            ActualizarAyudaCaja();
             FacturaGastosAppHost.NotifyCajaState(cajaAbierta);
         }
 
@@ -98,9 +97,10 @@ namespace UI.DISEÑO
                 }
 
                 lblMontoInicial.Text = cajaBLL.ObtenerMontoInicial().ToString("C");
-                lblIngresosHoy.Text = cajaBLL.IngresosHoy().ToString("C");
-                lblGastosHoy.Text = cajaBLL.EgresosHoy().ToString("C");
+                lblIngresosHoy.Text = cajaBLL.IngresosNetosDelDia().ToString("C");
+                lblGastosHoy.Text = cajaBLL.EgresosOperativosSesion().ToString("C");
                 lblBalance.Text = cajaBLL.BalanceActual().ToString("C");
+                ActualizarAyudaCaja();
             }
             catch (Exception ex)
             {
@@ -109,30 +109,23 @@ namespace UI.DISEÑO
         }
 
         /// <summary>
-        /// Refresco en vivo de panel1 (ingresos) y panelBalance tras un pago o la
-        /// edición de una deuda. No toca panelMontoInicial ni panelGastos: el reverso
-        /// del pago inicial no es un gasto y el fondo de apertura no cambia.
+        /// Refresco en vivo tras pago o edición de deuda (Fase 6.2 — panel completo).
         /// </summary>
-        private void ActualizarIngresosYBalance()
+        private void ActualizarDashboardEnVivo()
         {
-            try
-            {
-                if (IsDisposed || Disposing)
-                    return;
+            ActualizarDashboard();
+        }
 
-                if (InvokeRequired)
-                {
-                    BeginInvoke(new Action(ActualizarIngresosYBalance));
-                    return;
-                }
+        private void ActualizarAyudaCaja()
+        {
+            if (lblAyudaCaja == null || lblAyudaCaja.IsDisposed)
+                return;
 
-                lblIngresosHoy.Text = cajaBLL.IngresosHoy().ToString("C");
-                lblBalance.Text = cajaBLL.BalanceActual().ToString("C");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("Error refrescando ingresos/balance: " + ex.Message);
-            }
+            bool cajaAbierta = cajaBLL.ObtenerEstadoCaja();
+            lblAyudaCaja.Text = cajaAbierta
+                ? "Ingresos hoy = cobros netos del día (igual que inicio). Balance = turno actual (inicial + ingresos turno − gastos). " +
+                  "Financiado sin abono no entra hasta cobrarse. Reversos de pago inicial aparecen en Movimientos como REVERSO."
+                : "Caja cerrada. Ingresos hoy muestra el total neto del día. Abra caja para registrar movimientos del turno.";
         }
 
         // ================================
@@ -187,10 +180,10 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                // SISTEMA = Monto Inicial + Ingresos − Gastos (mismo criterio que BalanceActual / cuadre BLL).
+                // Cuadre del turno: ingresos/gastos netos de la caja abierta (no el total del día).
                 decimal montoInicial = cajaBLL.ObtenerMontoInicial();
-                decimal ingresos = cajaBLL.IngresosHoy();
-                decimal egresos = cajaBLL.EgresosHoy();
+                decimal ingresos = cajaBLL.IngresosNetosSesion();
+                decimal egresos = cajaBLL.EgresosOperativosSesion();
                 decimal sistema = montoInicial + ingresos - egresos;
 
                 string input = Microsoft.VisualBasic.Interaction.InputBox(
@@ -286,8 +279,7 @@ namespace UI.DISEÑO
         {
             FrmMovimientosCaja frm = new FrmMovimientosCaja(this); // ✅
             frm.ShowDialog();
-            // Al volver, relee ingresos/balance por si hubo cambios en otra ventana.
-            ActualizarIngresosYBalance();
+            ActualizarDashboard();
         }
 
         // ================================

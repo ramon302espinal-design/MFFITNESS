@@ -155,5 +155,30 @@ namespace DL
 
             return Convert.ToDecimal(db.ExecuteScalar(query));
         }
+
+        /// <summary>Gastos operativos del rango (sin reversos de corrección).</summary>
+        public decimal ObtenerEgresosOperativosPorRango(DateTime desde, DateTime hasta)
+        {
+            if (desde.Date > hasta.Date)
+                return 0m;
+
+            string query = @"
+            SELECT ISNULL(SUM(dc.Monto), 0)
+            FROM DetalleCaja dc
+            WHERE dc.TipoMovimiento = 'EGRESO'
+              AND CAST(dc.Fecha AS DATE) >= CAST(@desde AS DATE)
+              AND CAST(dc.Fecha AS DATE) <= CAST(@hasta AS DATE)
+              AND ISNULL(dc.MetodoPago, '') <> 'REVERSO'
+              AND dc.Concepto NOT LIKE 'REVERSO%'
+              AND dc.Concepto NOT LIKE 'Reverso%'";
+
+            SqlParameter[] p =
+            {
+                new SqlParameter("@desde", desde.Date),
+                new SqlParameter("@hasta", hasta.Date)
+            };
+
+            return Convert.ToDecimal(db.ExecuteScalar(query, p));
+        }
     }
 }

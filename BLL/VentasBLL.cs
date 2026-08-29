@@ -1,8 +1,9 @@
-using BLL.Services;
 using BLL.Models;
+using BLL.Services;
+using CORE;
 using DL;
+using Microsoft.Data.SqlClient;
 using System;
-using System.Collections.Generic;
 using System.Data;
 
 namespace BLL
@@ -10,12 +11,12 @@ namespace BLL
     public class VentasBLL
     {
         private readonly VentasDAL ventasDAL = new VentasDAL();
-        private readonly StockBLL stockBLL = new StockBLL();
+        private readonly StockDAL stockDAL = new StockDAL();
         private readonly ProductoDAL productoDAL = new ProductoDAL();
         private readonly CajaDAL cajaDAL = new CajaDAL();
+        private readonly DeudaDAL deudaDAL = new DeudaDAL();
         private readonly DeudaBLL deudaBLL = new DeudaBLL();
-
-        private string usuarioActual = "admin";
+        private readonly CajaTransaccionService txService = new CajaTransaccionService();
 
         // ===============================
         // LISTAR VENTAS
@@ -33,6 +34,7 @@ namespace BLL
             return ventasDAL.ObtenerDetalleVenta(ventaId);
         }
 
+        /// <summary>Fase 11 — venta POS atómica: stock + caja + deuda + validación integridad.</summary>
         public VentaOperacionResult RegistrarVentaCompletaConResultado(
             int? clienteId,
             decimal total,
@@ -61,13 +63,27 @@ namespace BLL
             if (string.IsNullOrWhiteSpace(usuario))
                 throw new Exception("Usuario requerido.");
 
-            usuarioActual = usuario;
+            decimal saldo = decimal.Round(total - montoPagado, 2);
+            DateTime fechaVencimiento = fechaVencimientoDeuda?.Date ?? DateTime.Today.AddDays(30);
+
+            if (saldo > 0)
+            {
+                if (!clienteId.HasValue || clienteId.Value <= 0)
+                    throw new Exception("Para ventas a crédito se requiere un cliente válido.");
+
+                if (!new ClienteBLL().EsMiembroRegistrado(clienteId.Value))
+                    throw new Exception(
+                        "Las ventas a crédito solo aplican a miembros registrados (con historial de membresía).");
+            }
 
             var result = new VentaOperacionResult { MontoPagado = montoPagado };
+            string? conceptoDeudaFinal = null;
+            int clienteDeuda = clienteId ?? 0;
 
-            try
+            txService.Ejecutar((conn, tx) =>
             {
-                int ventaId = ventasDAL.RegistrarVenta(clienteId, total, montoPagado, metodo, usuario);
+                int ventaId = ventasDAL.RegistrarVenta(
+                    conn, tx, clienteId, total, montoPagado, metodo, usuario);
                 result.VentaId = ventaId;
 
                 foreach (DataRow row in carrito.Rows)
@@ -77,43 +93,36 @@ namespace BLL
                     decimal precio = Convert.ToDecimal(row["Precio"]);
                     decimal subtotal = Convert.ToDecimal(row["Total"]);
 
-                    // Snapshot CRM (FASE 4.4): costo vigente al momento de la venta.
-                    // Si costo <= 0 → NULL (línea sin ganancia realizada confiable).
                     var (costoVigente, _) = productoDAL.ObtenerCostoYStock(productoId);
                     decimal? costoSnapshot = costoVigente > 0
                         ? Math.Round(costoVigente, 4, MidpointRounding.AwayFromZero)
                         : null;
 
                     ventasDAL.RegistrarDetalleVenta(
-                        ventaId, productoId, cantidad, precio, subtotal, costoSnapshot);
+                        conn, tx, ventaId, productoId, cantidad, precio, subtotal, costoSnapshot);
 
-                    int movId = stockBLL.RegistrarSalidaConId(
-                        productoId,
-                        cantidad,
-                        usuario,
-                        $"Venta Id {ventaId}");
-
+                    int movId = stockDAL.RegistrarSalidaEnTransaccion(
+                        conn, tx, productoId, cantidad, usuario, $"Venta Id {ventaId}");
                     result.StockMovimientoIds.Add(movId);
                 }
 
                 if (montoPagado > 0)
-                    result.CajaMovimientoId = RegistrarIngresoEnCajaConId(
-                        montoPagado, ventaId, metodo, clienteId);
+                {
+                    string conceptoCaja = $"Venta de productos (Id {ventaId})";
+                    result.CajaMovimientoId = txService.RegistrarIngresoConId(
+                        conn, tx, montoPagado, conceptoCaja, usuario, metodo, clienteId);
+                }
 
-                decimal saldo = total - montoPagado;
                 if (saldo > 0)
                 {
-                    if (!clienteId.HasValue || clienteId.Value <= 0)
-                        throw new Exception("Para ventas a crédito se requiere un cliente válido.");
+                    conceptoDeudaFinal = FinanciamientoVentaHelper.FormatearConceptoDeudaVenta(
+                        conceptoDeuda, ventaId);
+                    deudaBLL.ValidarDeudaNueva(clienteDeuda, conceptoDeudaFinal, saldo);
 
-                    DateTime fechaVencimiento = fechaVencimientoDeuda?.Date
-                        ?? DateTime.Today.AddDays(30);
-                    string concepto = string.IsNullOrWhiteSpace(conceptoDeuda)
-                        ? $"Venta de productos (Id {ventaId})"
-                        : $"{conceptoDeuda.Trim()} (Venta Id {ventaId})";
-                    result.DeudaId = deudaBLL.CrearDeudaConId(
-                        clienteId.Value,
-                        concepto,
+                    result.DeudaId = deudaDAL.InsertarDeuda(
+                        conn, tx,
+                        clienteDeuda,
+                        conceptoDeudaFinal,
                         saldo,
                         fechaVencimiento,
                         usuario,
@@ -121,24 +130,27 @@ namespace BLL
                         total);
                 }
 
-                return result;
-            }
-            catch
-            {
-                if (result.VentaId > 0)
-                {
-                    try
-                    {
-                        RevertirVenta(result, usuario);
-                    }
-                    catch
-                    {
-                        // Best effort: evitar dejar ventas huérfanas si algo falla a mitad de proceso.
-                    }
-                }
+                bool pagoInicialHist = result.DeudaId > 0
+                    && montoPagado > 0
+                    && DeudaDAL.ExistePagoInicialVigente(conn, tx, result.DeudaId);
 
-                throw;
+                FinanciamientoVentaHelper.ValidarIntegridadPostVenta(
+                    total,
+                    montoPagado,
+                    metodo,
+                    result.VentaId,
+                    result.DeudaId,
+                    result.CajaMovimientoId,
+                    pagoInicialHist);
+            });
+
+            if (result.DeudaId > 0 && conceptoDeudaFinal != null)
+            {
+                deudaBLL.NotificarDeudaCreadaPostCommit(
+                    clienteDeuda, conceptoDeudaFinal, saldo, fechaVencimiento, result.DeudaId, montoPagado > 0);
             }
+
+            return result;
         }
 
         /// <summary>
@@ -160,21 +172,12 @@ namespace BLL
             if (total <= 0)
                 throw new Exception("El total debe ser mayor a 0.");
 
-            usuarioActual = usuario;
+            var result = new VentaOperacionResult { MontoPagado = total };
 
-            var result = new VentaOperacionResult
-            {
-                MontoPagado = total
-            };
-
-            try
+            txService.Ejecutar((conn, tx) =>
             {
                 int ventaId = ventasDAL.RegistrarVenta(
-                    clienteId,
-                    total,
-                    total,
-                    "Saldo a favor",
-                    usuario);
+                    conn, tx, clienteId, total, total, "Saldo a favor", usuario);
                 result.VentaId = ventaId;
 
                 foreach (DataRow row in carrito.Rows)
@@ -193,78 +196,40 @@ namespace BLL
                         : null;
 
                     ventasDAL.RegistrarDetalleVenta(
-                        ventaId, productoId, cantidad, precio, subtotal, costoSnapshot);
+                        conn, tx, ventaId, productoId, cantidad, precio, subtotal, costoSnapshot);
 
-                    int movId = stockBLL.RegistrarSalidaConId(
+                    int movId = stockDAL.RegistrarSalidaEnTransaccion(
+                        conn, tx,
                         productoId,
                         cantidad,
                         usuario,
                         $"Despacho saldo a favor Id {saldoClienteId} · Venta Id {ventaId}");
-
                     result.StockMovimientoIds.Add(movId);
                 }
+            });
 
-                return result;
-            }
-            catch
-            {
-                if (result.VentaId > 0)
-                {
-                    try { RevertirVenta(result, usuario); }
-                    catch { /* ignore */ }
-                }
-
-                throw;
-            }
+            return result;
         }
 
+        /// <summary>Fase 11.4 — revertir venta financiada/contado en una sola TX.</summary>
         public void RevertirVenta(VentaOperacionResult operacion, string usuario)
         {
             if (operacion.VentaId <= 0)
                 throw new Exception("Venta inválida.");
 
-            foreach (int movId in operacion.StockMovimientoIds)
-                stockBLL.RevertirMovimiento(movId, usuario);
-
-            if (operacion.CajaMovimientoId > 0)
-                cajaDAL.RevertirMovimiento(operacion.CajaMovimientoId, usuario);
-
-            if (operacion.DeudaId > 0)
-                deudaBLL.AnularDeuda(operacion.DeudaId, usuario);
-
-            ventasDAL.AnularVenta(operacion.VentaId);
-        }
-
-        private int RegistrarIngresoEnCajaConId(
-            decimal total,
-            int ventaId,
-            string metodoPago,
-            int? clienteId)
-        {
-            if (total <= 0)
-                return 0;
-
-            var caja = cajaDAL.ObtenerCajaAbierta();
-
-            if (caja == null)
-                throw new Exception("No hay caja abierta para registrar la venta.");
-
-            int cajaId = Convert.ToInt32(caja["Id"]);
-            string concepto = $"Venta de productos (Id {ventaId})";
-
-            var txService = new CajaTransaccionService();
-            int movimientoId = 0;
-
             txService.Ejecutar((conn, tx) =>
             {
-                movimientoId = txService.RegistrarIngresoConId(
-                    conn, tx, total, concepto, usuarioActual, metodoPago, clienteId);
+                foreach (int movId in operacion.StockMovimientoIds)
+                    stockDAL.RevertirMovimientoEnTransaccion(conn, tx, movId, usuario);
+
+                if (operacion.CajaMovimientoId > 0)
+                    cajaDAL.RevertirMovimientoEnTransaccion(conn, tx, operacion.CajaMovimientoId, usuario);
+
+                if (operacion.DeudaId > 0)
+                    deudaDAL.AnularDeuda(conn, tx, operacion.DeudaId, usuario);
+
+                ventasDAL.AnularVenta(conn, tx, operacion.VentaId);
             });
-
-            if (movimientoId <= 0)
-                movimientoId = cajaDAL.ObtenerUltimoMovimientoIdPorConcepto(cajaId, concepto);
-
-            return movimientoId;
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using BLL.Models.Crm;
+using CORE;
 using UI.Helpers;
 using UI.Theme;
 
@@ -18,6 +19,7 @@ namespace UI
         private Form? _vistaActual;
         private Button? _botonActivo;
         private bool _suppressPeriodRefresh;
+        private DateTime _ultimaSyncFinanciera = DateTime.MinValue;
 
         public FrmCRMFinanciero()
         {
@@ -25,11 +27,32 @@ namespace UI
             // Design System CRM (FASE 2.3): no aplicar ThemeApplier redondeado del POS.
             CrmVisualTokens.MarkClassic(this);
             if (!ThemeHost.IsDesignTime())
+            {
                 ModuloAtajosTeclado.WireAtajosEnFormulario(this);
+                BusquedaFocusHelper.Wire(this);
+            }
+        }
+
+        /// <summary>Fase 10 — atajo R dentro del CRM activa Reportes POS sin abrir otro diálogo.</summary>
+        internal void ActivarVistaReportesPos()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(ActivarVistaReportesPos));
+                return;
+            }
+
+            btnReportesPos_Click(btnReportesPos, EventArgs.Empty);
         }
 
         private void FrmCRMFinanciero_Load(object sender, EventArgs e)
         {
+            SuscribirEventosFinancieros();
+            ActualizarTextoFooter();
+
             _suppressPeriodRefresh = true;
             dtDesdePeriodo.Value = DateTime.Today.AddDays(-29);
             dtHastaPeriodo.Value = DateTime.Today;
@@ -49,6 +72,63 @@ namespace UI
                 "Dashboard financiero",
                 "Vision general del rendimiento financiero");
             _suppressPeriodRefresh = false;
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            DesuscribirEventosFinancieros();
+            base.OnFormClosed(e);
+        }
+
+        private void SuscribirEventosFinancieros()
+        {
+            AppEventos.OnPagoRegistrado += OnMovimientoFinancieroCrm;
+            AppEventos.OnDeudaModificada += OnMovimientoFinancieroCrm;
+            AppEventos.OnCajaCambiada += OnMovimientoFinancieroCrm;
+        }
+
+        private void DesuscribirEventosFinancieros()
+        {
+            AppEventos.OnPagoRegistrado -= OnMovimientoFinancieroCrm;
+            AppEventos.OnDeudaModificada -= OnMovimientoFinancieroCrm;
+            AppEventos.OnCajaCambiada -= OnMovimientoFinancieroCrm;
+        }
+
+        /// <summary>Fase 8 — invalidación híbrida: mismo período, datos frescos tras movimiento de dinero.</summary>
+        private void OnMovimientoFinancieroCrm()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action(OnMovimientoFinancieroCrm));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                return;
+            }
+
+            _ultimaSyncFinanciera = DateTime.Now;
+            RefrescarVistaActual();
+            ActualizarTextoFooter();
+        }
+
+        private void ActualizarTextoFooter()
+        {
+            if (lblFooter == null || lblFooter.IsDisposed)
+                return;
+
+            string sync = _ultimaSyncFinanciera == DateTime.MinValue
+                ? "sin movimientos en sesión"
+                : $"sync {_ultimaSyncFinanciera:HH:mm:ss}";
+
+            lblFooter.Text =
+                "Atajos: P Cobrar · C Caja · E Estado · D Deudas · H Historial · R Reportes · I Inventario · M Clientes · " +
+                "Reportes POS = ledger operativo · CRM = KPIs agregados · PDF Deudas = historial financiamiento · " + sync;
         }
 
         private FrmAnaDashboard CrearDashboard()
@@ -224,6 +304,9 @@ namespace UI
             vista.PerformLayout();
             pnlContent.PerformLayout();
             _vistaActual = vista;
+
+            BusquedaFocusHelper.Wire(vista);
+            BusquedaFocusHelper.WireFormulariosEmbebidos(vista);
 
             // Sincroniza período del panelHeader del shell con la vista (Reportes POS, dashboards…).
             if (vista is ICrmPeriodRefreshable refreshable)

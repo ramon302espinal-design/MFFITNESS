@@ -145,11 +145,14 @@ if ($Configuration -eq 'Release') {
     @'
 {
   "Database": {
-    "DefaultEnvironment": "Production"
+    "DefaultEnvironment": "Production",
+    "ConnectionStrings": {
+      "Production": "Server=(localdb)\\MSSQLLocalDB;Database=MF CYBER DB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+    }
   }
 }
 '@ | Set-Content -Path $localSettings -Encoding UTF8
-    Write-Host "appsettings.Local.json → DefaultEnvironment=Production" -ForegroundColor Green
+    Write-Host "appsettings.Local.json → Production + [MF CYBER DB]" -ForegroundColor Green
 
     $launcher = Join-Path $OutputDir 'Start-MFFITNESS.cmd'
     @'

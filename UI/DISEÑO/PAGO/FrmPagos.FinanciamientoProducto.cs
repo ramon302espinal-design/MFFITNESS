@@ -355,7 +355,7 @@ namespace UI.DISEÑO
             {
                 clienteId = _miembroDebeSeleccionado.Id;
                 nombre = _miembroDebeSeleccionado.Nombre;
-                return true;
+                return clienteBLL.EsMiembroRegistrado(clienteId);
             }
 
             if (listMiembros.SelectedItem is MiembroDebeItem item && item.Id > 0)
@@ -363,7 +363,7 @@ namespace UI.DISEÑO
                 clienteId = item.Id;
                 nombre = item.Nombre;
                 _miembroDebeSeleccionado = item;
-                return true;
+                return clienteBLL.EsMiembroRegistrado(clienteId);
             }
 
             string texto = txtMiembroDebe.Text?.Trim() ?? string.Empty;
@@ -377,7 +377,7 @@ namespace UI.DISEÑO
                         clienteId = m.Id;
                         nombre = m.Nombre;
                         _miembroDebeSeleccionado = m;
-                        return true;
+                        return clienteBLL.EsMiembroRegistrado(clienteId);
                     }
                 }
             }

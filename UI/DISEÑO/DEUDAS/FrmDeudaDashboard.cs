@@ -2,6 +2,7 @@ using BLL;
 using CORE;
 using System;
 using System.Windows.Forms;
+using UI.Helpers;
 using UI.Theme;
 
 namespace UI
@@ -15,6 +16,12 @@ namespace UI
         {
             InitializeComponent();
             ThemeHost.Attach(this);
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            EmbeddedFormHelper.CorregirSiEmbebido(this);
+            base.OnLoad(e);
         }
 
         private void FrmDeudaDashboard_Load(object sender, EventArgs e)

@@ -35,7 +35,9 @@ namespace BLL
                 motivo = "Sin especificar";
 
             bool marcarComoVencido = modo == ModoDesactivacionMiembro.Vencido;
-            return dal.DesactivarMiembro(clienteId, usuario, motivo.Trim(), marcarComoVencido);
+            int id = dal.DesactivarMiembro(clienteId, usuario, motivo.Trim(), marcarComoVencido);
+            MovimientoFinancieroNotifier.EstadoMembresia();
+            return id;
         }
 
         public CongelacionDTO? ObtenerCongelacionActiva(int clienteId) =>
@@ -95,6 +97,7 @@ namespace BLL
                 usuario,
                 motivo.Trim());
 
+            MovimientoFinancieroNotifier.EstadoMembresia();
             return dto;
         }
 
@@ -140,6 +143,7 @@ namespace BLL
                 usuario,
                 $"Reactivación. Días restantes: {cong.DiasRestantes}. Vence {nuevaFechaFin:dd/MM/yyyy}.");
 
+            MovimientoFinancieroNotifier.EstadoMembresia();
             return nuevaFechaFin;
         }
 
@@ -202,6 +206,7 @@ namespace BLL
                 usuario,
                 $"Vencimiento: {fechaAnterior:dd/MM/yyyy} -> {fechaNueva:dd/MM/yyyy}");
 
+            MovimientoFinancieroNotifier.EstadoMembresia();
             return (fechaAnterior, fechaNueva);
         }
 
@@ -305,6 +310,9 @@ namespace BLL
                 new ProgramacionBLL().AplicarProgramacionesPendientes();
             foreach (ProgramacionActivadaEventArgs info in activadas)
                 AppEventos.ProgramacionActivada(info);
+
+            if (activadas.Count > 0)
+                MovimientoFinancieroNotifier.EstadoMembresia();
         } 
         // ===============================
         // 🔥 ALERTAS

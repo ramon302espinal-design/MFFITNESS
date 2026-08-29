@@ -274,6 +274,8 @@ namespace BLL
 
 
 
+            MovimientoFinancieroNotifier.PagoConCaja();
+
             return result;
 
         }

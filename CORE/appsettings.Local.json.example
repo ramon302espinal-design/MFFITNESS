@@ -1,5 +1,5 @@
 {
-  "_comment": "Copia como appsettings.Local.json (gitignored). El Deploy/Publish Release escribe DefaultEnvironment=Production en el POS instalado. En VS usa el perfil UI (Development).",
+  "_comment": "Copia como appsettings.Local.json (gitignored). Release/Deploy escribe Production + [MF CYBER DB]. VS Development usa MF_CYBER_DB_DEV.",
   "Database": {
     "DefaultEnvironment": "Development",
     "ConnectionStrings": {

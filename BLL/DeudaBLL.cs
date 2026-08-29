@@ -79,7 +79,19 @@ namespace BLL
                 pagoInicial,
                 totalFinanciado);
 
-            // WhatsApp fuera del hilo de UI/cobro (crear deuda o venta a crédito).
+            NotificarDeudaCreadaPostCommit(clienteId, concepto, monto, vencimiento, deudaId, pagoInicial > 0);
+            return deudaId;
+        }
+
+        /// <summary>WhatsApp + eventos tras commit (venta POS o crear deuda manual).</summary>
+        public void NotificarDeudaCreadaPostCommit(
+            int clienteId,
+            string concepto,
+            decimal monto,
+            DateTime vencimiento,
+            int deudaId,
+            bool huboCaja)
+        {
             int clienteIdBg = clienteId;
             string conceptoBg = concepto;
             decimal montoBg = monto;
@@ -97,9 +109,11 @@ namespace BLL
                 }
             });
 
-            MovimientoFinancieroNotifier.DeudaCreada(huboCaja: pagoInicial > 0);
-            return deudaId;
+            MovimientoFinancieroNotifier.DeudaCreada(huboCaja: huboCaja);
         }
+
+        public void ValidarDeudaNueva(int clienteId, string concepto, decimal monto) =>
+            ValidarDeudaDuplicada(clienteId, concepto, monto);
 
         // ===============================
         // REGISTRAR PAGO

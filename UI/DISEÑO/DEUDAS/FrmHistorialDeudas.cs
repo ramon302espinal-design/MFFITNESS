@@ -14,6 +14,7 @@ namespace UI
     {    
         HistorialBLL historialBLL = new HistorialBLL();
         private DataTable dtHistorialCompleto = new();
+        private bool _enlazarHistorialPendiente;
 
         /// <summary>Fuente del tipo de movimiento; se crea una vez para no asignar en cada celda.</summary>
         private Font? fuenteTipo;
@@ -21,6 +22,12 @@ namespace UI
         public FrmHistorialDeudas()
         {
             InitializeComponent();
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            EmbeddedFormHelper.CorregirSiEmbebido(this);
+            base.OnLoad(e);
         }
 
         private void FrmHistorialDeudas_Load(object sender, EventArgs e)
@@ -57,6 +64,11 @@ namespace UI
         {
             AppEventos.OnDeudaModificada -= CargarHistorial;
             AppEventos.OnPagoRegistrado -= CargarHistorial;
+            if (dgvHistorial != null)
+            {
+                dgvHistorial.DataBindingComplete -= DgvHistorial_DespuesDeEnlazar;
+                dgvHistorial.HandleCreated -= DgvHistorial_HandleCreated;
+            }
             fuenteTipo?.Dispose();
             fuenteTipo = null;
             base.OnFormClosed(e);
@@ -93,8 +105,7 @@ namespace UI
             {
                 try
                 {
-                    if (IsHandleCreated)
-                        BeginInvoke(new Action(CargarHistorial));
+                    BeginInvoke(new Action(CargarHistorial));
                 }
                 catch (ObjectDisposedException)
                 {
@@ -103,13 +114,15 @@ namespace UI
                 return;
             }
 
-            if (!PuedeUsarGrid())
-                return;
-
             try
             {
-                dtHistorialCompleto = historialBLL.ObtenerHistorial(null, null, null, null);
-                AplicarFiltros();
+                dtHistorialCompleto = historialBLL.ObtenerHistorial(null, null, null, null)
+                    ?? new DataTable();
+
+                if (PuedeEnlazarGrid())
+                    AplicarFiltros();
+                else
+                    _enlazarHistorialPendiente = true;
             }
             catch (ObjectDisposedException)
             {
@@ -122,12 +135,25 @@ namespace UI
             }
         }
 
-        private bool PuedeUsarGrid() =>
+        private bool PuedeEnlazarGrid() =>
             !IsDisposed
             && !Disposing
-            && IsHandleCreated
             && dgvHistorial != null
             && !dgvHistorial.IsDisposed;
+
+        private bool PuedeFormatearGrid() =>
+            PuedeEnlazarGrid()
+            && dgvHistorial!.IsHandleCreated;
+
+        private void DgvHistorial_HandleCreated(object? sender, EventArgs e)
+        {
+            dgvHistorial.HandleCreated -= DgvHistorial_HandleCreated;
+            if (_enlazarHistorialPendiente || dtHistorialCompleto.Rows.Count > 0)
+            {
+                _enlazarHistorialPendiente = false;
+                AplicarFiltros();
+            }
+        }
 
         // ===============================
         // MÉTODO PÚBLICO PARA REFRESCAR DESDE MÓDULO PRINCIPAL
@@ -142,12 +168,13 @@ namespace UI
         // ===============================
         private void AplicarFiltros()
         {
-            if (!PuedeUsarGrid())
+            if (!PuedeEnlazarGrid())
                 return;
 
             if (dtHistorialCompleto == null || dtHistorialCompleto.Rows.Count == 0)
             {
-                dgvHistorial.DataSource = null;
+                dgvHistorial!.DataSource = null;
+                ActualizarResumenExportacion();
                 return;
             }
 
@@ -163,8 +190,9 @@ namespace UI
                     filtro += $" AND Tipo = '{tipo}'";
                 }
 
-                // Filtro por fecha
-                filtro += $" AND Fecha >= #{dtpDesde.Value:MM/dd/yyyy}# AND Fecha <= #{dtpHasta.Value:MM/dd/yyyy 23:59:59}#";
+                // Filtro por fecha (incluir todo el día final)
+                DateTime hastaFin = dtpHasta.Value.Date.AddDays(1).AddTicks(-1);
+                filtro += $" AND Fecha >= #{dtpDesde.Value:MM/dd/yyyy}# AND Fecha <= #{hastaFin:MM/dd/yyyy HH:mm:ss}#";
 
                 // Filtro por búsqueda de cliente
                 string textoCliente = txtCliente.Text.Trim();
@@ -174,9 +202,21 @@ namespace UI
                 }
 
                 dv.RowFilter = filtro;
-                dgvHistorial.DataSource = dv;
 
-                FormatearColumnas();
+                if (!dgvHistorial!.IsHandleCreated)
+                {
+                    _enlazarHistorialPendiente = true;
+                    dgvHistorial.HandleCreated -= DgvHistorial_HandleCreated;
+                    dgvHistorial.HandleCreated += DgvHistorial_HandleCreated;
+                    return;
+                }
+
+                dgvHistorial.DataBindingComplete -= DgvHistorial_DespuesDeEnlazar;
+                dgvHistorial.DataSource = dv;
+                dgvHistorial.DataBindingComplete += DgvHistorial_DespuesDeEnlazar;
+
+                if (dgvHistorial.Columns.Count > 0)
+                    FormatearColumnasYResumen();
             }
             catch (ObjectDisposedException)
             {
@@ -189,20 +229,38 @@ namespace UI
             }
         }
 
+        private void DgvHistorial_DespuesDeEnlazar(object? sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            dgvHistorial.DataBindingComplete -= DgvHistorial_DespuesDeEnlazar;
+            FormatearColumnasYResumen();
+        }
+
+        private void FormatearColumnasYResumen()
+        {
+            if (!PuedeFormatearGrid())
+                return;
+
+            FormatearColumnas();
+            ActualizarResumenExportacion();
+        }
+
         // ===============================
         // FORMATEAR COLUMNAS
         // ===============================
         private void FormatearColumnas()
         {
-            if (!PuedeUsarGrid() || dgvHistorial.Columns.Count == 0) return;
+            if (!PuedeFormatearGrid() || dgvHistorial!.Columns.Count == 0)
+                return;
 
+            DataGridViewHelper.RunColumnLayout(dgvHistorial, () =>
+            {
             DataGridViewHelper.HideColumn(dgvHistorial, "Id");
             DataGridViewHelper.HideColumn(dgvHistorial, "DeudaId");
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Nombre", col =>
             {
                 col.HeaderText = "Cliente";
-                col.Width = 200;
+                DataGridViewHelper.SetColumnWidth(col, 200);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Tipo", col =>
@@ -211,29 +269,29 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Descripcion", col =>
             {
                 col.HeaderText = "Descripción";
-                col.Width = 250;
+                DataGridViewHelper.SetColumnWidth(col, 250);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "FechaLimitePago", col =>
             {
                 col.HeaderText = "Fecha Límite Pago";
                 col.DefaultCellStyle.Format = "dd/MM/yyyy";
-                col.Width = 130;
-                col.DisplayIndex = 3;
+                DataGridViewHelper.SetColumnWidth(col, 130);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 3);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "AporteInicial", col =>
             {
                 col.HeaderText = "Pago Inicial";
-                col.Width = 120;
-                col.DisplayIndex = 4;
+                DataGridViewHelper.SetColumnWidth(col, 120);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 4);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "OrigenPrecio", col =>
             {
                 col.HeaderText = "Origen";
-                col.Width = 90;
-                col.DisplayIndex = 5;
+                DataGridViewHelper.SetColumnWidth(col, 90);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 5);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "PrecioTotal", col =>
@@ -241,32 +299,33 @@ namespace UI
                 col.HeaderText = "Precio Total";
                 col.DefaultCellStyle.Format = "C2";
                 col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                col.Width = 110;
-                col.DisplayIndex = 6;
+                DataGridViewHelper.SetColumnWidth(col, 110);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 6);
             });
+
+            DataGridViewHelper.HideColumn(dgvHistorial, "SaldoDeuda");
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Monto", col =>
             {
                 col.HeaderText = "Monto";
                 col.DefaultCellStyle.Format = "C2";
                 col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                col.Width = 100;
-                col.DisplayIndex = 7;
+                DataGridViewHelper.SetColumnWidth(col, 100);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 7);
             });
-
-            DataGridViewHelper.HideColumn(dgvHistorial, "SaldoDeuda");
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Fecha", col =>
             {
                 col.HeaderText = "Fecha";
                 col.DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
-                col.Width = 150;
+                DataGridViewHelper.SetColumnWidth(col, 150);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Usuario", col =>
             {
                 col.HeaderText = "Usuario";
-                col.Width = 100;
+                DataGridViewHelper.SetColumnWidth(col, 100);
+            });
             });
         }
 
@@ -284,11 +343,12 @@ namespace UI
 
             foreach (DataRowView row in dv)
             {
-                string tipo = row["Tipo"]?.ToString() ?? string.Empty;
+                string tipo = row["Tipo"]?.ToString()?.Trim().ToUpperInvariant() ?? string.Empty;
                 decimal monto = row["Monto"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Monto"]);
 
                 if (tipo == "DEUDA")
                 {
+                    // SSOT Fase 2: saldo de deuda enriquecido, no el monto del movimiento legacy.
                     if (row.Row.Table.Columns.Contains("SaldoDeuda")
                         && row["SaldoDeuda"] != DBNull.Value)
                         totalDeudas += Convert.ToDecimal(row["SaldoDeuda"]);
@@ -298,10 +358,26 @@ namespace UI
                 else if (tipo == "PAGO" || tipo == "PAGO_INICIAL")
                     totalPagos += monto;
                 else if (tipo == "REVERSO_PAGO" || tipo == "REVERSO_PAGO_INICIAL")
-                    totalPagos -= monto; // pago devuelto: deja de contar como cobrado
+                    totalPagos -= monto;
             }
 
             balance = totalDeudas - totalPagos;
+        }
+
+        /// <summary>Resumen on-screen alineado con el PDF export (mismas filas visibles + SSOT).</summary>
+        private void ActualizarResumenExportacion()
+        {
+            if (lblResumenExport == null || lblResumenExport.IsDisposed)
+                return;
+
+            ObtenerTotalesVisibles(out decimal totalDeudas, out decimal totalPagos, out decimal balance);
+
+            int filas = dgvHistorial.DataSource is DataView dv ? dv.Count : dgvHistorial.Rows.Count;
+            lblResumenExport.Text =
+                $"{filas} movimiento(s) visible(s) · " +
+                $"Deudas: RD$ {totalDeudas:N2} · " +
+                $"Pagos: RD$ {totalPagos:N2} · " +
+                $"Balance: RD$ {balance:N2}";
         }
 
         // ===============================

@@ -68,8 +68,8 @@ namespace CORE
         }
 
         /// <summary>
-        /// Abre la conexión, escribe el log de arranque y cierra.
-        /// Idempotente (solo verifica una vez por proceso).
+        /// Abre la conexión, valida par entorno/BD, escribe log de arranque y cierra.
+        /// Idempotente (solo verifica una vez por proceso). Fase 12.4 / 12.5.
         /// </summary>
         public static void EnsureDatabaseLogged()
         {
@@ -84,18 +84,24 @@ namespace CORE
 
                 try
                 {
+                    ValidateEnvironmentDatabasePair(db.EnvironmentName, db.DatabaseName);
+
                     using var conn = new SqlConnection(db.ConnectionString);
                     conn.Open();
                     string catalog = string.IsNullOrWhiteSpace(conn.Database)
                         ? db.DatabaseName
                         : conn.Database;
 
-                    string line = $"[DATABASE] Conectado exitosamente a: {catalog}";
-                    WriteStartupLog(line);
+                    int schemaVersion = ReadSchemaVersion(conn);
+
+                    WriteStartupLog($"[DATABASE] Conectado exitosamente a: {catalog}");
                     WriteStartupLog($"[DATABASE] Entorno: {db.EnvironmentName}");
+                    WriteStartupLog($"[DATABASE] App: {AppVersion.ProductName} {AppVersion.Informational}");
+                    WriteStartupLog($"[DATABASE] SchemaVersion: {schemaVersion}");
+
                     db.Logged = true;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not InvalidOperationException)
                 {
                     string fail =
                         $"[DATABASE] ERROR al conectar a '{db.DatabaseName}' " +
@@ -103,6 +109,47 @@ namespace CORE
                     WriteStartupLog(fail);
                     throw new InvalidOperationException(fail, ex);
                 }
+            }
+        }
+
+        /// <summary>Fase 12.4 — Production no debe apuntar a MF_CYBER_DB_DEV.</summary>
+        private static void ValidateEnvironmentDatabasePair(string environmentName, string databaseName)
+        {
+            bool isProduction = environmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
+            bool isDevelopment = environmentName.Equals("Development", StringComparison.OrdinalIgnoreCase);
+            bool isDevCatalog = databaseName.Contains("DEV", StringComparison.OrdinalIgnoreCase)
+                                || databaseName.Equals("MF_CYBER_DB_DEV", StringComparison.OrdinalIgnoreCase);
+            bool isProdCatalog = databaseName.Contains("MF CYBER DB", StringComparison.OrdinalIgnoreCase)
+                                 || databaseName.Equals("MF CYBER DB", StringComparison.OrdinalIgnoreCase);
+
+            if (isProduction && isDevCatalog)
+            {
+                throw new InvalidOperationException(
+                    "[DATABASE] CONFIG ERROR: entorno Production apunta a base DEV '" + databaseName + "'. " +
+                    "En el POS instalado use appsettings.Local.json con DefaultEnvironment=Production " +
+                    "y conexión a [MF CYBER DB], o ejecute Start-MFFITNESS.cmd.");
+            }
+
+            if (isDevelopment && isProdCatalog)
+            {
+                WriteStartupLog(
+                    "[DATABASE] ADVERTENCIA: entorno Development conectado a PROD '" + databaseName + "'. " +
+                    "Use MF_CYBER_DB_DEV para pruebas locales.");
+            }
+        }
+
+        private static int ReadSchemaVersion(SqlConnection conn)
+        {
+            try
+            {
+                using var cmd = new SqlCommand(
+                    "SELECT ISNULL(MAX(Version), 0) FROM dbo.SchemaVersion", conn);
+                object? o = cmd.ExecuteScalar();
+                return o == null || o == DBNull.Value ? 0 : Convert.ToInt32(o);
+            }
+            catch
+            {
+                return 0;
             }
         }
 

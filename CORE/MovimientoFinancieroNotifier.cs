@@ -62,5 +62,9 @@ namespace CORE
         /// <summary>Venta/despacho sin movimiento de caja (p. ej. saldo a favor).</summary>
         public static void VentaSinCaja() =>
             Notificar(huboPago: true, huboCaja: false, huboDeuda: false);
+
+        /// <summary>Cambio de estado de membresía sin movimiento de dinero (Fase 9).</summary>
+        public static void EstadoMembresia() =>
+            AppEventos.EstadoMembresiaCambiada();
     }
 }

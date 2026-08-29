@@ -32,6 +32,8 @@ namespace UI
         private bool estaExportando;
         private bool _cargandoUi;
         private bool _reporteInicialCargado;
+        private bool _refrescoEventoPendiente;
+        private DateTime _ultimaActualizacion = DateTime.MinValue;
 
         /// <summary>Rango inclusive (desde/hasta). Lo alimenta panelHeader del CRM o default 30 días.</summary>
         private DateTime _desde = DateTime.Today.AddDays(-29);
@@ -86,6 +88,59 @@ namespace UI
                 CargarReporte();
         }
 
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            DesuscribirEventosFinancieros();
+            base.OnFormClosed(e);
+        }
+
+        private void SuscribirEventosFinancieros()
+        {
+            AppEventos.OnPagoRegistrado += OnMovimientoFinancieroReporte;
+            AppEventos.OnDeudaModificada += OnMovimientoFinancieroReporte;
+            AppEventos.OnCajaCambiada += OnMovimientoFinancieroReporte;
+        }
+
+        private void DesuscribirEventosFinancieros()
+        {
+            AppEventos.OnPagoRegistrado -= OnMovimientoFinancieroReporte;
+            AppEventos.OnDeudaModificada -= OnMovimientoFinancieroReporte;
+            AppEventos.OnCajaCambiada -= OnMovimientoFinancieroReporte;
+        }
+
+        /// <summary>Fase 8 — recarga automática tras cobros/deudas/caja (mismo período).</summary>
+        private void OnMovimientoFinancieroReporte()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            _refrescoEventoPendiente = true;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(RefrescarPorEventoFinanciero));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                return;
+            }
+
+            RefrescarPorEventoFinanciero();
+        }
+
+        private void RefrescarPorEventoFinanciero()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            CargarReporte();
+            _refrescoEventoPendiente = false;
+        }
+
         private void AsegurarLayoutGrid()
         {
             if (IsDisposed || Disposing)
@@ -116,15 +171,53 @@ namespace UI
             if (lblTotal == null)
                 return;
 
+            string? tipo = ObtenerTipoSeleccionado();
+
+            if (tipo == "CAJA")
+            {
+                decimal ingresosNetos = IngresosCajaSSOT.IngresosNetosPorRango(_desde, _hasta);
+                decimal gastos = IngresosCajaSSOT.EgresosOperativosPorRango(_desde, _hasta);
+                lblTotal.Text =
+                    $"INGRESOS NETOS (SSOT): {ingresosNetos:C} · GASTOS OPERATIVOS: {gastos:C}";
+                ActualizarEstadoSync();
+                return;
+            }
+
+            if (tipo is "GASTO" or "GASTOS")
+            {
+                decimal gastos = IngresosCajaSSOT.EgresosOperativosPorRango(_desde, _hasta);
+                lblTotal.Text = $"TOTAL GASTOS (SSOT): {gastos:C}";
+                ActualizarEstadoSync();
+                return;
+            }
+
             if (datosActuales == null || datosActuales.Rows.Count == 0)
             {
                 lblTotal.Text = "TOTAL: " + 0m.ToString("C");
+                ActualizarEstadoSync();
                 return;
             }
 
             decimal total = ObtenerMontoTotal();
-            string etiqueta = ObtenerEtiquetaTotal(ObtenerTipoSeleccionado());
+            string etiqueta = ObtenerEtiquetaTotal(tipo);
             lblTotal.Text = $"{etiqueta}: {total.ToString("C")}";
+            ActualizarEstadoSync();
+        }
+
+        private void ActualizarEstadoSync()
+        {
+            if (lblEstadoSync == null || lblEstadoSync.IsDisposed)
+                return;
+
+            _ultimaActualizacion = DateTime.Now;
+            string sync = _refrescoEventoPendiente
+                ? " · actualizando…"
+                : $" · actualizado {_ultimaActualizacion:HH:mm:ss}";
+
+            lblEstadoSync.Text =
+                "Reportes POS = movimientos del período (caja, ventas, membresía). " +
+                "CRM analítica = KPIs agregados. PDF Deudas = historial financiamiento." +
+                sync;
         }
 
         private static string ObtenerEtiquetaTotal(string? tipo) => tipo switch
@@ -263,6 +356,7 @@ namespace UI
                 case "SUPLEMENTO":
                 case "SUPLEMENTOS":
                     SetHeaderSiExiste("VentaId", "Venta #");
+                    SetHeaderSiExiste("Operacion", "Operación");
                     SetHeaderSiExiste("Producto", "Producto");
                     SetHeaderSiExiste("Categoria", "Categoría");
                     SetHeaderSiExiste("Monto", "Subtotal");
@@ -519,7 +613,11 @@ namespace UI
 
         private void FrmReportes_Load(object sender, EventArgs e)
         {
+            if (txtBusca != null)
+                txtBusca.Tag = "busqueda";
+
             BusquedaFocusHelper.Wire(this);
+            SuscribirEventosFinancieros();
 
             _cargandoUi = true;
             try

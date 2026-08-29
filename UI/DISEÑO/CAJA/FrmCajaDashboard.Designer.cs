@@ -45,6 +45,7 @@ namespace UI.DISEÑO
             lblMontoInicial = new Label();
             label1 = new Label();
             panelIndicadores = new Panel();
+            lblAyudaCaja = new Label();
             panel1 = new Panel();
             lblIngresosHoy = new Label();
             panelIngresos = new Label();
@@ -264,6 +265,7 @@ namespace UI.DISEÑO
             // panelIndicadores
             // 
             panelIndicadores.BackColor = Color.White;
+            panelIndicadores.Controls.Add(lblAyudaCaja);
             panelIndicadores.Controls.Add(panel1);
             panelIndicadores.Controls.Add(panelGastos);
             panelIndicadores.Controls.Add(panelBalance);
@@ -271,8 +273,19 @@ namespace UI.DISEÑO
             panelIndicadores.Dock = DockStyle.Top;
             panelIndicadores.Location = new Point(0, 117);
             panelIndicadores.Name = "panelIndicadores";
-            panelIndicadores.Size = new Size(1062, 150);
+            panelIndicadores.Size = new Size(1062, 175);
             panelIndicadores.TabIndex = 1;
+            // 
+            // lblAyudaCaja
+            // 
+            lblAyudaCaja.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lblAyudaCaja.Font = new Font("Segoe UI", 8F);
+            lblAyudaCaja.ForeColor = Color.FromArgb(64, 64, 64);
+            lblAyudaCaja.Location = new Point(12, 148);
+            lblAyudaCaja.Name = "lblAyudaCaja";
+            lblAyudaCaja.Size = new Size(1038, 20);
+            lblAyudaCaja.TabIndex = 3;
+            lblAyudaCaja.Text = "Ingresos hoy = cobros netos del día. Balance = turno actual.";
             // 
             // panel1
             // 
@@ -332,7 +345,7 @@ namespace UI.DISEÑO
             label2.Name = "label2";
             label2.Size = new Size(117, 23);
             label2.TabIndex = 3;
-            label2.Text = "GASTOS HOY";
+            label2.Text = "GASTOS TURNO";
             // 
             // panelBalance
             // 
@@ -362,7 +375,7 @@ namespace UI.DISEÑO
             label3.Name = "label3";
             label3.Size = new Size(87, 23);
             label3.TabIndex = 4;
-            label3.Text = "BALANCE";
+            label3.Text = "BALANCE TURNO";
             // 
             // panelBotones
             // 
@@ -523,6 +536,7 @@ namespace UI.DISEÑO
         private Button btnMovimientos;
         private Button btnCerrarCaja;
         private Button btnCierresCaja;
+        private Label lblAyudaCaja;
         private Label lblEstadoCaja;
     }
 }

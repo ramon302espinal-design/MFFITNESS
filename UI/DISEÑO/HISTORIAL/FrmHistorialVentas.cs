@@ -247,22 +247,25 @@ namespace UI.DISEÑO
 
             decimal totalVenta = 0m;
             decimal saldoVenta = 0m;
+            decimal pagoInicial = 0m;
 
             if (filaVenta?.DataBoundItem is DataRowView fila)
             {
                 totalVenta = fila["Total"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["Total"]);
                 saldoVenta = fila["Saldo"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["Saldo"]);
+                pagoInicial = fila["MontoPagado"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["MontoPagado"]);
             }
             else if (dgvVentasProductos.CurrentRow?.DataBoundItem is DataRowView filaActual)
             {
                 totalVenta = filaActual["Total"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["Total"]);
                 saldoVenta = filaActual["Saldo"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["Saldo"]);
+                pagoInicial = filaActual["MontoPagado"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["MontoPagado"]);
             }
 
             if (label3 != null)
             {
                 label3.Text = saldoVenta > 0
-                    ? $"DETALLE · FINANCIADO · Total RD$ {totalVenta:N2} · Abono RD$ {totalVenta - saldoVenta:N2} · Saldo RD$ {saldoVenta:N2}"
+                    ? $"DETALLE · FINANCIADO · Precio Total RD$ {totalVenta:N2} · Pago Inicial RD$ {pagoInicial:N2} · Saldo Pendiente RD$ {saldoVenta:N2}"
                     : "DETALLE DE PRODUCTOS";
             }
         }

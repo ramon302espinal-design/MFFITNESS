@@ -26,7 +26,6 @@ namespace UI.DISEÑO
         // ===============================
         // DECLARACIÓN DE INSTANCIAS BLL
         // ===============================
-        private readonly VentasBLL ventasBLL = new VentasBLL();
         private readonly ProductoBLL productoBLL = new ProductoBLL();
         private readonly CajaBLL cajaBLL = new CajaBLL();
         private readonly MembresiaBLL membresiaBLL = new MembresiaBLL();

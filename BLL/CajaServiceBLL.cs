@@ -16,12 +16,16 @@ namespace BLL
 
         public decimal CalcularIngresosHoy()
         {
-            return cierreDAL.ObtenerTotalPorTipoMovimientoHoy("INGRESO");
+            return IngresosCajaSSOT.IngresosNetosDelDia();
         }
 
         public decimal CalcularEgresosHoy()
         {
-            return cierreDAL.ObtenerTotalPorTipoMovimientoHoy("EGRESO");
+            DataRow? caja = cajaDAL.ObtenerCajaAbierta();
+            if (caja == null)
+                return 0m;
+
+            return IngresosCajaSSOT.EgresosOperativosSesion(Convert.ToInt32(caja["Id"]));
         }
 
         // ===============================

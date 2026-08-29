@@ -450,13 +450,22 @@ ORDER BY dc.Fecha DESC";
         // OBTENER TOTAL INGRESOS POR FECHA (CORREGIDO)
         // ===============================
         public decimal ObtenerTotalIngresosPorFecha(DateTime fecha)
+            => ObtenerTotalIngresosPorRango(fecha.Date, fecha.Date);
+
+        /// <summary>Ingresos netos vigentes entre fechas inclusive (SSOT Fase 6/8).</summary>
+        public decimal ObtenerTotalIngresosPorRango(DateTime desde, DateTime hasta)
         {
+            if (desde.Date > hasta.Date)
+                return 0m;
+
             string query = IngresosNetosSql + @"
-                             AND CAST(dc.Fecha AS DATE) = CAST(@fecha AS DATE)";
+                             AND CAST(dc.Fecha AS DATE) >= CAST(@desde AS DATE)
+                             AND CAST(dc.Fecha AS DATE) <= CAST(@hasta AS DATE)";
 
             SqlParameter[] parametros =
             {
-                new SqlParameter("@fecha", fecha)
+                new SqlParameter("@desde", desde.Date),
+                new SqlParameter("@hasta", hasta.Date)
             };
 
             object? result = db.ExecuteScalar(query, parametros);

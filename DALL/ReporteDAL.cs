@@ -292,6 +292,12 @@ SELECT
     v.Fecha,
     v.Id AS VentaId,
     ISNULL(c.Nombre, N'Mostrador') AS Cliente,
+    CASE
+        WHEN v.Saldo > 0 THEN N'FINANCIADO'
+        WHEN UPPER(LTRIM(RTRIM(ISNULL(v.MetodoPago, N'')))) IN (N'FINANCIADO', N'CREDITO', N'CRÉDITO')
+             AND ISNULL(v.MontoPagado, 0) < ISNULL(v.Total, 0) THEN N'FINANCIADO'
+        ELSE N'CONTADO'
+    END AS Operacion,
 {columnaCategoria}    ISNULL(NULLIF(LTRIM(RTRIM(pr.CodigoBarra)), N''), N'—') AS Codigo,
     pr.Nombre AS Producto,
     d.Cantidad,

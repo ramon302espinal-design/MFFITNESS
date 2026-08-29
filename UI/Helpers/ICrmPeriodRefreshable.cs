@@ -4,6 +4,7 @@ namespace UI.Helpers
 {
     /// <summary>
     /// Vista hospedada en <see cref="FrmCRMFinanciero"/> que puede recargar por período del header.
+    /// Fase 8: el shell también invoca <see cref="Recargar"/> ante AppEventos financieros (híbrido).
     /// </summary>
     public interface ICrmPeriodRefreshable
     {

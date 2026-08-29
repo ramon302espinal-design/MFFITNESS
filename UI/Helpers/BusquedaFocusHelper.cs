@@ -24,7 +24,10 @@ namespace UI.Helpers
                 return;
 
             if (FormsCableadas.TryGetValue(host, out _))
+            {
+                WireFormulariosEmbebidos(host);
                 return;
+            }
 
             FormsCableadas.Add(host, CableMarker);
 
@@ -34,17 +37,38 @@ namespace UI.Helpers
                 if (host.IsDisposed)
                     return;
 
-                HashSet<TextBoxBase> campos = RecolectarCamposBusqueda(host);
-                if (campos.Count == 0)
-                    return;
-
-                WireRecursivo(host, host, campos);
+                CablearBusquedaEnControl(host, host);
+                WireFormulariosEmbebidos(host);
             }
 
             if (host.IsHandleCreated)
                 AlCargar(null, EventArgs.Empty);
             else
                 host.Load += AlCargar;
+        }
+
+        /// <summary>Formularios TopLevel=false dentro de tabs/paneles (Deudas, CRM).</summary>
+        public static void WireFormulariosEmbebidos(Control root)
+        {
+            if (root == null || root.IsDisposed)
+                return;
+
+            foreach (Control hijo in root.Controls)
+            {
+                if (hijo is Form embebido && !embebido.TopLevel)
+                    Wire(embebido);
+
+                WireFormulariosEmbebidos(hijo);
+            }
+        }
+
+        private static void CablearBusquedaEnControl(Form host, Control nodo)
+        {
+            HashSet<TextBoxBase> campos = RecolectarCamposBusqueda(nodo);
+            if (campos.Count == 0)
+                return;
+
+            WireRecursivo(nodo, host, campos);
         }
 
         private static void WireRecursivo(Control nodo, Form host, HashSet<TextBoxBase> campos)

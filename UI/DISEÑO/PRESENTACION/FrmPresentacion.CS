@@ -68,6 +68,21 @@ namespace UI.DISEÑO
                 // 3️⃣ VÍNCULO CORE: Cargamos ingresos hoy, mes y conteo de clientes
                 CargarDashboard();
 
+                // 3️⃣b Fase 11.5 / 12 / 13 — auditorías en background (no bloquean UI)
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        new IntegridadFinancieraBLL().RegistrarAuditoriaEnLog();
+                        new DevProdParityBLL().RegistrarComparacionEnLog();
+                        new AceptacionFinalBLL().RegistrarEnLog();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Auditoria F11-F13] Error: {ex.Message}");
+                    }
+                });
+
                 // 4️⃣ AUTOMATIZACIÓN: Revisamos quién venció hoy y lanzamos el Popup de alertas
                 MostrarAlertas();
 
@@ -97,10 +112,12 @@ namespace UI.DISEÑO
                     System.Diagnostics.Debug.WriteLine("FacturaGastosAppHost: " + exFactura.Message);
                 }
 
-                // 6️⃣ Deudas en vivo: cualquier cobro o nueva deuda refresca las tarjetas.
-                AppEventos.OnPagoRegistrado += RefrescarKpiDeudas;
-                AppEventos.OnDeudaModificada += RefrescarKpiDeudas;
+                // 6️⃣ Indicadores financieros en vivo (ingresos + deudas + caja).
+                AppEventos.OnPagoRegistrado += RefrescarIndicadoresFinancieros;
+                AppEventos.OnDeudaModificada += RefrescarIndicadoresFinancieros;
+                AppEventos.OnCajaCambiada += RefrescarIndicadoresFinancieros;
                 AppEventos.OnProgramacionActivada += OnProgramacionActivada;
+                AppEventos.OnEstadoMembresiaCambiada += RefrescarConteosClientes;
 
                 ConfigurarCapturaEscannerInicio();
                 ModuloAtajosTeclado.AsegurarFiltroGlobal();
@@ -181,9 +198,11 @@ namespace UI.DISEÑO
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            AppEventos.OnPagoRegistrado -= RefrescarKpiDeudas;
-            AppEventos.OnDeudaModificada -= RefrescarKpiDeudas;
+            AppEventos.OnPagoRegistrado -= RefrescarIndicadoresFinancieros;
+            AppEventos.OnDeudaModificada -= RefrescarIndicadoresFinancieros;
+            AppEventos.OnCajaCambiada -= RefrescarIndicadoresFinancieros;
             AppEventos.OnProgramacionActivada -= OnProgramacionActivada;
+            AppEventos.OnEstadoMembresiaCambiada -= RefrescarConteosClientes;
             AppEventos.OnStockCritico -= OnStockCriticoTiempoReal;
 
             if (_timerWhatsApp != null)
@@ -220,12 +239,13 @@ namespace UI.DISEÑO
             base.OnFormClosed(e);
         }
 
-        private static void OnProgramacionActivada(ProgramacionActivadaEventArgs info)
+        private void OnProgramacionActivada(ProgramacionActivadaEventArgs info)
         {
             FrmProgramacionActivadaToast.MostrarUnaVez(
                 info.ProgramacionId,
                 info.PlanNombre,
                 info.ClienteNombre);
+            RefrescarConteosClientes();
         }
 
         private void OnCajaCambiadaFacturaAuto()
@@ -711,8 +731,9 @@ namespace UI.DISEÑO
 
         private void btnHistorial_Click(object sender, EventArgs e)
         {
-            FrmHistorialVentas historial = new FrmHistorialVentas();
+            using FrmHistorialVentas historial = new FrmHistorialVentas(this);
             historial.ShowDialog();
+            CargarDashboard();
         }
 
         private void btnProductoStock_Click(object sender, EventArgs e)
@@ -757,36 +778,14 @@ namespace UI.DISEÑO
                 // Sincroniza Activa=0 tras el día de vencimiento antes de contar.
                 new MembresiaBLL().ActualizarVencimientos();
 
-                // Usamos el nuevo BLL que centraliza todo el Core
-                DashboardBLL dashboardBLL = new DashboardBLL();
-
-                // 1. Clientes: SSOT EstadoDAL (ACTIVO+PROGRAMADO / VENCIDO = mismo grid Estado/Clientes)
-                lblClientesActivos.Text = dashboardBLL.ClientesActivos().ToString();
-                lblClientesVencidos.Text = dashboardBLL.ClientesVencidos().ToString();
+                // 1. Clientes: SSOT EstadoConteosSSOT (ACTIVO+PROGRAMADO / VENCIDO = mismo grid Estado)
+                CargarConteosClientes();
 
                 // 2. Datos Financieros Reales (Vienen de MovimientosCaja: Ventas + Membresías)
-                decimal hoy = dashboardBLL.IngresosHoy();
-                decimal mes = dashboardBLL.IngresosMes();
-
-                if (_puedeVerIngresos)
-                {
-                    lblIngresosHoy.Text = hoy.ToString("C");
-                    lblIngresosMes.Text = mes.ToString("C");
-                    lblIngresosHoy.ForeColor = hoy > 0 ? AppTheme.Primary : AppTheme.Error;
-                    lblIngresosMes.ForeColor = mes > 0 ? Color.FromArgb(168, 85, 247) : AppTheme.TextMuted;
-                }
-                else
-                {
-                    lblIngresosHoy.Text = "—";
-                    lblIngresosMes.Text = "—";
-                    lblIngresosHoy.ForeColor = AppTheme.TextMuted;
-                    lblIngresosMes.ForeColor = AppTheme.TextMuted;
-                }
+                CargarIngresosDashboard();
 
                 lblClientesActivos.ForeColor = AppTheme.Success;
                 lblClientesVencidos.ForeColor = AppTheme.Error;
-
-                // 3. Deudas: activas, vencidas e ingreso pendiente por cobrar.
                 CargarKpiDeudas();
 
                 PresentacionDashboardStyle.ActualizarEncabezado(_lblDashWelcome, _lblDashDateTime);
@@ -795,6 +794,68 @@ namespace UI.DISEÑO
             {
                 AppDialog.Warning(this, "Error al actualizar indicadores: " + ex.Message, "Dashboard");
             }
+        }
+
+        /// <summary>Conteos Activos/Vencidos — Fase 9 SSOT con grid Estado Clientes.</summary>
+        private void CargarConteosClientes()
+        {
+            var conteos = EstadoConteosSSOT.Obtener();
+            lblClientesActivos.Text = conteos.Activos.ToString();
+            lblClientesVencidos.Text = conteos.Vencidos.ToString();
+        }
+
+        /// <summary>Tras programación, congelar, desactivar, etc.</summary>
+        private void RefrescarConteosClientes()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(RefrescarConteosClientes));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                return;
+            }
+
+            try
+            {
+                new MembresiaBLL().ActualizarVencimientos();
+                CargarConteosClientes();
+                lblClientesActivos.ForeColor = AppTheme.Success;
+                lblClientesVencidos.ForeColor = AppTheme.Error;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Refresco conteos clientes: " + ex.Message);
+            }
+        }
+
+        /// <summary>Ingresos hoy/mes desde DetalleCaja (SSOT CajaDAL).</summary>
+        private void CargarIngresosDashboard()
+        {
+            if (!_puedeVerIngresos)
+            {
+                lblIngresosHoy.Text = "—";
+                lblIngresosMes.Text = "—";
+                lblIngresosHoy.ForeColor = AppTheme.TextMuted;
+                lblIngresosMes.ForeColor = AppTheme.TextMuted;
+                return;
+            }
+
+            var dashboardBLL = new DashboardBLL();
+            decimal hoy = dashboardBLL.IngresosHoy();
+            decimal mes = dashboardBLL.IngresosMes();
+
+            lblIngresosHoy.Text = hoy.ToString("C");
+            lblIngresosMes.Text = mes.ToString("C");
+            lblIngresosHoy.ForeColor = hoy > 0 ? AppTheme.Primary : AppTheme.Error;
+            lblIngresosMes.ForeColor = mes > 0 ? Color.FromArgb(168, 85, 247) : AppTheme.TextMuted;
         }
 
         /// <summary>
@@ -832,12 +893,14 @@ namespace UI.DISEÑO
         }
 
         /// <summary>
-        /// Refresco puntual de las deudas al registrarse un pago o moverse una deuda,
-        /// sin recargar todo el dashboard.
+        /// Refresco en vivo: ingresos, deudas y conteos de clientes (Fase 4 + Fase 9).
         /// </summary>
-        private void RefrescarKpiDeudas()
+        private void RefrescarIndicadoresFinancieros()
         {
-            if (IsDisposed || Disposing || (!_puedeVerDeudas && !_puedeVerIngresoPendiente))
+            if (IsDisposed || Disposing)
+                return;
+
+            if (!_puedeVerIngresos && !_puedeVerDeudas && !_puedeVerIngresoPendiente)
                 return;
 
             if (InvokeRequired)
@@ -845,7 +908,7 @@ namespace UI.DISEÑO
                 try
                 {
                     if (IsHandleCreated)
-                        BeginInvoke(new Action(RefrescarKpiDeudas));
+                        BeginInvoke(new Action(RefrescarIndicadoresFinancieros));
                 }
                 catch (ObjectDisposedException)
                 {
@@ -853,7 +916,18 @@ namespace UI.DISEÑO
                 return;
             }
 
-            CargarKpiDeudas();
+            try
+            {
+                CargarIngresosDashboard();
+                CargarKpiDeudas();
+                CargarConteosClientes();
+                lblClientesActivos.ForeColor = AppTheme.Success;
+                lblClientesVencidos.ForeColor = AppTheme.Error;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Refresco financiero home: " + ex.Message);
+            }
         }
         private void MostrarAlertas()
         {
@@ -892,6 +966,7 @@ namespace UI.DISEÑO
                 using FrmCRMFinanciero frm = new FrmCRMFinanciero();
                 frm.StartPosition = FormStartPosition.CenterScreen;
                 frm.ShowDialog(this);
+                CargarDashboard();
             }
             catch (Exception ex)
             {

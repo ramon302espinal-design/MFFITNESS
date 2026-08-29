@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using UI.DISEÑO;
@@ -127,34 +128,90 @@ namespace UI.Helpers
 
         private static void EjecutarAtajoNavegacion(Keys key, Form host)
         {
+            host = ResolverHostNavegacion(host);
+
             switch (key)
             {
                 case Keys.P:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloPagar))
+                        return;
                     ModuloNavBar.AbrirCobrar(host);
                     break;
                 case Keys.C:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloCaja))
+                        return;
                     ModuloNavBar.AbrirCaja(host);
                     break;
                 case Keys.E:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloEstado))
+                        return;
                     ModuloNavBar.AbrirEstado(host);
                     break;
                 case Keys.D:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloDeudas))
+                        return;
                     ModuloNavBar.AbrirDeudas(host);
                     break;
                 case Keys.H:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloHistorial))
+                        return;
                     ModuloNavBar.AbrirHistorial(host);
                     break;
                 case Keys.R:
+                    if (host is FrmCRMFinanciero crm)
+                    {
+                        crm.ActivarVistaReportesPos();
+                        return;
+                    }
+                    if (YaEnModulo(host, ModuloNavBar.ModuloReportes))
+                        return;
                     ModuloNavBar.AbrirReportes(host);
                     break;
                 case Keys.I:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloInventario))
+                        return;
                     ModuloNavBar.AbrirInventario(host);
                     break;
                 case Keys.M:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloClientes))
+                        return;
                     ModuloNavBar.AbrirClientes(host);
                     break;
             }
         }
+
+        /// <summary>Formulario contenedor (módulo embebido → shell padre).</summary>
+        internal static Form ResolverHostNavegacion(Form host)
+        {
+            if (host == null || host.IsDisposed)
+            {
+                Form? activa = Form.ActiveForm;
+                return activa != null && !activa.IsDisposed ? activa : host!;
+            }
+
+            Form? outermost = host;
+            for (Control? c = host; c != null; c = c.Parent)
+            {
+                if (c is Form f)
+                    outermost = f;
+            }
+
+            return outermost ?? host;
+        }
+
+        private static bool YaEnModulo(Form host, string modulo) =>
+            modulo switch
+            {
+                ModuloNavBar.ModuloPagar => host is FrmPagos,
+                ModuloNavBar.ModuloCaja => host is FrmCajaDashboard,
+                ModuloNavBar.ModuloEstado => host is FrmEstadoClientes,
+                ModuloNavBar.ModuloDeudas => host is FrmModuloDeudas,
+                ModuloNavBar.ModuloHistorial => host is FrmHistorialVentas,
+                ModuloNavBar.ModuloReportes => host is FrmCRMFinanciero,
+                ModuloNavBar.ModuloInventario => host is FrmProductos,
+                ModuloNavBar.ModuloClientes => host is FrmClientes,
+                _ => false
+            };
 
         private static bool EsTeclaAtajo(Keys key) => key switch
         {
@@ -213,11 +270,13 @@ namespace UI.Helpers
                 if (form == null || form.IsDisposed || !form.Visible)
                     return false;
 
+                Form host = ResolverHostNavegacion(form);
+
                 Keys keyCode = (Keys)(int)m.WParam & Keys.KeyCode;
                 Keys keyData = keyCode | Control.ModifierKeys;
                 var e = new KeyEventArgs(keyData);
 
-                return TryHandleNavegacion(e, form, m.HWnd);
+                return TryHandleNavegacion(e, host, m.HWnd);
             }
         }
     }

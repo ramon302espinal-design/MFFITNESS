@@ -519,12 +519,15 @@ namespace BLL
             var deuda = ObtenerDeuda(deudaId);
             if (deuda == null) return false;
 
+            decimal saldo = Convert.ToDecimal(deuda["Saldo"]);
+            if (saldo <= 0m)
+                return false;
+
             int clienteId = Convert.ToInt32(deuda["ClienteId"]);
             if (!forzar && dal.NotificacionYaEnviada(clienteId, "DEUDA_VENCIDA", deudaId))
                 return true;
 
             string concepto = deuda["Concepto"]?.ToString() ?? "Deuda";
-            decimal saldo = Convert.ToDecimal(deuda["Saldo"]);
             DateTime fechaVencimiento = Convert.ToDateTime(deuda["FechaVencimiento"]);
 
             return EnviarMensajeTemplado(clienteId, "DEUDA_VENCIDA", new Dictionary<string, string>
@@ -720,6 +723,9 @@ namespace BLL
 
             foreach (DataRow row in deudas.Rows)
             {
+                if (!DeudaTieneSaldoPendiente(row))
+                    continue;
+
                 if (!string.Equals(row["Estado"]?.ToString(), "ACTIVA", StringComparison.OrdinalIgnoreCase))
                     continue;
 
@@ -742,6 +748,9 @@ namespace BLL
 
             foreach (DataRow row in deudas.Rows)
             {
+                if (!DeudaTieneSaldoPendiente(row))
+                    continue;
+
                 if (!string.Equals(row["Estado"]?.ToString(), "ACTIVA", StringComparison.OrdinalIgnoreCase))
                     continue;
 
@@ -763,6 +772,9 @@ namespace BLL
 
             foreach (DataRow row in deudas.Rows)
             {
+                if (!DeudaTieneSaldoPendiente(row))
+                    continue;
+
                 if (!string.Equals(row["Estado"]?.ToString(), "ACTIVA", StringComparison.OrdinalIgnoreCase))
                     continue;
 
@@ -896,6 +908,10 @@ namespace BLL
 
             return null;
         }
+
+        /// <summary>Mismo criterio que Estado Clientes / ObtenerResumenDeudasCliente (Saldo &gt; 0).</summary>
+        private static bool DeudaTieneSaldoPendiente(DataRow row) =>
+            row["Saldo"] != DBNull.Value && Convert.ToDecimal(row["Saldo"]) > 0m;
 
         private bool TryObtenerTelefonoCliente(int clienteId, out string numeroTelefono, out string nombreCliente)
         {

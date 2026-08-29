@@ -266,6 +266,36 @@ namespace DL
             decimal pagoInicial = 0,
             decimal montoTotalFinanciado = 0)
         {
+            using SqlConnection conn = new SqlConnection(db.ConnectionString);
+            conn.Open();
+            using SqlTransaction tx = conn.BeginTransaction();
+            try
+            {
+                int id = InsertarDeuda(
+                    conn, tx, clienteId, concepto, monto, vencimiento, usuario,
+                    pagoInicial, montoTotalFinanciado);
+                tx.Commit();
+                return id;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        }
+
+        /// <summary>Inserta deuda + historial DEUDA (+ PAGO_INICIAL si aplica) dentro de TX existente.</summary>
+        public int InsertarDeuda(
+            SqlConnection conn,
+            SqlTransaction tx,
+            int clienteId,
+            string concepto,
+            decimal monto,
+            DateTime vencimiento,
+            string usuario,
+            decimal pagoInicial = 0,
+            decimal montoTotalFinanciado = 0)
+        {
             pagoInicial = decimal.Round(Math.Max(0m, pagoInicial), 2);
             decimal totalFinanciado = montoTotalFinanciado > 0
                 ? decimal.Round(montoTotalFinanciado, 2)
@@ -278,16 +308,16 @@ namespace DL
     VALUES
     (@ClienteId, @Concepto, @Monto, 0, @Monto, @Vencimiento, 'ACTIVA', @Usuario)";
 
-            SqlParameter[] p =
+            int deudaId;
+            using (SqlCommand cmd = new SqlCommand(query, conn, tx))
             {
-        new SqlParameter("@ClienteId", clienteId),
-        new SqlParameter("@Concepto", concepto),
-        new SqlParameter("@Monto", monto),
-        new SqlParameter("@Vencimiento", vencimiento),
-        new SqlParameter("@Usuario", usuario)
-    };
-
-            int deudaId = Convert.ToInt32(db.ExecuteScalar(query, p));
+                cmd.Parameters.AddWithValue("@ClienteId", clienteId);
+                cmd.Parameters.AddWithValue("@Concepto", concepto);
+                cmd.Parameters.AddWithValue("@Monto", monto);
+                cmd.Parameters.AddWithValue("@Vencimiento", vencimiento);
+                cmd.Parameters.AddWithValue("@Usuario", usuario);
+                deudaId = Convert.ToInt32(cmd.ExecuteScalar());
+            }
 
             string descripcionDeuda = concepto;
             if (pagoInicial > 0)
@@ -297,66 +327,81 @@ namespace DL
                     $"Saldo pendiente: {monto:N2} | Fecha límite: {vencimiento:dd/MM/yyyy}";
             }
 
-            string historialQuery = @"
+            using (SqlCommand cmdHist = new SqlCommand(@"
     INSERT INTO HistorialDeudas
     (DeudaId, ClienteId, TipoMovimiento, Monto, Descripcion, Fecha, Usuario)
     VALUES
-    (@DeudaId, @ClienteId, 'DEUDA', @Monto, @Concepto, GETDATE(), @Usuario)";
-
-            SqlParameter[] h =
+    (@DeudaId, @ClienteId, 'DEUDA', @Monto, @Concepto, GETDATE(), @Usuario)", conn, tx))
             {
-        new SqlParameter("@DeudaId", deudaId),
-        new SqlParameter("@ClienteId", clienteId),
-        new SqlParameter("@Monto", monto),
-        new SqlParameter("@Concepto", descripcionDeuda),
-        new SqlParameter("@Usuario", usuario)
-    };
-
-            db.ExecuteNonQuery(historialQuery, h);
+                cmdHist.Parameters.AddWithValue("@DeudaId", deudaId);
+                cmdHist.Parameters.AddWithValue("@ClienteId", clienteId);
+                cmdHist.Parameters.AddWithValue("@Monto", monto);
+                cmdHist.Parameters.AddWithValue("@Concepto", descripcionDeuda);
+                cmdHist.Parameters.AddWithValue("@Usuario", usuario);
+                cmdHist.ExecuteNonQuery();
+            }
 
             if (pagoInicial > 0)
             {
-                string historialPagoInicialQuery = @"
+                using SqlCommand cmdPi = new SqlCommand(@"
     INSERT INTO HistorialDeudas
     (DeudaId, ClienteId, TipoMovimiento, Monto, Descripcion, Fecha, Usuario)
     VALUES
-    (@DeudaId, @ClienteId, 'PAGO_INICIAL', @Monto, @Descripcion, GETDATE(), @Usuario)";
-
-                SqlParameter[] hp =
-                {
-                    new SqlParameter("@DeudaId", deudaId),
-                    new SqlParameter("@ClienteId", clienteId),
-                    new SqlParameter("@Monto", pagoInicial),
-                    new SqlParameter("@Descripcion", $"Pago inicial al financiar - {concepto}"),
-                    new SqlParameter("@Usuario", usuario)
-                };
-
-                db.ExecuteNonQuery(historialPagoInicialQuery, hp);
+    (@DeudaId, @ClienteId, 'PAGO_INICIAL', @Monto, @Descripcion, GETDATE(), @Usuario)", conn, tx);
+                cmdPi.Parameters.AddWithValue("@DeudaId", deudaId);
+                cmdPi.Parameters.AddWithValue("@ClienteId", clienteId);
+                cmdPi.Parameters.AddWithValue("@Monto", pagoInicial);
+                cmdPi.Parameters.AddWithValue("@Descripcion", $"Pago inicial al financiar - {concepto}");
+                cmdPi.Parameters.AddWithValue("@Usuario", usuario);
+                cmdPi.ExecuteNonQuery();
             }
 
             return deudaId;
         }
 
+        public static bool ExistePagoInicialVigente(SqlConnection conn, SqlTransaction tx, int deudaId)
+        {
+            using SqlCommand cmd = new SqlCommand(@"
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1 FROM HistorialDeudas
+                    WHERE DeudaId = @DeudaId AND TipoMovimiento = 'PAGO_INICIAL'
+                ) THEN 1 ELSE 0 END", conn, tx);
+            cmd.Parameters.AddWithValue("@DeudaId", deudaId);
+            return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+        }
+
         public void AnularDeuda(int deudaId, string usuario)
         {
-            string query = @"
+            using SqlConnection conn = new SqlConnection(db.ConnectionString);
+            conn.Open();
+            using SqlTransaction tx = conn.BeginTransaction();
+            try
+            {
+                AnularDeuda(conn, tx, deudaId, usuario);
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        }
+
+        public void AnularDeuda(SqlConnection conn, SqlTransaction tx, int deudaId, string usuario)
+        {
+            using SqlCommand cmd = new SqlCommand(@"
                 UPDATE Deudas
                 SET Estado = 'ANULADA'
                 WHERE Id = @DeudaId
                   AND Estado = 'ACTIVA'
                   AND MontoPagado = 0
-                  AND Saldo = MontoTotal";
+                  AND Saldo = MontoTotal", conn, tx);
+            cmd.Parameters.AddWithValue("@DeudaId", deudaId);
 
-            SqlParameter[] p =
-            {
-                new SqlParameter("@DeudaId", deudaId)
-            };
-
-            int rows = db.ExecuteNonQuery(query, p);
-            if (rows == 0)
+            if (cmd.ExecuteNonQuery() == 0)
                 throw new Exception("La deuda no puede anularse (tiene pagos o ya fue modificada).");
 
-            string historialQuery = @"
+            using SqlCommand cmdHist = new SqlCommand(@"
                 INSERT INTO HistorialDeudas
                 (DeudaId, ClienteId, TipoMovimiento, Monto, Descripcion, Fecha, Usuario)
                 VALUES
@@ -366,15 +411,10 @@ namespace DL
                  0,
                  'Deuda anulada (deshacer)',
                  GETDATE(),
-                 @Usuario)";
-
-            SqlParameter[] h =
-            {
-                new SqlParameter("@DeudaId", deudaId),
-                new SqlParameter("@Usuario", usuario)
-            };
-
-            db.ExecuteNonQuery(historialQuery, h);
+                 @Usuario)", conn, tx);
+            cmdHist.Parameters.AddWithValue("@DeudaId", deudaId);
+            cmdHist.Parameters.AddWithValue("@Usuario", usuario);
+            cmdHist.ExecuteNonQuery();
         }
 
         // ===============================
@@ -1190,7 +1230,8 @@ VALUES
         // ===============================
         public DataTable ObtenerDeudas(bool soloActivas = true)
         {
-            string condicionEstado = soloActivas ? "WHERE d.Estado = 'ACTIVA'" : string.Empty;
+            // Pendientes reales: ACTIVA con saldo > 0 (mismo criterio que Estado Clientes y WhatsApp).
+            string condicionEstado = soloActivas ? "WHERE d.Estado = 'ACTIVA' AND d.Saldo > 0" : string.Empty;
             string query = $@"
             SELECT 
                 d.Id, 

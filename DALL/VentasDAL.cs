@@ -49,14 +49,20 @@ namespace DL
                         v.MetodoPago,
                         CASE
                             WHEN v.Saldo > 0 THEN 'FINANCIADO'
+                            WHEN UPPER(LTRIM(RTRIM(ISNULL(v.MetodoPago, '')))) IN (N'FINANCIADO', N'CREDITO', N'CRÉDITO')
+                                 AND ISNULL(v.MontoPagado, 0) < ISNULL(v.Total, 0) THEN 'FINANCIADO'
                             ELSE 'CONTADO'
                         END AS TipoOperacion,
                         CASE
                             WHEN v.Saldo > 0 AND v.MontoPagado > 0 THEN
-                                CONCAT('Financiado · Abono RD$ ', FORMAT(v.MontoPagado, 'N2'),
+                                CONCAT('Financiado · Pago inicial RD$ ', FORMAT(v.MontoPagado, 'N2'),
                                        ' · Saldo RD$ ', FORMAT(v.Saldo, 'N2'))
                             WHEN v.Saldo > 0 THEN
                                 CONCAT('Financiado · Saldo RD$ ', FORMAT(v.Saldo, 'N2'))
+                            WHEN UPPER(LTRIM(RTRIM(ISNULL(v.MetodoPago, '')))) IN (N'FINANCIADO', N'CREDITO', N'CRÉDITO')
+                                 AND ISNULL(v.MontoPagado, 0) < ISNULL(v.Total, 0) THEN
+                                CONCAT('Financiado (legacy) · Pago inicial RD$ ', FORMAT(v.MontoPagado, 'N2'),
+                                       ' · Saldo RD$ ', FORMAT(v.Total - v.MontoPagado, 'N2'))
                             ELSE v.MetodoPago
                         END AS FormaPago,
                         v.Usuario,
@@ -141,6 +147,54 @@ namespace DL
             return Convert.ToInt32(result);
         }
 
+        public int RegistrarVenta(
+            SqlConnection conn,
+            SqlTransaction tx,
+            int? clienteId,
+            decimal total,
+            decimal montoPagado,
+            string metodo,
+            string usuario)
+        {
+            using SqlCommand cmd = new SqlCommand(@"
+                INSERT INTO Ventas
+                (ClienteId, Total, MontoPagado, MetodoPago, Usuario, Fecha)
+                OUTPUT INSERTED.Id
+                VALUES
+                (@ClienteId, @Total, @MontoPagado, @MetodoPago, @Usuario, @Fecha)", conn, tx);
+            cmd.Parameters.AddWithValue("@ClienteId", (object?)clienteId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Total", total);
+            cmd.Parameters.AddWithValue("@MontoPagado", montoPagado);
+            cmd.Parameters.AddWithValue("@MetodoPago", metodo);
+            cmd.Parameters.AddWithValue("@Usuario", usuario);
+            cmd.Parameters.AddWithValue("@Fecha", DateTime.Now);
+            return Convert.ToInt32(cmd.ExecuteScalar());
+        }
+
+        public void RegistrarDetalleVenta(
+            SqlConnection conn,
+            SqlTransaction tx,
+            int ventaId,
+            int productoId,
+            int cantidad,
+            decimal precio,
+            decimal subtotal,
+            decimal? costoUnitario = null)
+        {
+            using SqlCommand cmd = new SqlCommand(@"
+                INSERT INTO DetalleVentas
+                (VentaId, ProductoId, Cantidad, Precio, Subtotal, CostoUnitario)
+                VALUES
+                (@VentaId, @ProductoId, @Cantidad, @Precio, @Subtotal, @CostoUnitario)", conn, tx);
+            cmd.Parameters.AddWithValue("@VentaId", ventaId);
+            cmd.Parameters.AddWithValue("@ProductoId", productoId);
+            cmd.Parameters.AddWithValue("@Cantidad", cantidad);
+            cmd.Parameters.AddWithValue("@Precio", precio);
+            cmd.Parameters.AddWithValue("@Subtotal", subtotal);
+            cmd.Parameters.AddWithValue("@CostoUnitario", (object?)costoUnitario ?? DBNull.Value);
+            cmd.ExecuteNonQuery();
+        }
+
         public void AnularVenta(int ventaId)
         {
             SqlParameter[] p = { new SqlParameter("@VentaId", ventaId) };
@@ -149,6 +203,20 @@ namespace DL
             db.ExecuteNonQuery("DELETE FROM Ventas WHERE Id = @VentaId", p);
         }
 
+        public void AnularVenta(SqlConnection conn, SqlTransaction tx, int ventaId)
+        {
+            using SqlCommand cmdDet = new SqlCommand(
+                "DELETE FROM DetalleVentas WHERE VentaId = @VentaId", conn, tx);
+            cmdDet.Parameters.AddWithValue("@VentaId", ventaId);
+            cmdDet.ExecuteNonQuery();
+
+            using SqlCommand cmdV = new SqlCommand(
+                "DELETE FROM Ventas WHERE Id = @VentaId", conn, tx);
+            cmdV.Parameters.AddWithValue("@VentaId", ventaId);
+            cmdV.ExecuteNonQuery();
+        }
+
+        [Obsolete("Stub legacy — usar overload con conn/tx.")]
         public void RegistrarVenta(SqlConnection conn, SqlTransaction tx,
            int? clienteId, decimal total, string metodoPago, string usuario)
         {
