@@ -1,4 +1,3 @@
-using BLL.Models;
 using System.Windows.Forms;
 using UI.DISEÑO;
 
@@ -9,7 +8,10 @@ namespace UI.Helpers
     /// </summary>
     public static class DesactivacionMiembroDialog
     {
-        public static ModoDesactivacionMiembro? Mostrar(IWin32Window? owner, string nombreCliente)
-            => FrmDesactivacionMiembro.Mostrar(owner, nombreCliente);
+        public static DesactivacionMiembroResult Mostrar(
+            IWin32Window? owner,
+            string nombreCliente,
+            bool esDesactivado = false)
+            => FrmDesactivacionMiembro.Mostrar(owner, nombreCliente, esDesactivado);
     }
 }

@@ -867,12 +867,56 @@ namespace UI.DISEÑO
 
                 string nombreCliente = ObtenerValorCelda(dgvEstado.CurrentRow!, "Nombre");
                 string estadoActual = ObtenerValorCelda(dgvEstado.CurrentRow!, "Estado");
+                bool esDesactivado = estadoActual.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase);
 
-                ModoDesactivacionMiembro? modo = DesactivacionMiembroDialog.Mostrar(this, nombreCliente);
-                if (modo == null)
+                DesactivacionMiembroResult resultado =
+                    DesactivacionMiembroDialog.Mostrar(this, nombreCliente, esDesactivado);
+                if (resultado.Cancelado)
                     return;
 
-                if (estadoActual.Equals("DESACTIVADO", StringComparison.OrdinalIgnoreCase))
+                string usuario = Sesion.Usuario ?? "ADMIN";
+
+                if (resultado.Activar)
+                {
+                    if (!esDesactivado)
+                    {
+                        MessageBox.Show(
+                            "Solo se puede activar un miembro DESACTIVADO.",
+                            "Activar",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    string motivoActivacion = Microsoft.VisualBasic.Interaction.InputBox(
+                        "Motivo de reactivación (opcional):",
+                        "Activar miembro",
+                        "Reactivación manual");
+
+                    if (motivoActivacion.Length == 0)
+                        return;
+
+                    Cursor = Cursors.WaitCursor;
+                    try
+                    {
+                        membresiaBLL.ActivarMiembroDesactivado(clienteId, usuario, motivoActivacion);
+                    }
+                    finally
+                    {
+                        Cursor = Cursors.Default;
+                    }
+
+                    CargarEstado();
+                    _presentacion?.CargarDashboard();
+                    MessageBox.Show(
+                        "Miembro activado correctamente.",
+                        "Activar",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (esDesactivado)
                 {
                     MessageBox.Show(
                         "El cliente ya está DESACTIVADO.",
@@ -881,8 +925,6 @@ namespace UI.DISEÑO
                         MessageBoxIcon.Information);
                     return;
                 }
-
-                string usuario = Sesion.Usuario ?? "ADMIN";
 
                 string motivo = Microsoft.VisualBasic.Interaction.InputBox(
                     "¿Por qué se va el cliente?",
@@ -898,21 +940,21 @@ namespace UI.DISEÑO
                     motivo = "Sin especificar";
 
                 Cursor = Cursors.WaitCursor;
-                int resultado;
+                int resultadoDesactivacion;
                 try
                 {
-                    resultado = membresiaBLL.DesactivarMiembro(
+                    resultadoDesactivacion = membresiaBLL.DesactivarMiembro(
                         clienteId,
                         usuario,
                         motivo,
-                        ModoDesactivacionMiembro.SinMembresia);
+                        resultado.ModoDesactivacion);
                 }
                 finally
                 {
                     Cursor = Cursors.Default;
                 }
 
-                if (resultado <= 0)
+                if (resultadoDesactivacion <= 0)
                 {
                     MessageBox.Show(
                         "No se pudo registrar la baja del cliente.",

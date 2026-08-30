@@ -114,6 +114,9 @@
 		<Compile Update="DISEÑO\ESTADO\FrmDesactivacionMiembro.Designer.cs">
 			<DependentUpon>FrmDesactivacionMiembro.cs</DependentUpon>
 		</Compile>
+		<EmbeddedResource Update="DISEÑO\ESTADO\FrmDesactivacionMiembro.resx">
+			<DependentUpon>FrmDesactivacionMiembro.cs</DependentUpon>
+		</EmbeddedResource>
 		<Compile Update="DISEÑO\ESTADO\FrmCongelarMiembro.cs">
 			<SubType>Form</SubType>
 		</Compile>

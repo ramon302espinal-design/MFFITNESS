@@ -212,6 +212,76 @@ namespace DL
         }
 
         // ===============================
+        // ACTIVAR MIEMBRO DESACTIVADO (revierte SALIDA manual)
+        // ===============================
+        public int ActivarMiembroDesactivado(int clienteId, string usuario, string motivo)
+        {
+            var historialDAL = new HistorialMembresiaDAL();
+
+            using SqlConnection conn = db.GetConnection();
+            conn.Open();
+            using SqlTransaction tx = conn.BeginTransaction();
+
+            try
+            {
+                int? membresiaId = null;
+                int? planId = null;
+                DateTime? fechaFin = null;
+
+                using (var cmdGet = new SqlCommand(@"
+                    SELECT TOP 1 Id, PlanId, FechaFin
+                    FROM Membresias
+                    WHERE ClienteId = @ClienteId
+                    ORDER BY FechaFin DESC, Id DESC", conn, tx))
+                {
+                    cmdGet.Parameters.AddWithValue("@ClienteId", clienteId);
+                    using var reader = cmdGet.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        membresiaId = Convert.ToInt32(reader["Id"]);
+                        if (reader["PlanId"] != DBNull.Value && reader["PlanId"] != null)
+                            planId = Convert.ToInt32(reader["PlanId"]);
+                        if (reader["FechaFin"] != DBNull.Value && reader["FechaFin"] != null)
+                            fechaFin = Convert.ToDateTime(reader["FechaFin"]).Date;
+                    }
+                }
+
+                if (!membresiaId.HasValue)
+                    throw new Exception("El cliente no tiene membresía registrada.");
+
+                if (!fechaFin.HasValue || fechaFin.Value < DateTime.Today)
+                    throw new Exception("El plan está vencido. Use Renovar para reactivar al miembro.");
+
+                using (var cmdUpdate = new SqlCommand(@"
+                    UPDATE Membresias
+                    SET Activa = 1
+                    WHERE Id = @MembresiaId", conn, tx))
+                {
+                    cmdUpdate.Parameters.AddWithValue("@MembresiaId", membresiaId.Value);
+                    cmdUpdate.ExecuteNonQuery();
+                }
+
+                historialDAL.Registrar(
+                    conn,
+                    tx,
+                    clienteId,
+                    "REACTIVACION",
+                    planId,
+                    null,
+                    usuario,
+                    motivo);
+
+                tx.Commit();
+                return 1;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        }
+
+        // ===============================
         // CLIENTES VENCEN HOY Y VENCIDOS
         // ===============================
         public int ClientesVencenHoy()

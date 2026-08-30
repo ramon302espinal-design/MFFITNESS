@@ -299,7 +299,7 @@ namespace UI.DISEÑO
             // 
             btnAñadirMiembro.Anchor = AnchorStyles.None;
             btnAñadirMiembro.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnAñadirMiembro.Location = new Point(402, 10);
+            btnAñadirMiembro.Location = new Point(331, 10);
             btnAñadirMiembro.Name = "btnAñadirMiembro";
             btnAñadirMiembro.Size = new Size(178, 42);
             btnAñadirMiembro.TabIndex = 3;
@@ -312,7 +312,7 @@ namespace UI.DISEÑO
             btnRenovar.Anchor = AnchorStyles.None;
             btnRenovar.Enabled = false;
             btnRenovar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnRenovar.Location = new Point(605, 11);
+            btnRenovar.Location = new Point(530, 11);
             btnRenovar.Name = "btnRenovar";
             btnRenovar.Size = new Size(142, 42);
             btnRenovar.TabIndex = 0;
@@ -324,11 +324,11 @@ namespace UI.DISEÑO
             // 
             btnDesactivar.Anchor = AnchorStyles.None;
             btnDesactivar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnDesactivar.Location = new Point(767, 11);
+            btnDesactivar.Location = new Point(693, 11);
             btnDesactivar.Name = "btnDesactivar";
-            btnDesactivar.Size = new Size(126, 42);
+            btnDesactivar.Size = new Size(200, 42);
             btnDesactivar.TabIndex = 1;
-            btnDesactivar.Text = "DESACTIVAR";
+            btnDesactivar.Text = "DESACTIVAR/ACTIVAR";
             btnDesactivar.UseVisualStyleBackColor = true;
             btnDesactivar.Click += btnDesactivar_Click;
             // 

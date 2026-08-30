@@ -40,6 +40,29 @@ namespace BLL
             return id;
         }
 
+        /// <summary>
+        /// Reactiva un miembro DESACTIVADO (último historial SALIDA) sin cobro.
+        /// </summary>
+        public int ActivarMiembroDesactivado(int clienteId, string usuario, string? motivo = null)
+        {
+            if (clienteId <= 0)
+                throw new Exception("Cliente no válido.");
+
+            if (string.IsNullOrWhiteSpace(usuario))
+                usuario = "ADMIN";
+
+            string? ultimo = new HistorialMembresiaDAL().ObtenerUltimoTipoMovimiento(clienteId);
+            if (!string.Equals(ultimo, "SALIDA", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Solo se puede activar un miembro DESACTIVADO.");
+
+            if (string.IsNullOrWhiteSpace(motivo))
+                motivo = "Reactivación manual";
+
+            int id = dal.ActivarMiembroDesactivado(clienteId, usuario, motivo.Trim());
+            MovimientoFinancieroNotifier.EstadoMembresia();
+            return id;
+        }
+
         public CongelacionDTO? ObtenerCongelacionActiva(int clienteId) =>
             new CongelacionDAL().ObtenerActiva(clienteId);
 
