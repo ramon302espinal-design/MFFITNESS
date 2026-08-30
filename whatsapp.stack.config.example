@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copiar a: %LocalAppData%\MFFITNESS\whatsapp.stack.config
+  Prioridad URL pública: WHATSAPP_PUBLIC_BASE_URL (env) > este archivo > UI\App.config
+
+  DESARROLLO (VS + ngrok efímero):
+    - Dejar WhatsAppPublicBaseUrl vacío
+    - Ejecutar: Tools\WhatsAppHost\Start-WhatsAppStack.ps1 -Profile Dev
+    - El script escribe la URL de ngrok aquí y en App.config
+
+  PRODUCCIÓN (PC del gym, URL fija):
+    - Opción A: dominio ngrok reservado en NgrokDomain + TunnelProvider Ngrok
+    - Opción B: túnel Cloudflare nombrado (CloudflaredToken) + TunnelProvider Cloudflared
+    - Opción C: reverse proxy propio → WhatsAppPublicBaseUrl fija abajo
+-->
+<configuration>
+  <appSettings>
+    <!-- URL HTTPS que Twilio usa (webhook + media fallback). Vacío en dev = ngrok lo rellena. -->
+    <add key="WhatsAppPublicBaseUrl" value="" />
+
+    <!-- Ngrok: dominio reservado ej. otter-legal-bass.ngrok-free.app (sin https://) -->
+    <add key="NgrokDomain" value="" />
+
+    <!-- Ngrok | Cloudflared | None -->
+    <add key="TunnelProvider" value="Ngrok" />
+
+    <!-- Cloudflare Zero Trust → Tunnels → token del conector -->
+    <add key="CloudflaredToken" value="" />
+
+    <!-- Debe coincidir con WhatsAppMediaListenUrl en App.config -->
+    <add key="WhatsAppMediaListenPort" value="5088" />
+  </appSettings>
+</configuration>

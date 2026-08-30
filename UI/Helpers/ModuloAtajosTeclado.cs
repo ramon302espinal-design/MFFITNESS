@@ -2,11 +2,12 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using UI.DISEÑO;
+using UI.DISEÑO.CHAT;
 
 namespace UI.Helpers
 {
     /// <summary>
-    /// Atajos globales: P Cobrar · C Caja · E Estado · D Deudas · H Historial · R Reportes · I Inventario · M Clientes.
+    /// Atajos globales: P Cobrar · C Caja · E Estado · D Deudas · H Historial · R Reportes · I Inventario · M Clientes · W WhatsApp.
     /// FrmPagos productos: Shift → financiar · Espacio/Enter → COBRAR.
     /// </summary>
     internal static class ModuloAtajosTeclado
@@ -177,6 +178,11 @@ namespace UI.Helpers
                         return;
                     ModuloNavBar.AbrirClientes(host);
                     break;
+                case Keys.W:
+                    if (YaEnModulo(host, ModuloNavBar.ModuloChat))
+                        return;
+                    ModuloNavBar.AbrirChat(host);
+                    break;
             }
         }
 
@@ -210,12 +216,13 @@ namespace UI.Helpers
                 ModuloNavBar.ModuloReportes => host is FrmCRMFinanciero,
                 ModuloNavBar.ModuloInventario => host is FrmProductos,
                 ModuloNavBar.ModuloClientes => host is FrmClientes,
+                ModuloNavBar.ModuloChat => host is FrmChat,
                 _ => false
             };
 
         private static bool EsTeclaAtajo(Keys key) => key switch
         {
-            Keys.P or Keys.C or Keys.E or Keys.D or Keys.H or Keys.R or Keys.I or Keys.M => true,
+            Keys.P or Keys.C or Keys.E or Keys.D or Keys.H or Keys.R or Keys.I or Keys.M or Keys.W => true,
             _ => false
         };
 

@@ -24,14 +24,28 @@ namespace WhatsAppHost
                     Uso:
                       WhatsAppHost.exe              Loop de automatizacion (recordatorios)
                       WhatsAppHost.exe --once       Una corrida y sale
-                      WhatsAppHost.exe --media-only Solo Kestrel local :5088 (fallback sin Supabase)
+                      WhatsAppHost.exe --media-only Solo Kestrel :5088 (webhook + media fallback)
                       WhatsAppHost.exe --help       Ayuda
+
+                    Webhook inbound (Twilio Console → When a message comes in):
+                      {WhatsAppPublicBaseUrl}/webhook/twilio/whatsapp
+
+                    Stack dev (una terminal):
+                      powershell -ExecutionPolicy Bypass -File .\Start-WhatsAppStack.ps1 -Profile Dev
+
+                    Stack producción (admin, tareas Windows):
+                      powershell -ExecutionPolicy Bypass -File .\Install-WhatsAppStack.ps1 -Environment Production
+
+                    Diagnóstico:
+                      powershell -ExecutionPolicy Bypass -File .\Test-WhatsAppStack.ps1
+
+                    Config URL pública: %LocalAppData%\MFFITNESS\whatsapp.stack.config
+                    (plantilla: whatsapp.stack.config.example en raíz del repo)
 
                     Produccion: PDF via Supabase Storage (bucket FACTURAS).
                     Fallback: Kestrel + WhatsAppPublicBaseUrl (HTTPS publico).
-                    Tunel Ngrok historico: archive\Start-MediaTunnel.ps1
 
-                    Instalar como tarea Windows (admin):
+                    Instalar host solo (legacy):
                       powershell -ExecutionPolicy Bypass -File .\Install-WhatsAppHost.ps1
                     """);
                 return 0;
@@ -40,9 +54,17 @@ namespace WhatsAppHost
             using var mutex = new Mutex(true, MutexName, out bool createdNew);
             if (!createdNew)
             {
-                Console.WriteLine($"[{Ahora()}] Ya hay otra instancia de WhatsAppHost en ejecucion. Saliendo.");
-                return 2;
+                if (LocalHealthOk())
+                {
+                    Console.WriteLine($"[{Ahora()}] Ya hay otra instancia de WhatsAppHost en ejecucion. Saliendo.");
+                    return 2;
+                }
+
+                Console.WriteLine($"[{Ahora()}] AVISO: mutex ocupado pero :5088 no responde. Cierre WhatsAppHost en Administrador de tareas y reintente.");
+                return 3;
             }
+
+            WhatsAppStackSecrets.InvalidateCache();
 
             if (!TwilioSettings.WhatsAppHabilitado && !mediaOnly)
             {
@@ -69,15 +91,10 @@ namespace WhatsAppHost
                 Console.WriteLine($"[{Ahora()}] Deteniendo...");
             };
 
-            // Kestrel/Ngrok solo si NO hay Supabase (PDF publico en bucket FACTURAS).
-            bool usarMediaLocal = mediaOnly || !SupabaseSettings.Configurado;
-            if (usarMediaLocal)
+            // Kestrel: webhook inbound siempre; PDF local solo si no hay Supabase.
+            if (TwilioSettings.WhatsAppHabilitado || mediaOnly)
             {
                 FacturaMediaServer.Start(cts.Token);
-            }
-            else
-            {
-                Console.WriteLine($"[{Ahora()}] Media: Supabase Storage ({SupabaseSettings.BucketFacturas}). Sin Kestrel/Ngrok.");
             }
 
             if (mediaOnly)
@@ -138,6 +155,20 @@ namespace WhatsAppHost
 
         private static bool TieneFlag(string[] args, string flag) =>
             Array.Exists(args, a => string.Equals(a, flag, StringComparison.OrdinalIgnoreCase));
+
+        private static bool LocalHealthOk()
+        {
+            try
+            {
+                using var client = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+                var resp = client.GetAsync("http://127.0.0.1:5088/health").GetAwaiter().GetResult();
+                return resp.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         private static string Ahora() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 

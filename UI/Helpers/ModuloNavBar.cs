@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using UI.DISEÑO;
+using UI.DISEÑO.CHAT;
 using UI.Theme;
 
 namespace UI.Helpers
@@ -22,6 +23,7 @@ namespace UI.Helpers
         public const string ModuloPagar = "PAGAR";
         public const string ModuloReportes = "REPORTES";
         public const string ModuloClientes = "CLIENTES";
+        public const string ModuloChat = "CHAT";
 
         private const int Gap = 8;
         private const int StartX = 8;
@@ -115,6 +117,25 @@ namespace UI.Helpers
             using var frm = new FrmCRMFinanciero { StartPosition = FormStartPosition.CenterScreen };
             MostrarDialogo(frm, owner);
             ObtenerPresentacion()?.CargarDashboard();
+        }
+
+        public static void AbrirChat(IWin32Window? owner, int? clienteId = null)
+        {
+            foreach (Form form in Application.OpenForms)
+            {
+                if (form is FrmChat chat && !chat.IsDisposed)
+                {
+                    chat.Focus();
+                    if (clienteId is > 0)
+                        chat.NavegarACliente(clienteId.Value);
+                    return;
+                }
+            }
+
+            using var frm = clienteId.HasValue
+                ? new FrmChat(clienteId)
+                : new FrmChat();
+            MostrarDialogo(frm, owner);
         }
 
         public static void AbrirClientes(IWin32Window? owner)

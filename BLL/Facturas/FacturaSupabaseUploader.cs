@@ -158,5 +158,7 @@ namespace BLL.Facturas
             await _client.InitializeAsync().ConfigureAwait(false);
             return _client;
         }
+
+        internal static Task<Supabase.Client> ObtenerClienteStorageAsync() => GetClientAsync();
     }
 }

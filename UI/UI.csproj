@@ -444,6 +444,15 @@
 	  <EmbeddedResource Update="DISEÑO\INVENTARIO Y REPORTE\ANALITICA\FrmAnaDecisiones.resx">
 	    <DependentUpon>FrmAnaDecisiones.cs</DependentUpon>
 	  </EmbeddedResource>
+	  <Compile Update="DISEÑO\CHAT\FrmChat.cs">
+	    <SubType>Form</SubType>
+	  </Compile>
+	  <Compile Update="DISEÑO\CHAT\FrmChat.Designer.cs">
+	    <DependentUpon>FrmChat.cs</DependentUpon>
+	  </Compile>
+	  <EmbeddedResource Update="DISEÑO\CHAT\FrmChat.resx">
+	    <DependentUpon>FrmChat.cs</DependentUpon>
+	  </EmbeddedResource>
 	</ItemGroup>
 
 </Project>

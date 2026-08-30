@@ -47,7 +47,7 @@ if ($normalized -match '\\OneDrive\\' -or $normalized -match '\\Escritorio\\' -o
     Write-Host ""
     Write-Host "ADVERTENCIA: destino bajo OneDrive/Escritorio." -ForegroundColor Yellow
     Write-Host "  Las actualizaciones OTA pueden fallar por bloqueo de archivos en sync." -ForegroundColor Yellow
-    Write-Host "  Preferir: .\Scripts\Deploy-Pos.ps1  →  %LocalAppData%\Programs\MFFITNESS" -ForegroundColor Yellow
+    Write-Host "  Preferir: .\Scripts\Deploy-Pos.ps1 -> %LocalAppData%\Programs\MFFITNESS" -ForegroundColor Yellow
     Write-Host ""
 }
 
@@ -87,9 +87,37 @@ if ($Configuration -eq 'Release' -and -not $IncludePdbs) {
     $umArgs += @('-p:DebugType=None', '-p:DebugSymbols=false')
 }
 
-Write-Host "Publicando UpdateManager → UpdateManager\ (runtime aislado)..."
+Write-Host "Publicando UpdateManager -> UpdateManager\ (runtime aislado)..."
 dotnet publish $umProj @umArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish UpdateManager falló ($LASTEXITCODE)" }
+
+$whProj = Join-Path $RepoRoot 'Tools\WhatsAppHost\WhatsAppHost.csproj'
+$whOut = Join-Path $OutputDir 'WhatsAppHost'
+if (Test-Path $whProj) {
+    Write-Host "Publicando WhatsAppHost -> WhatsAppHost\ ..."
+    $whArgs = @('-c', $Configuration, '-o', $whOut, '--nologo')
+    if ($Configuration -eq 'Release' -and -not $IncludePdbs) {
+        $whArgs += @('-p:DebugType=None', '-p:DebugSymbols=false')
+    }
+    dotnet publish $whProj @whArgs
+    if ($LASTEXITCODE -ne 0) { throw "dotnet publish WhatsAppHost falló ($LASTEXITCODE)" }
+    $stackExample = Join-Path $RepoRoot 'whatsapp.stack.config.example'
+    if (Test-Path $stackExample) {
+        Copy-Item $stackExample (Join-Path $OutputDir 'whatsapp.stack.config.example') -Force
+    }
+}
+
+# ngrok portable embebido (Tools\Bundled\ngrok\ngrok.exe)
+$bundledNgrok = Join-Path $RepoRoot 'Tools\Bundled\ngrok\ngrok.exe'
+$ngrokOut = Join-Path $OutputDir 'Tools\ngrok'
+if (Test-Path $bundledNgrok) {
+    New-Item -ItemType Directory -Force -Path $ngrokOut | Out-Null
+    Copy-Item $bundledNgrok (Join-Path $ngrokOut 'ngrok.exe') -Force
+    Write-Host "ngrok embebido -> Tools\ngrok\ngrok.exe" -ForegroundColor Green
+}
+else {
+    Write-Host "AVISO: no hay Tools\Bundled\ngrok\ngrok.exe. El instalador usara ngrok del sistema." -ForegroundColor Yellow
+}
 
 $migOut = Join-Path $OutputDir 'Database\Migrations'
 New-Item -ItemType Directory -Force -Path $migOut | Out-Null
@@ -138,7 +166,7 @@ if (!(Test-Path $icoOut)) {
 $rootUm = Join-Path $OutputDir 'UpdateManager.exe'
 if (Test-Path $rootUm) { Remove-Item -Force $rootUm }
 
-# POS instalado / Release → siempre [MF CYBER DB] vía appsettings.Local.json.
+# POS instalado / Release: siempre [MF CYBER DB] via appsettings.Local.json.
 # Desarrollo en VS sigue con perfil "UI (Development)" (MFFITNESS_ENVIRONMENT=Development).
 $localSettings = Join-Path $OutputDir 'appsettings.Local.json'
 if ($Configuration -eq 'Release') {
@@ -152,7 +180,7 @@ if ($Configuration -eq 'Release') {
   }
 }
 '@ | Set-Content -Path $localSettings -Encoding UTF8
-    Write-Host "appsettings.Local.json → Production + [MF CYBER DB]" -ForegroundColor Green
+    Write-Host "appsettings.Local.json -> Production + [MF CYBER DB]" -ForegroundColor Green
 
     $launcher = Join-Path $OutputDir 'Start-MFFITNESS.cmd'
     @'
@@ -161,7 +189,7 @@ set MFFITNESS_ENVIRONMENT=Production
 set DOTNET_ENVIRONMENT=Production
 start "" /D "%~dp0" "%~dp0UI.exe"
 '@ | Set-Content -Path $launcher -Encoding ASCII
-    Write-Host "Start-MFFITNESS.cmd → fuerza Production" -ForegroundColor Green
+    Write-Host "Start-MFFITNESS.cmd -> fuerza Production" -ForegroundColor Green
 }
 elseif (Test-Path $localSettings) {
     Remove-Item -Force $localSettings
@@ -176,5 +204,5 @@ Write-Host "  UI.exe en:              $OutputDir"
 Write-Host "  UpdateManager.exe en:   $umOut"
 Write-Host "  Icono:                  $(if (Test-Path $icoOut) { $icoOut } else { 'NO' })"
 Write-Host "  Migraciones SQL: $migCount"
-Write-Host "  Tamaño: ${totalMb} MB"
+Write-Host "  Tamano: ${totalMb} MB"
 Write-Host "  Despliegue en PC: .\Scripts\Deploy-Pos.ps1"

@@ -308,5 +308,47 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
             DataTable dt = db.ExecuteQuery(query, parametros);
             return dt?.Rows.Count > 0 ? dt.Rows[0] : null;
         }
+
+        /// <summary>
+        /// Busca cliente por teléfono E.164 o variantes locales (últimos 10 dígitos).
+        /// </summary>
+        public DataRow? ObtenerClientePorTelefono(string telefonoE164)
+        {
+            if (string.IsNullOrWhiteSpace(telefonoE164))
+                return null;
+
+            string digitos = telefonoE164.Trim();
+            if (digitos.StartsWith('+'))
+                digitos = digitos[1..];
+
+            digitos = digitos.Replace("-", "").Replace(" ", "").Replace("(", "").Replace(")", "");
+            if (digitos.StartsWith("whatsapp:", StringComparison.OrdinalIgnoreCase))
+                digitos = digitos[9..];
+
+            if (digitos.Length < 10)
+                return null;
+
+            string ultimos10 = digitos.Length > 10 ? digitos[^10..] : digitos;
+
+            string query = @"
+SELECT TOP 1 ID AS Id, Nombre, Telefono, Direccion, FechaNacimiento, Sexo
+FROM dbo.Clientes
+WHERE Telefono IS NOT NULL
+  AND LTRIM(RTRIM(Telefono)) <> N''
+  AND RIGHT(
+        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+            LOWER(LTRIM(RTRIM(Telefono))),
+            N'whatsapp:', N''), N'+', N''), N'-', N''), N' ', N''), N'(', N''), N')', N''),
+        10) = @Ultimos10
+ORDER BY ID DESC;";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Ultimos10", ultimos10)
+            };
+
+            DataTable dt = db.ExecuteQuery(query, parametros);
+            return dt.Rows.Count > 0 ? dt.Rows[0] : null;
+        }
     }
 }

@@ -84,10 +84,12 @@ namespace BLL
             string baseDir = AppContext.BaseDirectory;
             string[] candidatos =
             {
+                // Portable / Deploy-Pos: UI.exe y WhatsAppHost\ junto en la misma carpeta
+                Path.Combine(baseDir, "WhatsAppHost", "WhatsAppHost.exe"),
                 // UI Debug → repo\Tools\WhatsAppHost\bin\...
-                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\Tools\WhatsAppHost\bin\Debug\net10.0\WhatsAppHost.exe")),
-                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\Tools\WhatsAppHost\bin\Release\net10.0\WhatsAppHost.exe")),
-                // Copia instalada junto a datos locales
+                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\Tools\WhatsAppHost\bin\Debug\net8.0\WhatsAppHost.exe")),
+                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\Tools\WhatsAppHost\bin\Release\net8.0\WhatsAppHost.exe")),
+                // Tarea Windows Install-WhatsAppStack (legacy)
                 Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "MFFITNESS", "WhatsAppHost", "WhatsAppHost.exe"),

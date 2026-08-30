@@ -38,4 +38,5 @@ var r = wa.Enviar(
 // r.Entregado, r.Detalle, r.MessageSid
 ```
 
-Ops facturas: `DOCS\WHATSAPP_FACTURA_OPS.md`
+Ops facturas: `DOCS\WHATSAPP_FACTURA_OPS.md`  
+Stack webhook/túnel dev+prod: `DOCS\WHATSAPP_STACK.md`

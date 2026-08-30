@@ -45,6 +45,7 @@ namespace UI.DISEÑO
             txtBuscar = new TextBox();
             panelAcciones = new Panel();
             btnProgramar = new Button();
+            btnWhatsApp = new Button();
             btnAñadirMiembro = new Button();
             btnRenovar = new Button();
             btnDesactivar = new Button();
@@ -269,6 +270,7 @@ namespace UI.DISEÑO
             // 
             // panelAcciones
             // 
+            panelAcciones.Controls.Add(btnWhatsApp);
             panelAcciones.Controls.Add(btnProgramar);
             panelAcciones.Controls.Add(btnAñadirMiembro);
             panelAcciones.Controls.Add(btnRenovar);
@@ -294,6 +296,22 @@ namespace UI.DISEÑO
             btnProgramar.Text = "PROGRAMAR";
             btnProgramar.UseVisualStyleBackColor = true;
             btnProgramar.Click += btnProgramar_Click;
+            // 
+            // btnWhatsApp
+            // 
+            btnWhatsApp.Anchor = AnchorStyles.None;
+            btnWhatsApp.BackColor = Color.FromArgb(37, 211, 102);
+            btnWhatsApp.Enabled = false;
+            btnWhatsApp.FlatStyle = FlatStyle.Flat;
+            btnWhatsApp.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnWhatsApp.ForeColor = Color.White;
+            btnWhatsApp.Location = new Point(1225, 11);
+            btnWhatsApp.Name = "btnWhatsApp";
+            btnWhatsApp.Size = new Size(130, 42);
+            btnWhatsApp.TabIndex = 6;
+            btnWhatsApp.Text = "WHATSAPP";
+            btnWhatsApp.UseVisualStyleBackColor = false;
+            btnWhatsApp.Click += btnWhatsApp_Click;
             // 
             // btnAñadirMiembro
             // 
@@ -844,6 +862,7 @@ namespace UI.DISEÑO
         private Label lblMTotal;
         private Label label4;
         private Button btnProgramar;
+        private Button btnWhatsApp;
         private Button btnAñadirMiembro;
     }
 }

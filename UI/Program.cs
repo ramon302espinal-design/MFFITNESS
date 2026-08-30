@@ -13,6 +13,8 @@ namespace UI
 {
     internal static class Program
     {
+        private static int _stackApagado;
+
         [STAThread]
         static void Main()
         {
@@ -21,6 +23,7 @@ namespace UI
             ModuloAtajosTeclado.AsegurarFiltroGlobal();
             Application.AddMessageFilter(new EscapeInicioMessageFilter());
             FacturaMembresiaPdfService.ConfigurarLicencia();
+            RegistrarApagadoStackWhatsApp();
 
             try
             {
@@ -66,10 +69,12 @@ namespace UI
                 }
             }
 
-            // Trabajo pesado fuera del hilo UI para no congelar el arranque.
+            // WhatsApp: Kestrel + túnel ngrok (webhook inbound) siempre que WhatsApp esté activo.
             try
             {
-                if (!CORE.SupabaseSettings.Configurado)
+                if (CORE.TwilioSettings.WhatsAppHabilitado)
+                    System.Threading.Tasks.Task.Run(() => BLL.WhatsAppStackBootstrapper.EnsureReady(tryLaunchNgrok: true));
+                else if (!CORE.SupabaseSettings.Configurado)
                     System.Threading.Tasks.Task.Run(() => WhatsAppMediaHostLauncher.EnsureRunning());
                 else
                     System.Threading.Tasks.Task.Run(() => BLL.Facturas.FacturaSupabaseUploader.Warmup());
@@ -94,6 +99,29 @@ namespace UI
 
             StartUpdateExitWatcher();
             Application.Run(new FrmLogin());
+        }
+
+        /// <summary>Al salir de MFFITNESS, apaga ngrok y WhatsAppHost.</summary>
+        private static void RegistrarApagadoStackWhatsApp()
+        {
+            Application.ApplicationExit += (_, _) => ApagarStackWhatsApp();
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => ApagarStackWhatsApp();
+        }
+
+        private static void ApagarStackWhatsApp()
+        {
+            if (Interlocked.Exchange(ref _stackApagado, 1) != 0)
+                return;
+
+            try
+            {
+                ChatNotificationHost.Stop();
+                WhatsAppStackBootstrapper.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApagarStackWhatsApp: {ex.Message}");
+            }
         }
 
         /// <summary>

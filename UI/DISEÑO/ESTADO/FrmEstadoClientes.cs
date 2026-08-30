@@ -27,6 +27,7 @@ namespace UI.DISEÑO
         private readonly FrmPresentacion _presentacion;
         private readonly MensajeAutomaticoBLL mensajeBLL = new MensajeAutomaticoBLL();
         private readonly ReporteBLL reporteBLL = new ReporteBLL();
+        private readonly ChatBLL chatBLL = new ChatBLL();
         private readonly BindingSource _bsEstado = new BindingSource();
         private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
         private ContextMenuStrip? _menuEstado;
@@ -421,8 +422,12 @@ namespace UI.DISEÑO
                     btnRenovar.Enabled = false;
                     btnCongelar.Enabled = false;
                     btnProgramar.Enabled = false;
+                    btnWhatsApp.Enabled = false;
                     return;
                 }
+
+                int clienteId = ObtenerClienteSeleccionado();
+                btnWhatsApp.Enabled = clienteId > 0 && chatBLL.ClienteTieneTelefonoChat(clienteId);
 
                 string estado = ObtenerValorCelda(dgvEstado.CurrentRow, "Estado");
                 btnRenovar.Enabled =
@@ -441,6 +446,36 @@ namespace UI.DISEÑO
                 btnRenovar.Enabled = false;
                 btnCongelar.Enabled = false;
                 btnProgramar.Enabled = false;
+                btnWhatsApp.Enabled = false;
+            }
+        }
+
+        private void btnWhatsApp_Click(object sender, EventArgs e)
+        {
+            int clienteId = ObtenerClienteSeleccionado();
+            if (clienteId <= 0)
+            {
+                MessageBox.Show("Seleccione un miembro.", "WhatsApp",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (!chatBLL.ClienteTieneTelefonoChat(clienteId))
+            {
+                MessageBox.Show(
+                    "Este miembro no tiene teléfono válido. Actualícelo en Clientes.",
+                    "WhatsApp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                ModuloNavBar.AbrirChat(this, clienteId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al abrir chat: " + ex.Message, "WhatsApp",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

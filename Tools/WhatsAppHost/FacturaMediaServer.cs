@@ -7,9 +7,9 @@ using Microsoft.Extensions.Hosting;
 namespace WhatsAppHost
 {
     /// <summary>
-    /// Kestrel interno (fallback): sirve PDF locales si Supabase no esta configurado.
-    /// GET /media/factura/{pagoId}
-    /// Requiere URL publica HTTPS en WhatsAppPublicBaseUrl para que Twilio descargue.
+    /// Kestrel interno: webhook inbound Twilio + PDF locales (fallback sin Supabase).
+    /// POST /webhook/twilio/whatsapp — mensajes entrantes WhatsApp
+    /// GET  /media/factura/{pagoId} — PDF para Twilio (si no hay Supabase)
     /// </summary>
     internal static class FacturaMediaServer
     {
@@ -27,12 +27,19 @@ namespace WhatsAppHost
 
             var app = builder.Build();
 
-            app.MapGet("/health", () => Results.Ok(new
+            app.MapGet("/health", () =>
             {
-                status = "ok",
-                facturas = FacturaStorage.CarpetaFacturas,
-                publicBase = TwilioSettings.PublicBaseUrl
-            }));
+                WhatsAppStackSecrets.InvalidateCache();
+                return Results.Ok(new
+                {
+                    status = "ok",
+                    facturas = FacturaStorage.CarpetaFacturas,
+                    publicBase = TwilioSettings.PublicBaseUrl,
+                    webhook = TwilioSettings.WebhookPublicUrl ?? "(configurar WhatsAppPublicBaseUrl)"
+                });
+            });
+
+            app.MapPost(TwilioSettings.WebhookInboundPath, (Delegate)TwilioInboundWebhook.HandleAsync);
 
             app.MapGet("/media/factura/{pagoId:int}", (int pagoId) =>
             {
@@ -54,7 +61,6 @@ namespace WhatsAppHost
                     enableRangeProcessing: true);
             });
 
-            // Alias por si Twilio pide con extensión
             app.MapGet("/media/factura/{pagoId:int}.pdf", (int pagoId) =>
             {
                 string? path = FacturaStorage.ResolverRutaFacturaExistente(pagoId);
@@ -62,6 +68,22 @@ namespace WhatsAppHost
                     return Results.NotFound();
 
                 return Results.File(path, "application/pdf", FacturaStorage.NombreArchivoPago(pagoId));
+            });
+
+            app.MapGet("/media/chat/{fileName}", (string fileName) =>
+            {
+                if (!ChatMediaStorage.EsNombreSeguro(fileName))
+                    return Results.BadRequest("nombre invalido.");
+
+                string? path = ChatMediaStorage.ResolverRutaExistente(fileName);
+                if (path == null)
+                {
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Chat PDF no encontrado: {fileName}");
+                    return Results.NotFound();
+                }
+
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Sirviendo chat PDF -> {path}");
+                return Results.File(path, "application/pdf", fileName, enableRangeProcessing: true);
             });
 
             _ = Task.Run(async () =>
@@ -80,12 +102,19 @@ namespace WhatsAppHost
                 }
             }, cancellationToken);
 
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Kestrel media en {listenUrl}");
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Endpoint: GET /media/factura/{{pagoId}}");
-            if (!string.IsNullOrWhiteSpace(TwilioSettings.PublicBaseUrl))
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] PublicBaseUrl: {TwilioSettings.PublicBaseUrl}");
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Kestrel en {listenUrl}");
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Webhook inbound: POST {TwilioSettings.WebhookInboundPath}");
+            if (!string.IsNullOrWhiteSpace(TwilioSettings.WebhookPublicUrl))
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Twilio Console URL: {TwilioSettings.WebhookPublicUrl}");
             else
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] AVISO: sin WhatsAppPublicBaseUrl. Preferible Supabase; si no, ponga una URL HTTPS publica.");
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] AVISO: configure WhatsAppPublicBaseUrl (HTTPS) para que Twilio entregue mensajes entrantes.");
+
+            if (!SupabaseSettings.Configurado)
+            {
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Media fallback: GET /media/factura/{{pagoId}}");
+                if (!string.IsNullOrWhiteSpace(TwilioSettings.PublicBaseUrl))
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] PublicBaseUrl: {TwilioSettings.PublicBaseUrl}");
+            }
 
             return app;
         }

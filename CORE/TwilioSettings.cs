@@ -194,6 +194,10 @@ namespace CORE
                 if (!string.IsNullOrWhiteSpace(env))
                     return env.Trim().TrimEnd('/');
 
+                string? stack = WhatsAppStackSecrets.PublicBaseUrlOverride;
+                if (!string.IsNullOrWhiteSpace(stack))
+                    return stack.Trim().TrimEnd('/');
+
                 return ConfigurationManager.AppSettings["WhatsAppPublicBaseUrl"]?.Trim().TrimEnd('/')
                        ?? string.Empty;
             }
@@ -205,6 +209,77 @@ namespace CORE
         public static string MediaListenUrl =>
             ConfigurationManager.AppSettings["WhatsAppMediaListenUrl"]?.Trim()
             ?? "http://127.0.0.1:5088";
+
+        /// <summary>Ruta POST del webhook inbound (Kestrel WhatsAppHost).</summary>
+        public static string WebhookInboundPath =>
+            string.IsNullOrWhiteSpace(ConfigurationManager.AppSettings["TwilioWebhookInboundPath"])
+                ? "/webhook/twilio/whatsapp"
+                : ConfigurationManager.AppSettings["TwilioWebhookInboundPath"]!.Trim();
+
+        /// <summary>
+        /// Valida X-Twilio-Signature en el webhook. Requiere WhatsAppPublicBaseUrl HTTPS.
+        /// </summary>
+        public static bool ValidarFirmaWebhook =>
+            !bool.TryParse(ConfigurationManager.AppSettings["TwilioWebhookValidarFirma"], out bool validar)
+            || validar;
+
+        public static string? WebhookPublicUrl
+        {
+            get
+            {
+                string? env = Environment.GetEnvironmentVariable("TWILIO_WEBHOOK_PUBLIC_URL");
+                if (!string.IsNullOrWhiteSpace(env))
+                    return env.Trim().TrimEnd('/');
+
+                string baseUrl = PublicBaseUrl;
+                if (string.IsNullOrWhiteSpace(baseUrl))
+                    return null;
+
+                string path = WebhookInboundPath.StartsWith('/')
+                    ? WebhookInboundPath
+                    : "/" + WebhookInboundPath;
+
+                return baseUrl + path;
+            }
+        }
+
+        /// <summary>Estado del webhook inbound para la UI de chat.</summary>
+        public static string? ObtenerEstadoWebhookInbound()
+        {
+            if (string.IsNullOrWhiteSpace(WebhookPublicUrl))
+                return "Webhook inbound: falta WhatsAppPublicBaseUrl (HTTPS) — ver tooltip ℹ";
+
+            return null;
+        }
+
+        /// <summary>Instrucciones para configurar recepción de mensajes (tooltip UI).</summary>
+        public static string ObtenerAyudaWebhookInbound()
+        {
+            string url = WebhookPublicUrl ?? $"{PublicBaseUrl}{WebhookInboundPath}";
+            return
+                "Para RECIBIR mensajes de WhatsApp:\r\n\r\n" +
+                "1. WhatsAppHost corriendo (puerto 5088).\r\n" +
+                "2. Túnel HTTPS (dev: .\\Start-WhatsAppStack.ps1 -Profile Dev)\r\n" +
+                "   prod: .\\Install-WhatsAppStack.ps1\r\n" +
+                "3. URL pública en %LocalAppData%\\MFFITNESS\\whatsapp.stack.config\r\n" +
+                "   clave WhatsAppPublicBaseUrl (o App.config UI)\r\n" +
+                "   (o variable WHATSAPP_PUBLIC_BASE_URL)\r\n" +
+                "4. Twilio Console → Messaging → WhatsApp Sender\r\n" +
+                "   When a message comes in (POST):\r\n" +
+                $"   {url}\r\n\r\n" +
+                "Reinicie la app tras guardar App.config.";
+        }
+
+        public static bool WebhookInboundConfigurado =>
+            !string.IsNullOrWhiteSpace(WebhookPublicUrl);
+
+        /// <summary>
+        /// Si false, FrmChat solo recibe/muestra mensajes (sin envío manual).
+        /// App.config → ChatEnvioManualHabilitado (default: false).
+        /// </summary>
+        public static bool ChatEnvioManualHabilitado =>
+            bool.TryParse(ConfigurationManager.AppSettings["ChatEnvioManualHabilitado"], out bool habilitado)
+            && habilitado;
 
         public static bool UsaPlantillaContent =>
             !string.IsNullOrWhiteSpace(ContentSidGenerico);

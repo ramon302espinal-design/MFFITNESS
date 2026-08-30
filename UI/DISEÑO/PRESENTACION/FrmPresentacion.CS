@@ -17,6 +17,7 @@ namespace UI.DISEÑO
     public partial class FrmPresentacion : Form
     {
         private System.Windows.Forms.Timer? _timerWhatsApp;
+        private System.Windows.Forms.Timer? _timerChatBadge;
         private System.Windows.Forms.Timer? _timerDashboard;
         private System.Windows.Forms.Timer? _timerStockAlert;
         private System.Windows.Forms.Timer? _timerStockCriticoDebounce;
@@ -29,6 +30,8 @@ namespace UI.DISEÑO
         private readonly DeudaBLL deudaNotificacionBLL = new DeudaBLL();
         // KPI de deudas: instancia propia; la de notificaciones corre en hilo aparte.
         private readonly DeudaBLL deudaKpiBLL = new DeudaBLL();
+        private readonly ChatBLL chatBadgeBLL = new ChatBLL();
+        private int _ultimoNoLeidosMenu = -1;
         private bool _puedeVerIngresos = true;
         private bool _puedeVerDeudas = true;
         private bool _puedeVerIngresoPendiente = true;
@@ -94,6 +97,9 @@ namespace UI.DISEÑO
 
                 // 5️⃣ WhatsApp: recordatorios de deuda y membresías
                 IniciarAutomatizacionWhatsApp();
+                IniciarBadgeChatWhatsApp();
+                ChatNotificationHost.Start();
+                System.Threading.Tasks.Task.Run(() => BLL.WhatsAppStackBootstrapper.EnsureReady(tryLaunchNgrok: true));
 
                 // 5️⃣b Facturas → egreso automático (AppHost: no se cancela al salir de Caja)
                 try
@@ -141,6 +147,36 @@ namespace UI.DISEÑO
             {
                 // 6️⃣ UX: Restauramos el cursor normal siempre (aunque haya error)
                 this.Cursor = Cursors.Default;
+            }
+        }
+
+        private void IniciarBadgeChatWhatsApp()
+        {
+            if (!btnChat.Visible)
+                return;
+
+            ActualizarBadgeChatWhatsApp();
+
+            _timerChatBadge = new System.Windows.Forms.Timer { Interval = 15000 };
+            _timerChatBadge.Tick += (_, _) => ActualizarBadgeChatWhatsApp();
+            _timerChatBadge.Start();
+        }
+
+        private void ActualizarBadgeChatWhatsApp()
+        {
+            if (!btnChat.Visible || btnChat.IsDisposed)
+                return;
+
+            try
+            {
+                int noLeidos = chatBadgeBLL.ContarNoLeidosTotal();
+                _ultimoNoLeidosMenu = noLeidos;
+
+                btnChat.Text = noLeidos > 0 ? $"WHATSAPP ({noLeidos})" : "WHATSAPP";
+            }
+            catch
+            {
+                btnChat.Text = "WHATSAPP";
             }
         }
 
@@ -211,6 +247,15 @@ namespace UI.DISEÑO
                 _timerWhatsApp.Dispose();
                 _timerWhatsApp = null;
             }
+
+            if (_timerChatBadge != null)
+            {
+                _timerChatBadge.Stop();
+                _timerChatBadge.Dispose();
+                _timerChatBadge = null;
+            }
+
+            ChatNotificationHost.Stop();
 
             if (_timerDashboard != null)
             {
@@ -441,6 +486,7 @@ namespace UI.DISEÑO
             btnHistorial.Visible = false;
             btnEstado.Visible = false;
             btnProductoStock.Visible = false;
+            btnChat.Visible = false;
 
             // Aplicar visibilidad según rol
             switch (rol)
@@ -456,6 +502,7 @@ namespace UI.DISEÑO
                     btnAgregarCliente.Visible = true;   // CLIENTES
                     btnProductoStock.Visible = true;    // INVENTARIO
                     btnEstado.Visible = true;           // ESTADO
+                    btnChat.Visible = true;
                     break;
                 case "CONSULTA":
                     btnEstado.Visible = true;
@@ -508,6 +555,7 @@ namespace UI.DISEÑO
             btnEstado.Visible = true;
             btnProductoStock.Visible = true;
             btnDeudas.Visible = true; // ADMIN siempre ve el módulo de deudas
+            btnChat.Visible = true;
         }
 
         // ===============================
@@ -971,6 +1019,20 @@ namespace UI.DISEÑO
             catch (Exception ex)
             {
                 MessageBox.Show("Error al abrir CRM financiero: " + ex.Message);
+            }
+        }
+
+        private void btnChat_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                ModuloNavBar.AbrirChat(this);
+                ActualizarBadgeChatWhatsApp();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al abrir chat WhatsApp: " + ex.Message,
+                    "Sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

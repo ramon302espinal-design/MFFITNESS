@@ -80,6 +80,31 @@ namespace DL
             }
         }
 
+        /// <summary>Último pago del miembro, por fecha e Id.</summary>
+        public DataRow? ObtenerUltimoPagoPorCliente(int clienteId)
+        {
+            if (clienteId <= 0)
+                return null;
+
+            string query = @"
+SELECT TOP 1
+    Id,
+    ClienteId,
+    FechaPago,
+    FechaVencimiento,
+    Monto,
+    MetodoPago,
+    Concepto,
+    Usuario
+FROM dbo.Pagos
+WHERE ClienteId = @ClienteId
+ORDER BY FechaPago DESC, Id DESC;";
+
+            SqlParameter[] parametros = { new SqlParameter("@ClienteId", clienteId) };
+            DataTable dt = db.ExecuteQuery(query, parametros);
+            return dt.Rows.Count > 0 ? dt.Rows[0] : null;
+        }
+
         public void RevertirPagoMembresia(int pagoId, int cajaMovimientoId, string usuario)
         {
             using SqlConnection conn = new SqlConnection(db.ConnectionString);
