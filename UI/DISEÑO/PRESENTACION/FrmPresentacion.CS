@@ -694,7 +694,7 @@ namespace UI.DISEÑO
             if (!Visible || !Enabled)
                 return false;
 
-            if (ActiveControl is TextBox)
+            if (BusquedaFocusHelper.DebeAnularAtajosTeclado(this))
                 return false;
 
             foreach (Form frm in Application.OpenForms)

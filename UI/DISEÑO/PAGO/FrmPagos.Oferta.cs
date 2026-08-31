@@ -294,7 +294,10 @@ namespace UI.DISEÑO
                 total == 0
                     ? $"Membresía OFERTA | CORTESÍA {pct:0.##}% | {motivo}"
                     : $"Membresía OFERTA | {pct:0.##}% (-RD${desc:0.00}) | Total RD${total:0.00} | {motivo}";
-            string metodoPago = "Efectivo";
+
+            // Cortesía RD$0: sin diálogo; monto > 0 pide Efectivo/Transferencia.
+            if (!TryCobrarMembresiaConMetodo(total, out string metodoPago))
+                return;
 
             var result = MembresiaCommandService.PagarMembresia(
                 clienteId,

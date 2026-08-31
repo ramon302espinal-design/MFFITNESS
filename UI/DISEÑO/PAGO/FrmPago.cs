@@ -18,11 +18,27 @@ namespace UI.DISEÑO
     public partial class FrmPago : Form
     {
         private readonly decimal _totalAPagar;
+        private readonly MetodoPagoPOS[] _metodosPermitidos;
         private MetodoPagoPOS _metodoSeleccionado = MetodoPagoPOS.Efectivo;
         private string _entradaMonto = string.Empty;
         private bool _sincronizandoTexto;
         private bool _editandoMontoDirecto;
         private Button? _billeteSeleccionado;
+
+        /// <summary>Métodos usados en productos (POS completo).</summary>
+        public static readonly MetodoPagoPOS[] MetodosPosCompletos =
+        [
+            MetodoPagoPOS.Efectivo,
+            MetodoPagoPOS.Tarjeta,
+            MetodoPagoPOS.Transferencia
+        ];
+
+        /// <summary>Métodos para cobro de membresía (sin tarjeta).</summary>
+        public static readonly MetodoPagoPOS[] MetodosMembresia =
+        [
+            MetodoPagoPOS.Efectivo,
+            MetodoPagoPOS.Transferencia
+        ];
 
         private static readonly Color ColorPrincipal = Color.FromArgb(0x1A, 0x8C, 0xFF);
         private static readonly Color ColorHover = Color.FromArgb(0x15, 0x77, 0xE6);
@@ -40,15 +56,24 @@ namespace UI.DISEÑO
         public FrmPago()
         {
             _totalAPagar = 0;
+            _metodosPermitidos = MetodosPosCompletos;
             InitializeComponent();
         }
 
         public FrmPago(decimal totalAPagar)
+            : this(totalAPagar, MetodosPosCompletos)
+        {
+        }
+
+        public FrmPago(decimal totalAPagar, MetodoPagoPOS[] metodosPermitidos)
         {
             if (totalAPagar <= 0)
                 throw new ArgumentOutOfRangeException(nameof(totalAPagar), "El total debe ser mayor a cero.");
+            if (metodosPermitidos == null || metodosPermitidos.Length == 0)
+                throw new ArgumentException("Debe indicar al menos un método de pago.", nameof(metodosPermitidos));
 
             _totalAPagar = totalAPagar;
+            _metodosPermitidos = metodosPermitidos;
             InitializeComponent();
             if (ThemeHost.IsDesignTime())
                 return;
@@ -142,13 +167,10 @@ namespace UI.DISEÑO
 
         private void cmbMetodo_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            var metodo = cmbMetodo.SelectedIndex switch
-            {
-                1 => MetodoPagoPOS.Tarjeta,
-                2 => MetodoPagoPOS.Transferencia,
-                _ => MetodoPagoPOS.Efectivo
-            };
-            AplicarMetodoPago(metodo);
+            int idx = cmbMetodo.SelectedIndex;
+            if (idx < 0 || idx >= _metodosPermitidos.Length)
+                return;
+            AplicarMetodoPago(_metodosPermitidos[idx]);
         }
 
         private void BilleteRapido_Click(object? sender, EventArgs e)
@@ -331,10 +353,25 @@ namespace UI.DISEÑO
         private void InicializarEstado()
         {
             lblTotalMonto.Text = FormatearMoneda(_totalAPagar);
+            PoblarComboMetodos();
             cmbMetodo.SelectedIndex = 0;
-            AplicarMetodoPago(MetodoPagoPOS.Efectivo);
+            AplicarMetodoPago(_metodosPermitidos[0]);
             // Prefill exacto: Enter/PAGAR funciona de inmediato; billetes reemplazan si hay cambio.
             EstablecerMonto(_totalAPagar);
+        }
+
+        private void PoblarComboMetodos()
+        {
+            cmbMetodo.Items.Clear();
+            foreach (MetodoPagoPOS metodo in _metodosPermitidos)
+            {
+                cmbMetodo.Items.Add(metodo switch
+                {
+                    MetodoPagoPOS.Tarjeta => "Tarjeta",
+                    MetodoPagoPOS.Transferencia => "Transferencia",
+                    _ => "Efectivo"
+                });
+            }
         }
 
         private void AplicarBilleteRapido(decimal valor)

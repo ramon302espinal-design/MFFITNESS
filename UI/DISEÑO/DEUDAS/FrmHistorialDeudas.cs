@@ -174,7 +174,6 @@ namespace UI
             if (dtHistorialCompleto == null || dtHistorialCompleto.Rows.Count == 0)
             {
                 dgvHistorial!.DataSource = null;
-                ActualizarResumenExportacion();
                 return;
             }
 
@@ -216,7 +215,7 @@ namespace UI
                 dgvHistorial.DataBindingComplete += DgvHistorial_DespuesDeEnlazar;
 
                 if (dgvHistorial.Columns.Count > 0)
-                    FormatearColumnasYResumen();
+                    FormatearColumnas();
             }
             catch (ObjectDisposedException)
             {
@@ -232,16 +231,7 @@ namespace UI
         private void DgvHistorial_DespuesDeEnlazar(object? sender, DataGridViewBindingCompleteEventArgs e)
         {
             dgvHistorial.DataBindingComplete -= DgvHistorial_DespuesDeEnlazar;
-            FormatearColumnasYResumen();
-        }
-
-        private void FormatearColumnasYResumen()
-        {
-            if (!PuedeFormatearGrid())
-                return;
-
             FormatearColumnas();
-            ActualizarResumenExportacion();
         }
 
         // ===============================
@@ -260,37 +250,40 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Nombre", col =>
             {
                 col.HeaderText = "Cliente";
-                DataGridViewHelper.SetColumnWidth(col, 200);
+                DataGridViewHelper.SetColumnFill(col, 160, 120);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Tipo", col =>
-                col.HeaderText = "Tipo");
+            {
+                col.HeaderText = "Tipo";
+                DataGridViewHelper.SetColumnFill(col, 70, 55);
+            });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Descripcion", col =>
             {
                 col.HeaderText = "Descripción";
-                DataGridViewHelper.SetColumnWidth(col, 250);
+                DataGridViewHelper.SetColumnFill(col, 220, 120);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "FechaLimitePago", col =>
             {
                 col.HeaderText = "Fecha Límite Pago";
                 col.DefaultCellStyle.Format = "dd/MM/yyyy";
-                DataGridViewHelper.SetColumnWidth(col, 130);
+                DataGridViewHelper.SetColumnFill(col, 110, 95);
                 DataGridViewHelper.SetDisplayIndexSafe(col, 3);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "AporteInicial", col =>
             {
                 col.HeaderText = "Pago Inicial";
-                DataGridViewHelper.SetColumnWidth(col, 120);
+                DataGridViewHelper.SetColumnFill(col, 95, 80);
                 DataGridViewHelper.SetDisplayIndexSafe(col, 4);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "OrigenPrecio", col =>
             {
                 col.HeaderText = "Origen";
-                DataGridViewHelper.SetColumnWidth(col, 90);
+                DataGridViewHelper.SetColumnFill(col, 75, 60);
                 DataGridViewHelper.SetDisplayIndexSafe(col, 5);
             });
 
@@ -299,7 +292,7 @@ namespace UI
                 col.HeaderText = "Precio Total";
                 col.DefaultCellStyle.Format = "C2";
                 col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                DataGridViewHelper.SetColumnWidth(col, 110);
+                DataGridViewHelper.SetColumnFill(col, 95, 80);
                 DataGridViewHelper.SetDisplayIndexSafe(col, 6);
             });
 
@@ -310,7 +303,7 @@ namespace UI
                 col.HeaderText = "Monto";
                 col.DefaultCellStyle.Format = "C2";
                 col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                DataGridViewHelper.SetColumnWidth(col, 100);
+                DataGridViewHelper.SetColumnFill(col, 85, 70);
                 DataGridViewHelper.SetDisplayIndexSafe(col, 7);
             });
 
@@ -318,15 +311,15 @@ namespace UI
             {
                 col.HeaderText = "Fecha";
                 col.DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
-                DataGridViewHelper.SetColumnWidth(col, 150);
+                DataGridViewHelper.SetColumnFill(col, 120, 100);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Usuario", col =>
             {
                 col.HeaderText = "Usuario";
-                DataGridViewHelper.SetColumnWidth(col, 100);
+                DataGridViewHelper.SetColumnFill(col, 85, 70);
             });
-            });
+            }, restoreFill: true);
         }
 
         // ===============================
@@ -362,22 +355,6 @@ namespace UI
             }
 
             balance = totalDeudas - totalPagos;
-        }
-
-        /// <summary>Resumen on-screen alineado con el PDF export (mismas filas visibles + SSOT).</summary>
-        private void ActualizarResumenExportacion()
-        {
-            if (lblResumenExport == null || lblResumenExport.IsDisposed)
-                return;
-
-            ObtenerTotalesVisibles(out decimal totalDeudas, out decimal totalPagos, out decimal balance);
-
-            int filas = dgvHistorial.DataSource is DataView dv ? dv.Count : dgvHistorial.Rows.Count;
-            lblResumenExport.Text =
-                $"{filas} movimiento(s) visible(s) · " +
-                $"Deudas: RD$ {totalDeudas:N2} · " +
-                $"Pagos: RD$ {totalPagos:N2} · " +
-                $"Balance: RD$ {balance:N2}";
         }
 
         // ===============================

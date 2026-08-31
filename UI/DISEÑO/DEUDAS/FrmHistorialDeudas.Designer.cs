@@ -40,7 +40,6 @@
             btnActualizar = new Button();
             btnExportar = new Button();
             btnImprimir = new Button();
-            lblResumenExport = new Label();
             ((System.ComponentModel.ISupportInitialize)dgvHistorial).BeginInit();
             SuspendLayout();
             // 
@@ -48,7 +47,7 @@
             // 
             dgvHistorial.AllowUserToAddRows = false;
             dgvHistorial.AllowUserToDeleteRows = false;
-            dgvHistorial.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            dgvHistorial.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvHistorial.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvHistorial.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -58,7 +57,7 @@
             dgvHistorial.ReadOnly = true;
             dgvHistorial.RowHeadersWidth = 51;
             dgvHistorial.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvHistorial.Size = new Size(1065, 622);
+            dgvHistorial.Size = new Size(1065, 672);
             dgvHistorial.TabIndex = 0;
             dgvHistorial.CellFormatting += dgvHistorial_CellFormatting;
             // 
@@ -185,25 +184,12 @@
             btnImprimir.UseVisualStyleBackColor = true;
             btnImprimir.Click += btnImprimir_Click;
             // 
-            // lblResumenExport
-            // 
-            lblResumenExport.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lblResumenExport.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblResumenExport.ForeColor = Color.FromArgb(45, 45, 45);
-            lblResumenExport.Location = new Point(20, 784);
-            lblResumenExport.Name = "lblResumenExport";
-            lblResumenExport.Size = new Size(940, 40);
-            lblResumenExport.TabIndex = 16;
-            lblResumenExport.Text = "Resumen financiero (filas visibles)";
-            lblResumenExport.TextAlign = ContentAlignment.MiddleLeft;
-            // 
             // FrmHistorialDeudas
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
             ClientSize = new Size(1488, 842);
-            Controls.Add(lblResumenExport);
             Controls.Add(btnImprimir);
             Controls.Add(btnExportar);
             Controls.Add(btnActualizar);
@@ -243,6 +229,5 @@
         private Button btnActualizar;
         private Button btnExportar;
         private Button btnImprimir;
-        private Label lblResumenExport;
     }
 }

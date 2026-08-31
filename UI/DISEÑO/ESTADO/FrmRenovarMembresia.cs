@@ -110,6 +110,9 @@ namespace UI.DISEÑO
                 if (!AsegurarCajaAbierta(usuario))
                     return;
 
+                if (!TryCobrarRenovacionConMetodo(plan.Precio, out string metodoPago))
+                    return;
+
                 btnConfirmar.Enabled = false;
                 btnCancelar.Enabled = false;
                 Cursor = Cursors.WaitCursor;
@@ -118,7 +121,9 @@ namespace UI.DISEÑO
                     _clienteId,
                     planId,
                     plan.Precio,
-                    usuario);
+                    concepto: null,
+                    usuario,
+                    metodoPago);
 
                 if (!result.Success)
                 {
@@ -128,7 +133,7 @@ namespace UI.DISEÑO
                 }
 
                 if (result.Payload is RenovacionOperacionResult opRen)
-                    IniciarPostRenovacionEnSegundoPlano(opRen, plan, planId, plan.Precio);
+                    IniciarPostRenovacionEnSegundoPlano(opRen, plan, planId, plan.Precio, metodoPago);
 
                 RenovacionCompletada = true;
                 DialogResult = DialogResult.OK;
@@ -187,6 +192,7 @@ namespace UI.DISEÑO
             PlanDTO plan,
             int planId,
             decimal montoCobrado,
+            string metodoPago,
             decimal? valorReferencia = null,
             decimal? descuento = null,
             decimal? porcentaje = null,
@@ -206,7 +212,7 @@ namespace UI.DISEÑO
             decimal pctBg = porcentaje ?? 0;
             string? asuntoBg = asuntoOferta;
             int clienteBg = _clienteId;
-            const string metodoBg = "Efectivo";
+            string metodoBg = string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago.Trim();
             bool esOferta = PlanNombres.EsOferta(plan.Nombre);
 
             System.Threading.Tasks.Task.Run(() =>
@@ -259,6 +265,24 @@ namespace UI.DISEÑO
                     System.Diagnostics.Debug.WriteLine($"[PDF/WhatsApp renovación] {ex.Message}");
                 }
             });
+        }
+
+        /// <summary>
+        /// Misma UX que cobro de membresía en FrmPagos: FrmPago solo Efectivo/Transferencia.
+        /// Monto 0 (cortesía) no abre diálogo.
+        /// </summary>
+        private bool TryCobrarRenovacionConMetodo(decimal monto, out string metodoBd)
+        {
+            metodoBd = "Efectivo";
+            if (monto <= 0)
+                return true;
+
+            using var frmPago = new FrmPago(monto, FrmPago.MetodosMembresia);
+            if (frmPago.ShowDialog(this) != DialogResult.OK || frmPago.PagoResultado == null)
+                return false;
+
+            metodoBd = frmPago.PagoResultado.MetodoSeleccionado.ToMetodoBd();
+            return true;
         }
 
         private static DataTable FiltrarPlanesRenovacion(DataTable planes)

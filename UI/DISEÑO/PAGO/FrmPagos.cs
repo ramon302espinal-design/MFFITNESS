@@ -59,6 +59,8 @@ namespace UI.DISEÑO
         private string? _codigoBarraInicial;
         private bool _suppressPausaUi;
         private int? _pausaVistaId;
+        private int _ultimoClientePausaAplicadoId;
+        private int _ultimoClientePausaAplicadoTick;
 
         // ===============================
         // CONSTRUCTORES
@@ -299,32 +301,12 @@ namespace UI.DISEÑO
             if (tabProductos.SelectedTab != tabPago && tabProductos.SelectedTab != tabMembresia)
                 return false;
 
-            if (txtBuscarProducto != null && txtBuscarProducto.Focused)
-                return false;
-
-            // Panel pausar ventas: permitir escribir en el buscador de miembros.
-            if (cmbClientePausarVenta != null
-                && (cmbClientePausarVenta.Focused || cmbClientePausarVenta.DroppedDown))
-                return false;
-
-            if (pnlPausarVentas != null && pnlPausarVentas.Visible
-                && cmbClientePausarVenta != null && cmbClientePausarVenta.ContainsFocus)
+            // Cualquier TextBox/Combo/lista editable con foco: no robar teclas (atajos/escáner).
+            if (BusquedaFocusHelper.DebeAnularAtajosTeclado(this))
                 return false;
 
             // Panel financiamiento abierto: permitir escribir en txtMiembroDebe / listMiembros.
             if (panelFinanciamientoProducto != null && panelFinanciamientoProducto.Visible)
-                return false;
-
-            if (txtMiembroDebe != null && txtMiembroDebe.Focused)
-                return false;
-
-            if (listMiembros != null && listMiembros.Focused)
-                return false;
-
-            if (cmbCliente.DroppedDown)
-                return false;
-
-            if (tabProductos.SelectedTab == tabMembresia && ActiveControl is TextBox)
                 return false;
 
             return true;
@@ -1006,7 +988,7 @@ namespace UI.DISEÑO
             if (keyData == (Keys.Control | Keys.Z))
             {
                 // No interferir con undo nativo de cajas de texto.
-                if (ActiveControl is TextBoxBase { ReadOnly: false } or ComboBox { DropDownStyle: ComboBoxStyle.DropDown })
+                if (BusquedaFocusHelper.DebeAnularAtajosTeclado(this))
                     return base.ProcessCmdKey(ref msg, keyData);
 
                 if (!_fotoProductoPosBusy && _undoFotoProductoPos.Count > 0
@@ -1031,22 +1013,8 @@ namespace UI.DISEÑO
             if (DebeSuprimirTeclaCobrarTrasCalculadora())
                 return true;
 
-            if (txtBuscarProducto != null && txtBuscarProducto.Focused)
-                return false;
-
-            if (cmbClientePausarVenta != null && cmbClientePausarVenta.Focused)
-                return false;
-
-            if (txtMiembroDebe != null && txtMiembroDebe.Focused)
-                return false;
-
-            if (listMiembros != null && listMiembros.Focused)
-                return false;
-
-            if (ActiveControl is TextBoxBase { ReadOnly: false })
-                return false;
-
-            if (ActiveControl is ComboBox { DropDownStyle: ComboBoxStyle.DropDown })
+            // Space/Enter mientras se escribe en buscador o campos: no cobrar.
+            if (BusquedaFocusHelper.DebeAnularAtajosTeclado(this))
                 return false;
 
             if (tabProductos.SelectedTab == tabPago)
@@ -1438,14 +1406,23 @@ namespace UI.DISEÑO
 
         private void cmbClientePausarVenta_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (_suppressPausaUi || _cmbPausaFiltrando)
+            // No actuar aquí: el BindingSource al filtrar/restaurar cambia SelectedIndex
+            // y elegía otro cliente. La confirmación va en SelectionChangeCommitted / Enter.
+        }
+
+        /// <summary>Click o Enter confirmado sobre un miembro concreto del combo de pausa.</summary>
+        private void AplicarSeleccionClientePausa(int clienteId, string nombre)
+        {
+            if (_suppressPausaUi || _cmbPausaFiltrando || clienteId <= 0)
                 return;
 
-            if (!TryObtenerClientePausaAsignar(out int clienteId, out string nombre))
-            {
-                LimpiarVistaPausa();
+            int now = Environment.TickCount;
+            if (clienteId == _ultimoClientePausaAplicadoId
+                && unchecked(now - _ultimoClientePausaAplicadoTick) < 450)
                 return;
-            }
+
+            _ultimoClientePausaAplicadoId = clienteId;
+            _ultimoClientePausaAplicadoTick = now;
 
             // Con carrito: pausar (click/selección izquierda).
             if (carrito.Rows.Count > 0)
@@ -1719,18 +1696,12 @@ namespace UI.DISEÑO
 
         private bool TryObtenerClientePausaAsignar(out int clienteId, out string nombre)
         {
+            // Prioriza el ítem DataRowView (Id real), no el índice tras quitar el filtro.
+            if (TryLeerClientePausaDelCombo(out clienteId, out nombre))
+                return true;
+
             clienteId = 0;
             nombre = string.Empty;
-
-            if (cmbClientePausarVenta?.SelectedItem is DataRowView row)
-            {
-                if (row["Id"] == null || row["Id"] == DBNull.Value)
-                    return false;
-
-                clienteId = Convert.ToInt32(row["Id"]);
-                nombre = row["Nombre"]?.ToString()?.Trim() ?? string.Empty;
-                return clienteId > 0;
-            }
 
             if (cmbClientePausarVenta?.SelectedValue != null
                 && cmbClientePausarVenta.SelectedValue != DBNull.Value
@@ -2038,7 +2009,9 @@ namespace UI.DISEÑO
 
             decimal saldo = plan.Precio - pagoInicial;
             string conceptoPago = $"Pago inicial - Membresía {cmbMembresia.Text}";
-            string metodoPago = "Efectivo";
+
+            if (!TryCobrarMembresiaConMetodo(pagoInicial, out string metodoPago))
+                return;
 
             DateTime? fechaVencimientoDeuda = saldo > 0
                 ? fechaLimiteDeuda
@@ -2133,7 +2106,9 @@ namespace UI.DISEÑO
             string concepto = cantidad > 1
                 ? $"Plan {plan.Nombre} x{cantidad}"
                 : $"Plan {plan.Nombre}";
-            string metodoPago = "Efectivo";
+
+            if (!TryCobrarMembresiaConMetodo(monto, out string metodoPago))
+                return;
 
             // clienteId 0 → BLL usa VISITANTE (SISTEMA); no exige cmbCliente.
             var result = MembresiaCommandService.RegistrarPlanParcial(
@@ -2189,7 +2164,9 @@ namespace UI.DISEÑO
             }
 
             string concepto = $"Membresía {cmbMembresia.Text}";
-            string metodoPago = "Efectivo";
+
+            if (!TryCobrarMembresiaConMetodo(monto, out string metodoPago))
+                return;
 
             var result = MembresiaCommandService.PagarMembresia(
                 clienteId,
@@ -2583,6 +2560,15 @@ namespace UI.DISEÑO
         /// Abre el modal FrmPago (calculadora POS) y devuelve la solicitud de cobro.
         /// </summary>
         private bool TryCobrarConCalculadora(decimal totalAPagar, out SolicitudPagoDTO? solicitud)
+            => TryCobrarConCalculadora(totalAPagar, out solicitud, FrmPago.MetodosPosCompletos);
+
+        /// <summary>
+        /// Abre FrmPago con los métodos indicados (p. ej. solo Efectivo/Transferencia en membresía).
+        /// </summary>
+        private bool TryCobrarConCalculadora(
+            decimal totalAPagar,
+            out SolicitudPagoDTO? solicitud,
+            MetodoPagoPOS[] metodosPermitidos)
         {
             solicitud = null;
 
@@ -2595,7 +2581,7 @@ namespace UI.DISEÑO
 
             ActivarProteccionReboteCobro();
 
-            using var frmPago = new FrmPago(totalAPagar);
+            using var frmPago = new FrmPago(totalAPagar, metodosPermitidos);
             if (frmPago.ShowDialog(this) != DialogResult.OK)
                 return false;
 
@@ -2603,6 +2589,25 @@ namespace UI.DISEÑO
 
             solicitud = frmPago.PagoResultado;
             return solicitud != null;
+        }
+
+        /// <summary>
+        /// Pide Efectivo/Transferencia para cobros de membresía.
+        /// Si monto es 0 (cortesía / sin abono), no abre diálogo y usa Efectivo.
+        /// Cancelar el diálogo aborta el cobro.
+        /// </summary>
+        private bool TryCobrarMembresiaConMetodo(decimal monto, out string metodoBd)
+        {
+            metodoBd = "Efectivo";
+            if (monto <= 0)
+                return true;
+
+            if (!TryCobrarConCalculadora(monto, out SolicitudPagoDTO? pago, FrmPago.MetodosMembresia)
+                || pago == null)
+                return false;
+
+            metodoBd = pago.MetodoSeleccionado.ToMetodoBd();
+            return true;
         }
 
         private void ActivarProteccionReboteCobro() =>

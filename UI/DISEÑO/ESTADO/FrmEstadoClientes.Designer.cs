@@ -44,8 +44,8 @@ namespace UI.DISEÑO
             lblBuscar = new Label();
             txtBuscar = new TextBox();
             panelAcciones = new Panel();
-            btnProgramar = new Button();
             btnWhatsApp = new Button();
+            btnProgramar = new Button();
             btnAñadirMiembro = new Button();
             btnRenovar = new Button();
             btnDesactivar = new Button();
@@ -284,19 +284,6 @@ namespace UI.DISEÑO
             panelAcciones.TabIndex = 3;
             panelAcciones.Tag = "classic";
             // 
-            // btnProgramar
-            // 
-            btnProgramar.Anchor = AnchorStyles.None;
-            btnProgramar.Enabled = false;
-            btnProgramar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnProgramar.Location = new Point(1063, 11);
-            btnProgramar.Name = "btnProgramar";
-            btnProgramar.Size = new Size(150, 42);
-            btnProgramar.TabIndex = 5;
-            btnProgramar.Text = "PROGRAMAR";
-            btnProgramar.UseVisualStyleBackColor = true;
-            btnProgramar.Click += btnProgramar_Click;
-            // 
             // btnWhatsApp
             // 
             btnWhatsApp.Anchor = AnchorStyles.None;
@@ -305,7 +292,7 @@ namespace UI.DISEÑO
             btnWhatsApp.FlatStyle = FlatStyle.Flat;
             btnWhatsApp.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnWhatsApp.ForeColor = Color.White;
-            btnWhatsApp.Location = new Point(1225, 11);
+            btnWhatsApp.Location = new Point(1179, 11);
             btnWhatsApp.Name = "btnWhatsApp";
             btnWhatsApp.Size = new Size(130, 42);
             btnWhatsApp.TabIndex = 6;
@@ -313,11 +300,24 @@ namespace UI.DISEÑO
             btnWhatsApp.UseVisualStyleBackColor = false;
             btnWhatsApp.Click += btnWhatsApp_Click;
             // 
+            // btnProgramar
+            // 
+            btnProgramar.Anchor = AnchorStyles.None;
+            btnProgramar.Enabled = false;
+            btnProgramar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnProgramar.Location = new Point(1017, 11);
+            btnProgramar.Name = "btnProgramar";
+            btnProgramar.Size = new Size(150, 42);
+            btnProgramar.TabIndex = 5;
+            btnProgramar.Text = "PROGRAMAR";
+            btnProgramar.UseVisualStyleBackColor = true;
+            btnProgramar.Click += btnProgramar_Click;
+            // 
             // btnAñadirMiembro
             // 
             btnAñadirMiembro.Anchor = AnchorStyles.None;
             btnAñadirMiembro.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnAñadirMiembro.Location = new Point(331, 10);
+            btnAñadirMiembro.Location = new Point(285, 10);
             btnAñadirMiembro.Name = "btnAñadirMiembro";
             btnAñadirMiembro.Size = new Size(178, 42);
             btnAñadirMiembro.TabIndex = 3;
@@ -330,7 +330,7 @@ namespace UI.DISEÑO
             btnRenovar.Anchor = AnchorStyles.None;
             btnRenovar.Enabled = false;
             btnRenovar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnRenovar.Location = new Point(530, 11);
+            btnRenovar.Location = new Point(484, 11);
             btnRenovar.Name = "btnRenovar";
             btnRenovar.Size = new Size(142, 42);
             btnRenovar.TabIndex = 0;
@@ -342,7 +342,7 @@ namespace UI.DISEÑO
             // 
             btnDesactivar.Anchor = AnchorStyles.None;
             btnDesactivar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnDesactivar.Location = new Point(693, 11);
+            btnDesactivar.Location = new Point(647, 11);
             btnDesactivar.Name = "btnDesactivar";
             btnDesactivar.Size = new Size(200, 42);
             btnDesactivar.TabIndex = 1;
@@ -355,7 +355,7 @@ namespace UI.DISEÑO
             btnCongelar.Anchor = AnchorStyles.None;
             btnCongelar.Enabled = false;
             btnCongelar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnCongelar.Location = new Point(913, 11);
+            btnCongelar.Location = new Point(867, 11);
             btnCongelar.Name = "btnCongelar";
             btnCongelar.Size = new Size(126, 42);
             btnCongelar.TabIndex = 2;

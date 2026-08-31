@@ -221,6 +221,10 @@ namespace UI.DISEÑO
             if (!AsegurarCajaAbierta(usuario))
                 return false;
 
+            // Cortesía RD$0: sin diálogo; monto > 0 pide Efectivo/Transferencia.
+            if (!TryCobrarRenovacionConMetodo(total, out string metodoPago))
+                return false;
+
             btnConfirmar.Enabled = false;
             btnCancelar.Enabled = false;
             Cursor = Cursors.WaitCursor;
@@ -232,7 +236,8 @@ namespace UI.DISEÑO
                     planId,
                     total,
                     concepto,
-                    usuario);
+                    usuario,
+                    metodoPago);
 
                 if (!result.Success)
                 {
@@ -243,7 +248,7 @@ namespace UI.DISEÑO
 
                 if (result.Payload is RenovacionOperacionResult opRen)
                     IniciarPostRenovacionEnSegundoPlano(
-                        opRen, plan, planId, total, valorRef, desc, pct, motivo);
+                        opRen, plan, planId, total, metodoPago, valorRef, desc, pct, motivo);
 
                 RenovacionCompletada = true;
                 DialogResult = DialogResult.OK;

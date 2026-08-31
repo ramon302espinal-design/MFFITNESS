@@ -196,59 +196,49 @@ namespace BLL
             IReadOnlyDictionary<string, string>? variables,
             string contentSidAviso)
         {
+            string miembro = LeerVar(variables, "CLIENTE", "Miembro");
+            string asunto = LeerVar(variables, "ASUNTO", "Actualizacion de cuenta");
+            string detalle = WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(mensaje, miembro);
+            if (string.IsNullOrWhiteSpace(detalle))
+                detalle = asunto;
+
+            string fecha = DateTime.Now.ToString(CORE.FechaHoraFormats.FechaHora);
+            string numeroOrigen = NormalizarE164(TwilioSettings.PhoneNumber);
+            string numeroTo = NormalizarE164(numeroDestino);
+
             try
             {
-                string miembro = LeerVar(variables, "CLIENTE", "Miembro");
-                string asunto = LeerVar(variables, "ASUNTO", "Actualizacion de cuenta");
-                string detalle = WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(mensaje, miembro);
-                if (string.IsNullOrWhiteSpace(detalle))
-                    detalle = asunto;
-
-                string fecha = DateTime.Now.ToString(CORE.FechaHoraFormats.FechaHora);
-
-                string contentVariables = WhatsAppContentVariableHelper.SerializarAvisoCuenta(
-                    miembro, asunto, detalle, fecha);
-
-                string numeroOrigen = NormalizarE164(TwilioSettings.PhoneNumber);
-                string numeroTo = NormalizarE164(numeroDestino);
-
                 InicializarTwilioClient();
-
-                Trace.WriteLine(
-                    $"[WhatsApp] Aviso UTILITY ContentSid={contentSidAviso} vars={contentVariables}");
-
-                var message = MessageResource.Create(
-                    to: new PhoneNumber($"whatsapp:{numeroTo}"),
-                    from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
-                    contentSid: contentSidAviso,
-                    contentVariables: contentVariables);
-
-                string? messageSid = message.Sid;
-                if (string.IsNullOrWhiteSpace(messageSid))
+                return EnviarAvisoUtilityConVariables(
+                    numeroTo,
+                    numeroOrigen,
+                    contentSidAviso,
+                    miembro,
+                    asunto,
+                    detalle,
+                    fecha,
+                    aplanarDetalle: false);
+            }
+            catch (ApiException apiEx) when (
+                EsErrorVariablesPlantilla(apiEx) && detalle.Contains('\n'))
+            {
+                // Meta rechaza \\n en {{3}}: reintento aplanado (CTA en la misma línea).
+                Trace.WriteLine("[WhatsApp] Variables con salto rechazadas; reintento aplanado. "
+                    + FormatearApiException(apiEx));
+                try
                 {
-                    return new WhatsAppEnvioResult
-                    {
-                        Exito = true,
-                        Entregado = true,
-                        Detalle = "Aviso (plantilla UTILITY) aceptado por Twilio.",
-                        StatusFinal = "accepted"
-                    };
+                    return EnviarAvisoUtilityConVariables(
+                        numeroTo, numeroOrigen, contentSidAviso,
+                        miembro, asunto, detalle, fecha, aplanarDetalle: true);
                 }
-
-                var estado = EsperarEstadoFinal(messageSid);
-                bool ok = !EsEstadoFallido(estado.Status)
-                          && (EsEstadoEntregado(estado.Status) || EsEstadoEnviado(estado.Status));
-
-                return new WhatsAppEnvioResult
+                catch (ApiException apiEx2)
                 {
-                    Exito = true,
-                    Entregado = ok,
-                    Detalle = ok
-                        ? $"Aviso enviado (plantilla UTILITY, status={estado.Status})."
-                        : FormatearErrorEstado(estado),
-                    MessageSid = messageSid,
-                    StatusFinal = estado.Status
-                };
+                    return Fallo(FormatearApiException(apiEx2));
+                }
+                catch (Exception ex2)
+                {
+                    return Fallo(ex2.Message);
+                }
             }
             catch (ApiException apiEx)
             {
@@ -259,6 +249,61 @@ namespace BLL
                 return Fallo(ex.Message);
             }
         }
+
+        private WhatsAppEnvioResult EnviarAvisoUtilityConVariables(
+            string numeroTo,
+            string numeroOrigen,
+            string contentSidAviso,
+            string miembro,
+            string asunto,
+            string detalle,
+            string fecha,
+            bool aplanarDetalle)
+        {
+            string contentVariables = WhatsAppContentVariableHelper.SerializarAvisoCuenta(
+                miembro, asunto, detalle, fecha, aplanarDetalle);
+
+            Trace.WriteLine(
+                $"[WhatsApp] Aviso UTILITY ContentSid={contentSidAviso} aplanar={aplanarDetalle} vars={contentVariables}");
+
+            var message = MessageResource.Create(
+                to: new PhoneNumber($"whatsapp:{numeroTo}"),
+                from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
+                contentSid: contentSidAviso,
+                contentVariables: contentVariables);
+
+            string? messageSid = message.Sid;
+            if (string.IsNullOrWhiteSpace(messageSid))
+            {
+                return new WhatsAppEnvioResult
+                {
+                    Exito = true,
+                    Entregado = true,
+                    Detalle = "Aviso (plantilla UTILITY) aceptado por Twilio.",
+                    StatusFinal = "accepted"
+                };
+            }
+
+            var estado = EsperarEstadoFinal(messageSid);
+            bool ok = !EsEstadoFallido(estado.Status)
+                      && (EsEstadoEntregado(estado.Status) || EsEstadoEnviado(estado.Status));
+
+            return new WhatsAppEnvioResult
+            {
+                Exito = true,
+                Entregado = ok,
+                Detalle = ok
+                    ? $"Aviso enviado (plantilla UTILITY, status={estado.Status})."
+                    : FormatearErrorEstado(estado),
+                MessageSid = messageSid,
+                StatusFinal = estado.Status
+            };
+        }
+
+        private static bool EsErrorVariablesPlantilla(ApiException apiEx) =>
+            apiEx.Code == 21656
+            || (apiEx.Message?.Contains("21656", StringComparison.Ordinal) ?? false)
+            || (apiEx.Message?.IndexOf("Content Variables", StringComparison.OrdinalIgnoreCase) >= 0);
 
         private WhatsAppEnvioResult EnviarFacturaMediaTemplate(
             string numeroDestino,

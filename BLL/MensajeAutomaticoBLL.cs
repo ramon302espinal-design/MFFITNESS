@@ -21,6 +21,9 @@ namespace BLL
         /// <summary>Financiamientos que se listan uno a uno en el estado de cuenta.</summary>
         private const int MaxFinanciamientosDetallados = 6;
 
+        private const string CtaRegularizarPago =
+            "Puedes hacer transferencia o pasar por recepción para regularizar tu pago.";
+
         /// <summary>Detalle del ultimo intento Twilio (para mostrar en UI tras cobrar).</summary>
         public string? UltimoDetalleEnvio { get; private set; }
 
@@ -462,12 +465,33 @@ namespace BLL
             DateTime fechaVencimiento,
             int? deudaId = null)
         {
+            string detalle = ConstruirDetalleDeudaCreadaWhatsApp(concepto, monto, fechaVencimiento);
             return EnviarMensajeTemplado(clienteId, "DEUDA_CREADA", new Dictionary<string, string>
             {
-                ["CONCEPTO"] = concepto,
-                ["MONTO"] = FormatearMonto(monto),
-                ["FECHA_VENCIMIENTO"] = fechaVencimiento.ToString("dd/MM/yyyy")
+                ["DETALLE"] = detalle
             }, deudaId);
+        }
+
+        /// <summary>
+        /// Texto único para {{3}} UTILITY: sin Venta Id, sin "Se ha registrado una deuda".
+        /// </summary>
+        private static string ConstruirDetalleDeudaCreadaWhatsApp(
+            string? concepto,
+            decimal monto,
+            DateTime fechaVencimiento)
+        {
+            string limpio = FinanciamientoVentaHelper.QuitarSufijoVentaIdParaAviso(concepto);
+            if (string.IsNullOrWhiteSpace(limpio))
+                limpio = "Financiamiento";
+
+            bool traeMonto = limpio.IndexOf("RD", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!traeMonto && monto > 0)
+                limpio = $"{limpio} ({FormatearMonto(monto)})";
+
+            DateTime financiado = DateTime.Today;
+            // Salto de línea: Meta muestra CTA debajo del Detalle (reintento aplanado si 21656).
+            return $"{limpio} financiado el {financiado:dd/MM/yyyy} - vence el {fechaVencimiento:dd/MM/yyyy}\n" +
+                   CtaRegularizarPago;
         }
 
         public bool EnviarRecordatorioDeudaVenceHoy(int deudaId, bool forzar = false)
@@ -539,9 +563,8 @@ namespace BLL
         }
 
         /// <summary>
-        /// Estado de cuenta completo: un solo mensaje con todos los financiamientos
-        /// pendientes del miembro (membresia y producto a credito), cada uno con la
-        /// fecha en que se pactó y su fecha límite.
+        /// Estado de cuenta: DETALLE limpio para plantilla UTILITY (Miembro/Fecha los pone Twilio).
+        /// Formato: "{concepto} financiado el dd/MM/yyyy - vence el dd/MM/yyyy Puedes hacer transferencia..."
         /// </summary>
         public bool EnviarResumenDeudasCliente(int clienteId)
         {
@@ -555,48 +578,43 @@ namespace BLL
             }
 
             var detalle = new System.Text.StringBuilder();
-            decimal total = 0m;
-            DateTime? proximoVencimiento = null;
             int numero = 0;
 
             foreach (DataRow row in deudas.Rows)
             {
                 numero++;
                 decimal saldo = LeerDecimal(row, "Saldo");
-                total += saldo;
-
                 DateTime vence = LeerFecha(row, "FechaVencimiento");
-                if (proximoVencimiento == null || vence < proximoVencimiento.Value)
-                    proximoVencimiento = vence;
 
-                // El cuerpo de la plantilla Twilio se recorta a 900 caracteres:
-                // se listan los primeros y el resto se resume para no cortar a medias.
                 if (numero <= MaxFinanciamientosDetallados)
-                    detalle.AppendLine(DescribirFinanciamiento(numero, row, saldo, vence));
+                {
+                    if (detalle.Length > 0)
+                        detalle.Append(' ');
+                    detalle.Append(DescribirFinanciamiento(row, saldo, vence));
+                }
             }
 
             int restantes = numero - MaxFinanciamientosDetallados;
             if (restantes > 0)
             {
-                detalle.AppendLine(restantes == 1
-                    ? "Y 1 financiamiento mas pendiente."
-                    : $"Y {restantes} financiamientos mas pendientes.");
+                detalle.Append(restantes == 1
+                    ? " Y 1 financiamiento mas pendiente."
+                    : $" Y {restantes} financiamientos mas pendientes.");
             }
+
+            detalle.Append('\n');
+            detalle.Append(CtaRegularizarPago);
 
             return EnviarMensajeTemplado(clienteId, "RESUMEN_DEUDAS", new Dictionary<string, string>
             {
-                ["DETALLE"] = detalle.ToString().TrimEnd(),
-                ["TOTAL"] = FormatearMonto(total),
-                ["CANTIDAD"] = numero == 1 ? "1 financiamiento" : $"{numero} financiamientos",
-                ["PROXIMO_VENCIMIENTO"] = proximoVencimiento?.ToString("dd/MM/yyyy") ?? "Sin fecha"
+                ["DETALLE"] = detalle.ToString().Trim()
             });
         }
 
         /// <summary>
-        /// Una linea por financiamiento: que se financio, cuando y cuanto queda.
+        /// Una linea legible: concepto (sin Venta Id) + fechas. Sin total/pagado/saldo ni numeracion.
         /// </summary>
         private static string DescribirFinanciamiento(
-            int numero,
             DataRow row,
             decimal saldo,
             DateTime vence)
@@ -606,19 +624,23 @@ namespace BLL
                 ? (row["Plan"]?.ToString() ?? string.Empty).Trim()
                 : string.Empty;
 
+            concepto = FinanciamientoVentaHelper.QuitarSufijoVentaIdParaAviso(concepto);
+
             if (string.IsNullOrWhiteSpace(concepto))
                 concepto = string.IsNullOrWhiteSpace(plan) ? "Financiamiento" : $"Plan {plan}";
             else if (!string.IsNullOrWhiteSpace(plan)
-                     && concepto.IndexOf(plan, StringComparison.OrdinalIgnoreCase) < 0)
+                     && concepto.IndexOf(plan, StringComparison.OrdinalIgnoreCase) < 0
+                     && concepto.IndexOf("Venta a", StringComparison.OrdinalIgnoreCase) < 0)
                 concepto = $"{concepto} (Plan {plan})";
 
             DateTime financiado = LeerFecha(row, "FechaCreacion");
-            decimal montoTotal = LeerDecimal(row, "MontoTotal");
-            decimal pagado = LeerDecimal(row, "MontoPagado");
 
-            return $"{numero}) {concepto} - financiado el {financiado:dd/MM/yyyy} - "
-                 + $"vence el {vence:dd/MM/yyyy} - total {FormatearMonto(montoTotal)}, "
-                 + $"pagado {FormatearMonto(pagado)}, saldo {FormatearMonto(saldo)}.";
+            // Si el concepto no trae monto visible, anadir saldo pendiente.
+            bool traeMonto = concepto.IndexOf("RD", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!traeMonto && saldo > 0)
+                concepto = $"{concepto} ({FormatearMonto(saldo)})";
+
+            return $"{concepto} financiado el {financiado:dd/MM/yyyy} - vence el {vence:dd/MM/yyyy}";
         }
 
         private static decimal LeerDecimal(DataRow row, string columna) =>
@@ -1025,13 +1047,13 @@ namespace BLL
             "MEMBRESIA_VENCIDA" => "Membresia vencida",
             "DESACTIVACION_MEMBRESIA" => "Membresia desactivada",
             "FINANCIAMIENTO" => "Financiamiento registrado",
-            "DEUDA_CREADA" => "Deuda registrada",
+            "DEUDA_CREADA" => "Financiamiento",
             "DEUDA_VENCE_HOY" => "Deuda vence hoy",
             "RECORDATORIO_VENCIMIENTO_DEUDA" => "Recordatorio de pago",
             "DEUDA_VENCIDA" => "Deuda vencida",
             "PAGO_DEUDA_RECIBIDO" => "Pago recibido",
             "DEUDA_PAGADA_COMPLETA" => "Deuda saldada",
-            "RESUMEN_DEUDAS" => "Estado de cuenta de financiamientos",
+            "RESUMEN_DEUDAS" => "Financiamiento",
             "PRUEBA_SISTEMA" => "Mensaje de prueba",
             "CONGELACION_MEMBRESIA" => "Membresia congelada",
             "DESCONGELACION_MEMBRESIA" => "Membresia reactivada",

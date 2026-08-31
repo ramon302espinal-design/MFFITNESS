@@ -139,6 +139,9 @@ namespace UI.Helpers
                 return desdeFocus;
 
             Control? desdeMensaje = ObtenerControlDesdeHandle(hwnd);
+            if (EsEntradaTextoActiva(desdeMensaje))
+                return desdeMensaje;
+
             if (desdeMensaje != null)
                 return desdeMensaje;
 
@@ -147,12 +150,29 @@ namespace UI.Helpers
 
             if (formulario != null)
             {
+                Control? hojaActiva = ResolverHojaActiva(formulario);
+                if (hojaActiva != null)
+                    return hojaActiva;
+
                 Control? recursivo = BuscarControlConFocoRecursivo(formulario);
                 if (recursivo != null)
                     return recursivo;
             }
 
             return formulario?.ActiveControl;
+        }
+
+        /// <summary>Baja por ContainerControl.ActiveControl hasta la hoja (forms embebidos / tabs).</summary>
+        private static Control? ResolverHojaActiva(Control root)
+        {
+            Control? actual = root is ContainerControl ccRoot ? ccRoot.ActiveControl : null;
+            if (actual == null)
+                return null;
+
+            while (actual is ContainerControl cc && cc.ActiveControl != null)
+                actual = cc.ActiveControl;
+
+            return actual;
         }
 
         private static Control? ObtenerControlDesdeHandle(IntPtr hwnd)
@@ -185,7 +205,11 @@ namespace UI.Helpers
             return null;
         }
 
-        /// <summary>True si el foco está en un campo editable (TextBox, Combo editable, ListBox).</summary>
+        /// <summary>
+        /// True si el usuario está escribiendo o tipando en un control de entrada.
+        /// Mientras sea true, los atajos de módulo (P/C/E/…) y navegación Back/Esc no deben dispararse;
+        /// la tecla llega al control con normalidad.
+        /// </summary>
         internal static bool EsEntradaTextoActiva(Control? activo)
         {
             if (activo == null)
@@ -193,13 +217,28 @@ namespace UI.Helpers
 
             for (Control? c = activo; c != null; c = c.Parent)
             {
+                if (!c.Enabled || !c.Visible)
+                    continue;
+
+                // TextBox / RichTextBox / MaskedTextBox / editing control de grilla.
                 if (c is TextBoxBase { ReadOnly: false })
                     return true;
 
-                if (c is ComboBox cb && (cb.DropDownStyle == ComboBoxStyle.DropDown || cb.DroppedDown))
+                // DropDown (escritura) y DropDownList (type-ahead al buscar miembro/plan).
+                if (c is ComboBox cb && (cb.Focused || cb.ContainsFocus || cb.DroppedDown))
                     return true;
 
-                if (c is ListBox lb && lb.Focused)
+                if (c is NumericUpDown nud && (nud.Focused || nud.ContainsFocus))
+                    return true;
+
+                if (c is DateTimePicker dtp && (dtp.Focused || dtp.ContainsFocus))
+                    return true;
+
+                if (c is DataGridView dgv && dgv.IsCurrentCellInEditMode)
+                    return true;
+
+                // Listas usadas como buscador (p. ej. listMiembros en financiamiento).
+                if (c is ListBox { Focused: true })
                     return true;
             }
 
@@ -208,6 +247,10 @@ namespace UI.Helpers
 
         internal static bool EsEntradaTextoActiva(IntPtr hwnd, Form? formulario) =>
             EsEntradaTextoActiva(ResolverControlConFoco(hwnd, formulario));
+
+        /// <summary>Atajos de módulo/cobro/escáner: no interceptar si hay entrada de texto activa.</summary>
+        internal static bool DebeAnularAtajosTeclado(Form? formulario, IntPtr hwndOrigen = default) =>
+            EsEntradaTextoActiva(hwndOrigen, formulario);
 
         private static bool EsCampoBusqueda(TextBoxBase tb)
         {

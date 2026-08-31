@@ -22,7 +22,8 @@ namespace BLL
             int planId,
             decimal precio,
             string usuario,
-            string? conceptoRenovacion = null)
+            string? conceptoRenovacion = null,
+            string? metodoPago = null)
         {
             deudaBLL.ValidarSinDeudaPendienteParaMembresia(clienteId);
 
@@ -36,6 +37,8 @@ namespace BLL
             string conceptoHistorial = conceptoPago.Length > 200
                 ? conceptoPago.Substring(0, 200)
                 : conceptoPago;
+            // Misma convención que membresía/POS: "Efectivo" / "Transferencia".
+            string metodo = string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago.Trim();
 
             var result = new RenovacionOperacionResult();
 
@@ -66,7 +69,7 @@ namespace BLL
                     CORE.TimeZoneHelper.NowDominicanRepublic(),
                     fin,
                     precio,
-                    "EFECTIVO",
+                    metodo,
                     conceptoPago,
                     usuario);
 
@@ -77,7 +80,7 @@ namespace BLL
                         precio,
                         CajaConceptoHelper.IngresoRenovacion(clienteId, nombreCliente),
                         usuario,
-                        "EFECTIVO",
+                        metodo,
                         clienteId);
                 }
 

@@ -32,7 +32,7 @@ namespace UI.Helpers
             if (!EsTeclaModuloSola(e))
                 return false;
 
-            if (BusquedaFocusHelper.EsEntradaTextoActiva(hwndOrigen, host))
+            if (BusquedaFocusHelper.DebeAnularAtajosTeclado(host, hwndOrigen))
                 return false;
 
             Keys key = e.KeyCode;
@@ -87,7 +87,7 @@ namespace UI.Helpers
             if (!btnFinanciamiento.Enabled || !btnFinanciamiento.Visible)
                 return false;
 
-            if (BusquedaFocusHelper.EsEntradaTextoActiva(default, host))
+            if (BusquedaFocusHelper.DebeAnularAtajosTeclado(host))
                 return false;
 
             if (panelFinanciamientoProducto != null

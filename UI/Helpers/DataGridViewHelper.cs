@@ -47,6 +47,20 @@ namespace UI.Helpers
             column.Width = Math.Max(width, 0);
         }
 
+        /// <summary>
+        /// Proporción Fill sin romper <see cref="DataGridViewAutoSizeColumnsMode.Fill"/>
+        /// (usar en grids anclados Left|Right que deben redistribuir al redimensionar).
+        /// </summary>
+        public static void SetColumnFill(DataGridViewColumn column, float fillWeight, int minimumWidth = 40)
+        {
+            if (column == null)
+                return;
+
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            column.FillWeight = Math.Max(fillWeight, 1f);
+            column.MinimumWidth = Math.Max(minimumWidth, 1);
+        }
+
         public static void SetDisplayIndexSafe(DataGridViewColumn column, int displayIndex)
         {
             DataGridView? grid = column.DataGridView;
@@ -59,8 +73,12 @@ namespace UI.Helpers
             column.DisplayIndex = displayIndex;
         }
 
-        /// <summary>Envuelve formateo de columnas (suspend layout + quitar Fill antes de Width).</summary>
-        public static void RunColumnLayout(DataGridView grid, Action layout)
+        /// <summary>Envuelve formateo de columnas (suspend layout).</summary>
+        /// <param name="restoreFill">
+        /// True: deja el grid en Fill al terminar (columnas con FillWeight se redistribuyen al anclar Left|Right).
+        /// False: deja AutoSize en None (útil si el layout usa anchos fijos via SetColumnWidth).
+        /// </param>
+        public static void RunColumnLayout(DataGridView grid, Action layout, bool restoreFill = false)
         {
             if (grid == null || grid.IsDisposed)
                 return;
@@ -68,10 +86,13 @@ namespace UI.Helpers
             grid.SuspendLayout();
             try
             {
-                if (grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
+                if (!restoreFill && grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
                     grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
 
                 layout();
+
+                if (restoreFill)
+                    grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             }
             finally
             {

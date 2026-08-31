@@ -1,5 +1,5 @@
 using System;
-using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -21,20 +21,37 @@ namespace BLL
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        public static string Sanitizar(string? texto)
+        public static string Sanitizar(string? texto) =>
+            Sanitizar(texto, preservarSaltosLinea: false);
+
+        /// <summary>
+        /// Sanitiza texto para variables Twilio/Meta.
+        /// Con preservarSaltosLinea=true mantiene un salto entre bloques (p. ej. Detalle + CTA).
+        /// Meta a veces rechaza \\n en variables (21656); el cliente debe reintentar aplanado.
+        /// </summary>
+        public static string Sanitizar(string? texto, bool preservarSaltosLinea)
         {
             if (string.IsNullOrWhiteSpace(texto))
                 return "Notificacion de MFFITNESS.";
 
-            string normalizado = texto.Normalize(NormalizationForm.FormD);
+            // Primero: reparar UTF-8 mal interpretado (crÃ©dito → crédito).
+            // Si se hace FormD antes, Ã© termina como "A©" (crA©dito).
+            string reparado = RepararMojibakeUtf8(texto);
+
+            // FormC: conserva tildes legibles (crédito, recepción) para Meta/Twilio UTF-8.
+            string normalizado = reparado.Normalize(NormalizationForm.FormC);
             var sb = new StringBuilder(normalizado.Length);
 
             foreach (char c in normalizado)
             {
-                if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark)
+                if (c == '\r')
                     continue;
-
-                if (c == '\r' || c == '\n' || c == '\t')
+                if (c == '\n')
+                {
+                    sb.Append(preservarSaltosLinea ? '\n' : ' ');
+                    continue;
+                }
+                if (c == '\t')
                     sb.Append(' ');
                 else if (c == '\'' || c == '`')
                     sb.Append('\u2019');
@@ -48,13 +65,70 @@ namespace BLL
                     sb.Append(c);
             }
 
-            string limpio = EspaciosExcesivos.Replace(sb.ToString(), "    ");
+            string limpio = sb.ToString();
+            if (preservarSaltosLinea)
+            {
+                while (limpio.Contains("\n\n", StringComparison.Ordinal))
+                    limpio = limpio.Replace("\n\n", "\n", StringComparison.Ordinal);
 
-            while (limpio.Contains("  ", StringComparison.Ordinal))
-                limpio = limpio.Replace("  ", " ", StringComparison.Ordinal);
+                // Compactar espacios por línea; conservar el salto entre Detalle y CTA.
+                var lineas = limpio.Split('\n');
+                for (int i = 0; i < lineas.Length; i++)
+                {
+                    string linea = EspaciosExcesivos.Replace(lineas[i], "    ");
+                    while (linea.Contains("  ", StringComparison.Ordinal))
+                        linea = linea.Replace("  ", " ", StringComparison.Ordinal);
+                    lineas[i] = linea.Trim();
+                }
+                limpio = string.Join("\n", lineas.Where(l => !string.IsNullOrEmpty(l)));
+            }
+            else
+            {
+                limpio = EspaciosExcesivos.Replace(limpio, "    ");
+                while (limpio.Contains("  ", StringComparison.Ordinal))
+                    limpio = limpio.Replace("  ", " ", StringComparison.Ordinal);
+                limpio = limpio.Trim();
+            }
 
-            limpio = limpio.Trim();
             return string.IsNullOrEmpty(limpio) ? "Notificacion de MFFITNESS." : limpio;
+        }
+
+        /// <summary>
+        /// Corrige texto UTF-8 leído como Windows-1252 (p. ej. crédito → crÃ©dito → crA©dito).
+        /// </summary>
+        internal static string RepararMojibakeUtf8(string texto)
+        {
+            if (string.IsNullOrEmpty(texto))
+                return texto;
+
+            // Ya degradado por sanitizado previo (FormD + strip marks).
+            if (texto.Contains("A©", StringComparison.Ordinal)
+                || texto.Contains("a©", StringComparison.OrdinalIgnoreCase))
+            {
+                texto = texto
+                    .Replace("A©", "e", StringComparison.Ordinal)
+                    .Replace("a©", "e", StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!texto.Contains('Ã') && !texto.Contains('Â'))
+                return texto;
+
+            try
+            {
+                byte[] bytes = Encoding.GetEncoding(1252).GetBytes(texto);
+                string candidate = Encoding.UTF8.GetString(bytes);
+                if (candidate.Contains('\uFFFD'))
+                    return texto;
+
+                // Aceptar solo si recupera letras latinas acentuadas o elimina Ã.
+                bool mejoro = candidate.IndexOfAny(new[] { 'á', 'é', 'í', 'ó', 'ú', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ' }) >= 0
+                              || (!candidate.Contains('Ã') && texto.Contains('Ã'));
+                return mejoro ? candidate : texto;
+            }
+            catch
+            {
+                return texto;
+            }
         }
 
         private static bool EsEmojiOSimbolo(char c)
@@ -66,7 +140,8 @@ namespace BLL
 
         public static string PrepararCuerpoPlantilla(string mensaje, string? nombreCliente)
         {
-            string cuerpo = Sanitizar(mensaje);
+            // Conservar separación Detalle / CTA si el cuerpo la trae.
+            string cuerpo = Sanitizar(mensaje, preservarSaltosLinea: true);
             cuerpo = PrefijoMffitness.Replace(cuerpo, string.Empty);
 
             if (!string.IsNullOrWhiteSpace(nombreCliente))
@@ -107,14 +182,17 @@ namespace BLL
             string miembro,
             string asunto,
             string detalle,
-            string fecha)
+            string fecha,
+            bool aplanarDetalle = false)
         {
+            // {{3}} puede llevar un salto (financiamiento + CTA). Miembro/asunto/fecha se aplanan.
+            bool preservarDetalle = !aplanarDetalle;
             return JsonSerializer.Serialize(
                 new System.Collections.Generic.Dictionary<string, string>
                 {
                     ["1"] = Cortar(Sanitizar(miembro), 60),
                     ["2"] = Cortar(Sanitizar(asunto), 60),
-                    ["3"] = Cortar(Sanitizar(detalle), 500),
+                    ["3"] = Cortar(Sanitizar(detalle, preservarSaltosLinea: preservarDetalle), 500),
                     ["4"] = Cortar(Sanitizar(fecha), 40)
                 },
                 JsonOpciones);

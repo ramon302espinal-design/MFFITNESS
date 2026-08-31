@@ -39,7 +39,7 @@ namespace UI.Helpers
                 if (activa is FrmPresentacion)
                     return false;
 
-                if (BusquedaFocusHelper.EsEntradaTextoActiva(m.HWnd, activa))
+                if (BusquedaFocusHelper.DebeAnularAtajosTeclado(activa, m.HWnd))
                     return false;
 
                 // Calculadora POS: Backspace borra dígitos del monto.
@@ -57,7 +57,7 @@ namespace UI.Helpers
                 if (activa is FrmPresentacion)
                     return false;
 
-                if (BusquedaFocusHelper.EsEntradaTextoActiva(m.HWnd, activa))
+                if (BusquedaFocusHelper.DebeAnularAtajosTeclado(activa, m.HWnd))
                     return false;
 
                 _navegando = true;
@@ -67,7 +67,7 @@ namespace UI.Helpers
 
             if (tecla == Keys.End)
             {
-                if (BusquedaFocusHelper.EsEntradaTextoActiva(m.HWnd, activa))
+                if (BusquedaFocusHelper.DebeAnularAtajosTeclado(activa, m.HWnd))
                     return false;
             }
 

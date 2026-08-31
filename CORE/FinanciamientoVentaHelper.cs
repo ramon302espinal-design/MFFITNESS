@@ -40,6 +40,22 @@ namespace CORE
             return $"{c} {sufijo}";
         }
 
+        /// <summary>Quita <c>(Venta Id N)</c> para textos WhatsApp / cliente (el Id sigue en BD).</summary>
+        public static string QuitarSufijoVentaIdParaAviso(string? concepto)
+        {
+            if (string.IsNullOrWhiteSpace(concepto))
+                return string.Empty;
+
+            string c = concepto.Trim();
+            int i = c.IndexOf(SufijoVentaId, StringComparison.OrdinalIgnoreCase);
+            if (i < 0)
+                i = c.IndexOf("(Venta Id", StringComparison.OrdinalIgnoreCase);
+            if (i >= 0)
+                c = c[..i].TrimEnd();
+
+            return c.Trim().TrimEnd('-', ' ', '|');
+        }
+
         /// <summary>
         /// Fase 11.1 / 11.2 — falla la TX si la venta financiada quedaría huérfana.
         /// </summary>
