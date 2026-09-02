@@ -9,6 +9,8 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using CORE;
 using UI.Theme;
@@ -1244,9 +1246,9 @@ namespace UI.DISEÑO
             PlanBLL planBLL = new PlanBLL();
             DataTable dt = planBLL.ObtenerPlanes();
 
-            // 🔥 FILTRO AQUÍ
+            // POS: ocultar 3x (se cobra por otros flujos). MENSUALIDAD visible junto a M-A.
             DataView dv = dt.DefaultView;
-            dv.RowFilter = "Nombre <> 'MENSUALIDAD' AND Nombre <> '3x'";
+            dv.RowFilter = "Nombre <> '3x'";
 
             cmbMembresia.DataSource = dv;
             cmbMembresia.DisplayMember = "Nombre";
@@ -2032,6 +2034,29 @@ namespace UI.DISEÑO
                 return;
             }
 
+            string? notaFin = null;
+            if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
+            {
+                notaFin = saldo > 0
+                    ? $"Tu membresía está activa. Saldo pendiente: RD${saldo:N2}. Vence el {fin:dd/MM/yyyy}."
+                    : null;
+                string nombrePlan = string.IsNullOrWhiteSpace(plan.Nombre)
+                    ? cmbMembresia.Text.Trim()
+                    : plan.Nombre.Trim();
+                // WhatsApp financiamiento lo dispara MembresiaBLL; aquí PDF con precio lista + abono.
+                EjecutarPostPagoMembresia(
+                    clienteId,
+                    planId,
+                    nombrePlan,
+                    pagoInicial,
+                    fin,
+                    metodoPago,
+                    opFin,
+                    notaExtra: notaFin,
+                    enviarWhatsAppFactura: false,
+                    precioLista: plan.Precio);
+            }
+
             LimpiarCampos();
 
             MessageBox.Show(
@@ -2045,25 +2070,6 @@ namespace UI.DISEÑO
                 MessageBoxIcon.Information);
 
             ProgramarRefrescoTrasPago();
-
-            if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
-            {
-                string? nota = saldo > 0
-                    ? $"Tu membresía está activa. Saldo pendiente: RD${saldo:N2}. Vence el {fin:dd/MM/yyyy}."
-                    : null;
-                // WhatsApp financiamiento lo dispara MembresiaBLL; aquí PDF con precio lista + abono.
-                IniciarPostPagoEnSegundoPlano(
-                    clienteId,
-                    planId,
-                    plan.Nombre ?? cmbMembresia.Text,
-                    pagoInicial,
-                    fin,
-                    metodoPago,
-                    opFin,
-                    notaExtra: nota,
-                    enviarWhatsAppFactura: false,
-                    precioLista: plan.Precio);
-            }
         }
 
         private void CobrarPlanParcial(
@@ -2183,23 +2189,31 @@ namespace UI.DISEÑO
                 return;
             }
 
-            LimpiarCampos();
-            MessageBox.Show("Membresía registrada correctamente.");
-
-            ProgramarRefrescoTrasPago();
-
             if (result.Payload is MembresiaOperacionResult opPago)
             {
-                IniciarPostPagoEnSegundoPlano(
+                string nombrePlan = string.IsNullOrWhiteSpace(plan.Nombre)
+                    ? cmbMembresia.Text.Trim()
+                    : plan.Nombre.Trim();
+                EjecutarPostPagoMembresia(
                     clienteId,
                     planId,
-                    plan.Nombre ?? cmbMembresia.Text,
+                    nombrePlan,
                     monto,
                     fin,
                     metodoPago,
                     opPago,
                     precioLista: plan.Precio);
             }
+
+            LimpiarCampos();
+            MessageBox.Show(
+                "Membresía registrada correctamente.\n\n" +
+                "El recibo se está generando y enviando por WhatsApp en segundo plano.",
+                "Membresía registrada",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            ProgramarRefrescoTrasPago();
         }
 
         /// <summary>
@@ -2263,9 +2277,234 @@ namespace UI.DISEÑO
             }));
         }
 
+        private int _postPagoJobs;
+
         /// <summary>
-        /// PDF primero (lista/descuento/asunto), luego WhatsApp factura. Sin popups en PC.
+        /// PDF + WhatsApp en segundo plano (no bloquea el POS; datos capturados antes de limpiar la UI).
         /// </summary>
+        private void EjecutarPostPagoMembresia(
+            int clienteId,
+            int planId,
+            string nombrePlan,
+            decimal monto,
+            DateTime fin,
+            string metodoPago,
+            MembresiaOperacionResult opPago,
+            string? notaExtra = null,
+            bool enviarWhatsAppFactura = true,
+            decimal? precioLista = null,
+            decimal? descuentoMonto = null,
+            decimal? descuentoPorcentaje = null,
+            string? asuntoOferta = null,
+            bool enviarWhatsAppOferta = false)
+        {
+            string planFactura = !string.IsNullOrWhiteSpace(opPago.PlanNombre)
+                ? opPago.PlanNombre!.Trim()
+                : nombrePlan.Trim();
+            DateTime fechaPago = opPago.FechaPago != default
+                ? opPago.FechaPago
+                : DateTime.Now;
+
+            var ctx = new PostPagoMembresiaContext(
+                clienteId,
+                planId,
+                planFactura,
+                nombrePlan.Trim(),
+                monto,
+                fin,
+                metodoPago,
+                fechaPago,
+                opPago,
+                notaExtra,
+                enviarWhatsAppFactura,
+                precioLista,
+                descuentoMonto,
+                descuentoPorcentaje,
+                asuntoOferta,
+                enviarWhatsAppOferta);
+
+            IniciarPostPagoMembresiaEnSegundoPlano(ctx);
+        }
+
+        private void IniciarPostPagoMembresiaEnSegundoPlano(PostPagoMembresiaContext ctx)
+        {
+            Interlocked.Increment(ref _postPagoJobs);
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    ProcesarPostPagoMembresia(ctx);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Post-pago] {ex.Message}");
+                }
+                finally
+                {
+                    if (Interlocked.Decrement(ref _postPagoJobs) == 0
+                        && !IsDisposed
+                        && IsHandleCreated)
+                    {
+                        try
+                        {
+                            BeginInvoke(new Action(() =>
+                            {
+                                if (!IsDisposed)
+                                    UseWaitCursor = false;
+                            }));
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // Formulario cerrado durante el envío.
+                        }
+                    }
+                }
+            });
+        }
+
+        private static void ProcesarPostPagoMembresia(PostPagoMembresiaContext ctx)
+        {
+            var opPago = new MembresiaOperacionResult
+            {
+                MembresiaId = ctx.MembresiaId,
+                PagoId = ctx.PagoId,
+                CajaMovimientoId = ctx.CajaMovimientoId,
+                PlanId = ctx.PlanId,
+                PlanNombre = ctx.PlanFactura,
+                FechaPago = ctx.FechaPago,
+                FechaFinMembresia = ctx.FechaFin
+            };
+
+            try
+            {
+                FacturaMembresiaPdfService.GenerarDesdeOperacion(
+                    owner: null,
+                    ctx.ClienteId,
+                    ctx.PlanFactura,
+                    ctx.Monto,
+                    ctx.FechaFin,
+                    ctx.MetodoPago,
+                    opPago,
+                    notaExtra: ctx.NotaExtra,
+                    abrirPdf: false,
+                    precioLista: ctx.PrecioLista,
+                    descuentoMonto: ctx.DescuentoMonto,
+                    descuentoPorcentaje: ctx.DescuentoPorcentaje,
+                    asuntoOferta: ctx.AsuntoOferta,
+                    forzarRegenerar: true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PDF post-pago] {ex.Message}");
+            }
+
+            if (ctx.EnviarWhatsAppFactura)
+            {
+                try
+                {
+                    string? waDetalle = new MembresiaBLL().EnviarWhatsAppTrasPagoMembresia(
+                        ctx.ClienteId,
+                        ctx.PlanId,
+                        ctx.Monto,
+                        ctx.FechaPago,
+                        ctx.FechaFin,
+                        ctx.MetodoPago,
+                        ctx.PagoId,
+                        nombrePlanOverride: ctx.PlanFactura);
+
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[WhatsApp post-pago] {waDetalle ?? "(sin detalle)"}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[WhatsApp post-pago] Error: {ex.Message}");
+                }
+            }
+
+            if (ctx.EnviarWhatsAppOferta
+                && ctx.DescuentoMonto.GetValueOrDefault() > 0
+                && !string.IsNullOrWhiteSpace(ctx.AsuntoOferta))
+            {
+                try
+                {
+                    new MensajeAutomaticoBLL().EnviarMensajeOfertaMembresia(
+                        ctx.ClienteId,
+                        ctx.NombrePlanOferta,
+                        ctx.PrecioLista ?? ctx.Monto,
+                        ctx.DescuentoPorcentaje ?? 0,
+                        ctx.DescuentoMonto ?? 0,
+                        ctx.Monto,
+                        ctx.AsuntoOferta!);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("[WhatsApp oferta] " + ex.Message);
+                }
+            }
+        }
+
+        private readonly struct PostPagoMembresiaContext
+        {
+            public PostPagoMembresiaContext(
+                int clienteId,
+                int planId,
+                string planFactura,
+                string nombrePlanOferta,
+                decimal monto,
+                DateTime fechaFin,
+                string metodoPago,
+                DateTime fechaPago,
+                MembresiaOperacionResult opPago,
+                string? notaExtra,
+                bool enviarWhatsAppFactura,
+                decimal? precioLista,
+                decimal? descuentoMonto,
+                decimal? descuentoPorcentaje,
+                string? asuntoOferta,
+                bool enviarWhatsAppOferta)
+            {
+                ClienteId = clienteId;
+                PlanId = planId;
+                PlanFactura = planFactura;
+                NombrePlanOferta = nombrePlanOferta;
+                Monto = monto;
+                FechaFin = fechaFin;
+                MetodoPago = metodoPago;
+                FechaPago = fechaPago;
+                MembresiaId = opPago.MembresiaId;
+                PagoId = opPago.PagoId;
+                CajaMovimientoId = opPago.CajaMovimientoId;
+                NotaExtra = notaExtra;
+                EnviarWhatsAppFactura = enviarWhatsAppFactura;
+                PrecioLista = precioLista;
+                DescuentoMonto = descuentoMonto;
+                DescuentoPorcentaje = descuentoPorcentaje;
+                AsuntoOferta = asuntoOferta;
+                EnviarWhatsAppOferta = enviarWhatsAppOferta;
+            }
+
+            public int ClienteId { get; }
+            public int PlanId { get; }
+            public string PlanFactura { get; }
+            public string NombrePlanOferta { get; }
+            public decimal Monto { get; }
+            public DateTime FechaFin { get; }
+            public string MetodoPago { get; }
+            public DateTime FechaPago { get; }
+            public int MembresiaId { get; }
+            public int PagoId { get; }
+            public int CajaMovimientoId { get; }
+            public string? NotaExtra { get; }
+            public bool EnviarWhatsAppFactura { get; }
+            public decimal? PrecioLista { get; }
+            public decimal? DescuentoMonto { get; }
+            public decimal? DescuentoPorcentaje { get; }
+            public string? AsuntoOferta { get; }
+            public bool EnviarWhatsAppOferta { get; }
+        }
+
+        /// <summary>Compat: delega al flujo en segundo plano.</summary>
         private void IniciarPostPagoEnSegundoPlano(
             int clienteId,
             int planId,
@@ -2282,75 +2521,10 @@ namespace UI.DISEÑO
             string? asuntoOferta = null,
             bool enviarWhatsAppOferta = false)
         {
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                try
-                {
-                    FacturaMembresiaPdfService.GenerarDesdeOperacion(
-                        owner: null,
-                        clienteId,
-                        nombrePlan,
-                        monto,
-                        fin,
-                        metodoPago,
-                        opPago,
-                        notaExtra: notaExtra,
-                        abrirPdf: false,
-                        precioLista: precioLista,
-                        descuentoMonto: descuentoMonto,
-                        descuentoPorcentaje: descuentoPorcentaje,
-                        asuntoOferta: asuntoOferta,
-                        forzarRegenerar: descuentoMonto.GetValueOrDefault() > 0
-                            || !string.IsNullOrWhiteSpace(asuntoOferta));
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[PDF post-pago] {ex.Message}");
-                }
-
-                if (enviarWhatsAppFactura)
-                {
-                    try
-                    {
-                        string? waDetalle = membresiaBLL.EnviarWhatsAppTrasPagoMembresia(
-                            clienteId,
-                            planId,
-                            monto,
-                            DateTime.Now,
-                            fin,
-                            metodoPago,
-                            opPago.PagoId);
-
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[WhatsApp post-pago] {waDetalle ?? "(sin detalle)"}");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[WhatsApp post-pago] Error: {ex.Message}");
-                    }
-                }
-
-                if (enviarWhatsAppOferta
-                    && descuentoMonto.GetValueOrDefault() > 0
-                    && !string.IsNullOrWhiteSpace(asuntoOferta))
-                {
-                    try
-                    {
-                        new MensajeAutomaticoBLL().EnviarMensajeOfertaMembresia(
-                            clienteId,
-                            nombrePlan,
-                            precioLista ?? monto,
-                            descuentoPorcentaje ?? 0,
-                            descuentoMonto ?? 0,
-                            monto,
-                            asuntoOferta!);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine("[WhatsApp oferta] " + ex.Message);
-                    }
-                }
-            });
+            EjecutarPostPagoMembresia(
+                clienteId, planId, nombrePlan, monto, fin, metodoPago, opPago,
+                notaExtra, enviarWhatsAppFactura, precioLista,
+                descuentoMonto, descuentoPorcentaje, asuntoOferta, enviarWhatsAppOferta);
         }
 
         private void LimpiarCampos()

@@ -58,6 +58,34 @@ namespace CORE
             return null;
         }
 
+        /// <summary>
+        /// True si no hay PDF o el archivo es anterior al pago (reutilización de factura_{pagoId} vieja).
+        /// </summary>
+        public static bool FacturaPdfDesactualizada(int pagoId, DateTime fechaPagoReferencia)
+        {
+            if (pagoId <= 0)
+                return true;
+
+            string? ruta = ResolverRutaFacturaExistente(pagoId);
+            if (string.IsNullOrWhiteSpace(ruta))
+                return true;
+
+            try
+            {
+                var info = new FileInfo(ruta);
+                if (!info.Exists)
+                    return true;
+
+                // Margen por reloj del sistema / redondeo SQL.
+                DateTime umbral = fechaPagoReferencia.ToLocalTime().AddSeconds(-5);
+                return info.LastWriteTime < umbral;
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
         public static void GuardarFactura(int pagoId, byte[] pdfBytes)
         {
             if (pagoId <= 0)

@@ -45,32 +45,27 @@ namespace BLL.Facturas
             string url = SupabaseSettings.ConstruirUrlPublicaObjeto(
                 FacturaStorage.NombreArchivoPago(pagoId));
 
+            string? rutaLocal = FacturaStorage.ResolverRutaFacturaExistente(pagoId);
+            if (!string.IsNullOrWhiteSpace(rutaLocal) && File.Exists(rutaLocal))
+            {
+                try
+                {
+                    byte[] bytes = File.ReadAllBytes(rutaLocal);
+                    string? subida = TryUploadAndGetPublicUrl(pagoId, bytes);
+                    if (!string.IsNullOrWhiteSpace(subida) && ObjetoDescargable(subida))
+                        return subida;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"[Supabase] factura_{pagoId}: resubida local fallo: {ex.Message}");
+                }
+            }
+
             if (ObjetoDescargable(url))
                 return url;
 
-            string? rutaLocal = FacturaStorage.ResolverRutaFacturaExistente(pagoId);
-            if (string.IsNullOrWhiteSpace(rutaLocal) || !File.Exists(rutaLocal))
-            {
-                Trace.WriteLine($"[Supabase] factura_{pagoId}: no publicada y sin archivo local.");
-                return null;
-            }
-
-            byte[] bytes;
-            try
-            {
-                bytes = File.ReadAllBytes(rutaLocal);
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"[Supabase] factura_{pagoId}: no se pudo leer el PDF local: {ex.Message}");
-                return null;
-            }
-
-            string? subida = TryUploadAndGetPublicUrl(pagoId, bytes);
-            if (string.IsNullOrWhiteSpace(subida))
-                return null;
-
-            return ObjetoDescargable(subida) ? subida : null;
+            Trace.WriteLine($"[Supabase] factura_{pagoId}: no publicada y sin archivo local util.");
+            return null;
         }
 
         /// <summary>

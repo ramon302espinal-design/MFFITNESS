@@ -6,7 +6,7 @@
   Copia el publish (UI.exe + WhatsAppHost + migraciones) a:
     %LocalAppData%\Programs\MFFITNESS
   Crea accesos directos Escritorio/Inicio, launcher Production y entrada en
-  Configuración → Aplicaciones → Instaladas (desinstalar).
+  Configuracion -> Aplicaciones -> Instaladas (desinstalar).
 
 .EXAMPLE
   .\Scripts\Install-MFFITNESS.ps1
@@ -71,36 +71,36 @@ function New-AppShortcut {
     $s.Save()
 }
 
-Write-Step "=== Instalador MFFITNESS POS ==="
+Write-Step '=== Instalador MFFITNESS POS ==='
 Write-Step "Origen:  $SourceDir"
 Write-Step "Destino: $InstallDir"
 
 if (-not $SkipPublish) {
     if (-not (Test-Path $publishScript)) {
-        throw "No se encontró Publish-Pos.ps1"
+        throw 'No se encontro Publish-Pos.ps1'
     }
-    Write-Step "Publicando Release..."
+    Write-Step 'Publicando Release...'
     & $publishScript -Configuration Release -OutputDir $SourceDir -RepoRoot $RepoRoot
-    if ($LASTEXITCODE -ne 0) { throw "Publish-Pos falló ($LASTEXITCODE)" }
+    if ($LASTEXITCODE -ne 0) { throw "Publish-Pos fallo ($LASTEXITCODE)" }
 }
 elseif (-not (Test-Path (Join-Path $SourceDir 'UI.exe'))) {
     throw "SkipPublish=true pero falta UI.exe en $SourceDir"
 }
 
-# Cerrar app en ejecución para reemplazar archivos
+# Cerrar app en ejecucion para reemplazar archivos
 Get-Process -Name 'UI', 'WhatsAppHost' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
-Write-Step "Copiando archivos..."
+Write-Step 'Copiando archivos...'
 if (Test-Path $InstallDir) {
-    # Conservar datos de usuario fuera del árbol de la app (%LocalAppData%\MFFITNESS)
+    # Conservar datos de usuario fuera del arbol de la app (%LocalAppData%\MFFITNESS)
     Remove-Item -LiteralPath $InstallDir -Recurse -Force
 }
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Copy-Item -Path (Join-Path $SourceDir '*') -Destination $InstallDir -Recurse -Force
 
 $exe = Join-Path $InstallDir 'UI.exe'
-if (-not (Test-Path $exe)) { throw "Instalación incompleta: falta UI.exe" }
+if (-not (Test-Path $exe)) { throw 'Instalacion incompleta: falta UI.exe' }
 
 # Production + [MF CYBER DB]
 $localSettings = Join-Path $InstallDir 'appsettings.Local.json'
@@ -123,7 +123,7 @@ set DOTNET_ENVIRONMENT=Production
 start "" /D "%~dp0" "%~dp0UI.exe"
 '@ | Set-Content -Path $launcher -Encoding ASCII
 
-# Scripts de desinstalación dentro de la carpeta instalada
+# Scripts de desinstalacion dentro de la carpeta instalada
 $uninstallSrc = Join-Path $SourceDir 'Uninstall-MFFITNESS.ps1'
 if (-not (Test-Path $uninstallSrc)) {
     $uninstallSrc = Join-Path $RepoRoot 'Scripts\Uninstall-MFFITNESS.ps1'
@@ -147,7 +147,7 @@ if (-not $NoDesktopShortcut) {
     Write-Step "Acceso directo Escritorio: $deskLnk"
 }
 
-# Registro Windows → Agregar o quitar programas
+# Registro Windows -> Agregar o quitar programas
 $uninstallCmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $InstallDir 'Uninstall-MFFITNESS.ps1')`""
 New-Item -Path $uninstallKey -Force | Out-Null
 Set-ItemProperty -Path $uninstallKey -Name 'DisplayName' -Value 'MFFITNESS POS'
@@ -159,20 +159,20 @@ Set-ItemProperty -Path $uninstallKey -Name 'DisplayIcon' -Value $exe
 Set-ItemProperty -Path $uninstallKey -Name 'NoModify' -Value 1 -Type DWord
 Set-ItemProperty -Path $uninstallKey -Name 'NoRepair' -Value 1 -Type DWord
 
-Write-Step ""
-Write-Step "Instalación completada." -Color Green
+Write-Step ''
+Write-Step 'Instalacion completada.' -Color Green
 Write-Step "  App:     $exe"
-Write-Step "  Versión: $($ver.ProductVersion)"
+Write-Step "  Version: $($ver.ProductVersion)"
 if (Test-Path (Join-Path $InstallDir 'WhatsAppHost\WhatsAppHost.exe')) {
-    Write-Step "  WhatsAppHost: incluido"
+    Write-Step '  WhatsAppHost: incluido'
 } else {
-    Write-Host "  AVISO: WhatsAppHost no incluido — reinstale con Publish-Pos completo." -ForegroundColor Yellow
+    Write-Host '  AVISO: WhatsAppHost no incluido - reinstale con Publish-Pos completo.' -ForegroundColor Yellow
 }
-Write-Step "  Desinstalar: Configuración → Aplicaciones → MFFITNESS POS"
+Write-Step '  Desinstalar: Configuracion -> Aplicaciones -> MFFITNESS POS'
 Write-Step "  O ejecute: $(Join-Path $InstallDir 'Uninstall-MFFITNESS.ps1')"
 
 if (-not $Silent) {
-    $launch = Read-Host "¿Abrir MFFITNESS ahora? (S/N)"
+    $launch = Read-Host 'Abrir MFFITNESS ahora? (S/N)'
     if ($launch -match '^[sSyY]') {
         Start-Process -FilePath $launcher -WorkingDirectory $InstallDir
     }

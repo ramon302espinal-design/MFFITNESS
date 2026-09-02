@@ -314,26 +314,13 @@ namespace UI.DISEÑO
                 return;
             }
 
-            LimpiarCampos();
-            MessageBox.Show(
-                $"Membresía OFERTA registrada.\n\n" +
-                $"Valor referencia: RD$ {valorRef:N2}\n" +
-                $"Cortesía: {pct:0.##}% (RD$ {desc:N2})\n" +
-                $"Total cobrado: RD$ {total:N2}\n" +
-                $"Asunto: {motivo}",
-                "Oferta aplicada",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-
-            ProgramarRefrescoTrasPago();
-
             if (result.Payload is MembresiaOperacionResult opPago)
             {
                 string nota =
                     $"Asunto: {motivo}. Cortesía {pct:0.##}% (-RD${desc:N2}). " +
                     $"Valor ref. RD${valorRef:N2} → total RD${total:N2}.";
 
-                IniciarPostPagoEnSegundoPlano(
+                EjecutarPostPagoMembresia(
                     clienteId,
                     planId,
                     plan.Nombre ?? PlanNombres.Oferta,
@@ -349,6 +336,19 @@ namespace UI.DISEÑO
                     asuntoOferta: motivo,
                     enviarWhatsAppOferta: true);
             }
+
+            LimpiarCampos();
+            MessageBox.Show(
+                $"Membresía OFERTA registrada.\n\n" +
+                $"Valor referencia: RD$ {valorRef:N2}\n" +
+                $"Cortesía: {pct:0.##}% (RD$ {desc:N2})\n" +
+                $"Total cobrado: RD$ {total:N2}\n" +
+                $"Asunto: {motivo}",
+                "Oferta aplicada",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            ProgramarRefrescoTrasPago();
         }
     }
 }

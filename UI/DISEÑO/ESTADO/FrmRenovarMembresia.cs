@@ -235,6 +235,9 @@ namespace UI.DISEÑO
                             MembresiaId = membresiaIdBg,
                             PagoId = pagoIdBg,
                             CajaMovimientoId = cajaMovIdBg,
+                            PlanId = planId,
+                            PlanNombre = planNombreBg,
+                            FechaPago = pagoBg,
                             FechaFinMembresia = finBg
                         },
                         notaExtra: nota,
@@ -243,7 +246,7 @@ namespace UI.DISEÑO
                         descuentoMonto: esOferta && descBg > 0 ? descBg : null,
                         descuentoPorcentaje: esOferta ? pctBg : null,
                         asuntoOferta: asuntoBg,
-                        forzarRegenerar: esOferta);
+                        forzarRegenerar: esOferta || FacturaStorage.FacturaPdfDesactualizada(pagoIdBg, pagoBg));
 
                     if (pagoIdBg > 0 && precioBg > 0)
                     {
@@ -254,7 +257,8 @@ namespace UI.DISEÑO
                             pagoBg,
                             finBg,
                             metodoBg,
-                            pagoIdBg);
+                            pagoIdBg,
+                            nombrePlanOverride: planNombreBg);
 
                         System.Diagnostics.Debug.WriteLine(
                             $"[WhatsApp renovación] {wa ?? "(sin detalle)"}");

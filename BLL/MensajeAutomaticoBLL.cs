@@ -163,16 +163,12 @@ namespace BLL
         {
             UltimoDetalleEnvio = null;
 
-            // Cuerpo corto profesional para {{1}} (incluye link si hay PublicBaseUrl).
-            string? mediaUrl = pagoId.HasValue
-                ? FacturaStorage.ConstruirMediaUrlPublica(pagoId.Value)
-                : null;
-
             if (pagoId.HasValue && pagoId.Value > 0)
             {
                 try
                 {
-                    if (FacturaStorage.ResolverRutaFacturaExistente(pagoId.Value) == null)
+                    bool pdfViejo = FacturaStorage.FacturaPdfDesactualizada(pagoId.Value, fechaPago);
+                    if (pdfViejo)
                     {
                         Facturas.FacturaMembresiaPdfGenerator.GenerarDesdePago(
                             clienteId,
@@ -190,20 +186,19 @@ namespace BLL
                 }
             }
 
-            // El PDF puede existir en disco sin estar publicado (subida previa fallida):
-            // se verifica/republica antes de enviar para que Twilio pueda descargarlo.
-            if (pagoId.HasValue && pagoId.Value > 0 && SupabaseSettings.Configurado)
-                mediaUrl = Facturas.FacturaSupabaseUploader.AsegurarPublicada(pagoId.Value);
-            else
-                mediaUrl = pagoId.HasValue
-                    ? FacturaStorage.ConstruirMediaUrlPublica(pagoId.Value)
-                    : null;
+            // Publicar o exponer el PDF para Twilio (Supabase o host local).
+            string? mediaUrl = pagoId.HasValue && pagoId.Value > 0
+                ? ResolverMediaUrlFactura(pagoId.Value)
+                : null;
 
-            // Solo archivo PDF: sin URL pública no se envía nada (ni texto de respaldo).
+            // Solo archivo PDF: sin URL pública, aviso de texto (PAGO_MEMBRESIA).
             if (string.IsNullOrWhiteSpace(mediaUrl))
             {
-                UltimoDetalleEnvio =
-                    "No se pudo publicar la factura PDF (Supabase/PublicBaseUrl). WhatsApp no enviado.";
+                bool avisoTexto = EnviarAvisoPagoMembresiaSinPdf(
+                    clienteId, nombrePlan, monto, fechaVencimiento, pagoId);
+                UltimoDetalleEnvio = avisoTexto
+                    ? "WhatsApp: aviso de pago enviado (sin PDF adjunto)."
+                    : "No se pudo publicar la factura PDF ni enviar aviso de pago por WhatsApp.";
                 System.Diagnostics.Debug.WriteLine($"FACTURA_MEMBRESIA: {UltimoDetalleEnvio}");
                 return UltimoDetalleEnvio;
             }
@@ -248,6 +243,45 @@ namespace BLL
 
             return UltimoDetalleEnvio
                    ?? (enviado ? "WhatsApp: PDF enviado." : "WhatsApp: PDF no entregado.");
+        }
+
+        /// <summary>Supabase primero; si falla, host local + PublicBaseUrl.</summary>
+        private static string? ResolverMediaUrlFactura(int pagoId)
+        {
+            if (pagoId <= 0)
+                return null;
+
+            string? mediaUrl = null;
+            if (SupabaseSettings.Configurado)
+                mediaUrl = Facturas.FacturaSupabaseUploader.AsegurarPublicada(pagoId);
+
+            if (!string.IsNullOrWhiteSpace(mediaUrl))
+                return mediaUrl;
+
+            if (FacturaStorage.ResolverRutaFacturaExistente(pagoId) == null)
+                return null;
+
+            WhatsAppMediaHostLauncher.EnsureRunning();
+            return FacturaStorage.ConstruirMediaUrlPublica(pagoId);
+        }
+
+        /// <summary>Respaldo si el PDF no se puede adjuntar (plantilla PAGO_MEMBRESIA).</summary>
+        private bool EnviarAvisoPagoMembresiaSinPdf(
+            int clienteId,
+            string nombrePlan,
+            decimal monto,
+            DateTime fechaVencimiento,
+            int? pagoId)
+        {
+            return EnviarMensajeTemplado(clienteId, "PAGO_MEMBRESIA", new Dictionary<string, string>
+            {
+                ["PLAN"] = string.IsNullOrWhiteSpace(nombrePlan) ? "Membresia" : nombrePlan.Trim(),
+                ["MONTO"] = FormatearMonto(monto),
+                ["FECHA_VENCE"] = fechaVencimiento.ToString("dd/MM/yyyy"),
+                ["FECHA_VENCE_COMPLETA"] = fechaVencimiento.ToString(
+                    "dddd, dd MMMM yyyy",
+                    new CultureInfo("es-DO"))
+            }, pagoId);
         }
 
         public bool EnviarMensajeVencimientoProximo(

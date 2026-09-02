@@ -493,6 +493,9 @@ namespace BLL
                     MembresiaId = membresiaId,
                     PagoId = pagoId,
                     CajaMovimientoId = cajaMovId,
+                    PlanId = planId,
+                    PlanNombre = plan.Nombre,
+                    FechaPago = inicio,
                     FechaFinMembresia = fin
                 };
 
@@ -611,6 +614,9 @@ namespace BLL
                 MembresiaId = 0,
                 PagoId = pagoId,
                 CajaMovimientoId = cajaMovId,
+                PlanId = planId,
+                PlanNombre = nombrePlan,
+                FechaPago = ahora,
                 FechaFinMembresia = finDia
             };
         }
@@ -673,6 +679,9 @@ namespace BLL
 
             var result = new MembresiaOperacionResult
             {
+                PlanId = planId,
+                PlanNombre = plan.Nombre,
+                FechaPago = inicio,
                 FechaFinMembresia = fin
             };
 
@@ -822,45 +831,38 @@ namespace BLL
             DateTime fechaPago,
             DateTime fechaVencimiento,
             string metodoPago,
-            int pagoId)
+            int pagoId,
+            string? nombrePlanOverride = null)
         {
-            var plan = planDAL.ObtenerPlan(planId);
-            if (plan == null)
-                return "Plan no encontrado para WhatsApp.";
+            string nombrePlan = nombrePlanOverride?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(nombrePlan))
+            {
+                var plan = planDAL.ObtenerPlan(planId);
+                if (plan == null)
+                    return "Plan no encontrado para WhatsApp.";
+                nombrePlan = plan.Nombre ?? "Membresia";
+            }
 
             try
             {
-                return EnviarWhatsAppPagoMembresia(
-                    clienteId, plan, monto, fechaPago, fechaVencimiento, metodoPago, pagoId);
+                string numeroRecibo = pagoId > 0
+                    ? $"MF-{pagoId}"
+                    : $"MF-{clienteId}-{fechaPago:yyyyMMddHHmm}";
+
+                return mensajeBLL.EnviarFacturaMembresia(
+                    clienteId,
+                    nombrePlan,
+                    monto,
+                    fechaPago,
+                    fechaVencimiento,
+                    numeroRecibo,
+                    metodoPago,
+                    pagoId);
             }
             catch (Exception ex)
             {
                 return "Error WhatsApp: " + ex.Message;
             }
-        }
-
-        private string EnviarWhatsAppPagoMembresia(
-            int clienteId,
-            PlanDTO plan,
-            decimal monto,
-            DateTime fechaPago,
-            DateTime fechaVencimiento,
-            string metodoPago,
-            int pagoId)
-        {
-            string numeroRecibo = pagoId > 0
-                ? $"MF-{pagoId}"
-                : $"MF-{clienteId}-{fechaPago:yyyyMMddHHmm}";
-
-            return mensajeBLL.EnviarFacturaMembresia(
-                clienteId,
-                plan.Nombre ?? "Membresia",
-                monto,
-                fechaPago,
-                fechaVencimiento,
-                numeroRecibo,
-                metodoPago,
-                pagoId);
         }
 
         private void EnviarWhatsAppFinanciamiento(
@@ -891,14 +893,15 @@ namespace BLL
 
             if (pagoInicial > 0 && result.PagoId > 0)
             {
-                EnviarWhatsAppPagoMembresia(
+                EnviarWhatsAppTrasPagoMembresia(
                     clienteId,
-                    plan,
+                    planId,
                     pagoInicial,
-                    DateTime.Now,
+                    result.FechaPago != default ? result.FechaPago : DateTime.Now,
                     fin,
                     "Efectivo",
-                    result.PagoId);
+                    result.PagoId,
+                    nombrePlanOverride: result.PlanNombre ?? plan.Nombre);
             }
         }
     }

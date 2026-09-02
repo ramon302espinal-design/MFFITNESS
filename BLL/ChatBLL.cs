@@ -330,6 +330,20 @@ namespace BLL
             return FacturaStorage.ConstruirMediaUrlPublica(pagoId);
         }
 
+        private static string ExtraerNombrePlanDesdeConcepto(string concepto)
+        {
+            string c = (concepto ?? string.Empty).Trim();
+            if (c.StartsWith("Membresía ", StringComparison.OrdinalIgnoreCase))
+                return c.Substring("Membresía ".Length).Trim();
+            if (c.StartsWith("Membresia ", StringComparison.OrdinalIgnoreCase))
+                return c.Substring("Membresia ".Length).Trim();
+            if (c.StartsWith("Pago inicial - Membresía ", StringComparison.OrdinalIgnoreCase))
+                return c.Substring("Pago inicial - Membresía ".Length).Trim();
+            if (c.StartsWith("Pago inicial - Membresia ", StringComparison.OrdinalIgnoreCase))
+                return c.Substring("Pago inicial - Membresia ".Length).Trim();
+            return c;
+        }
+
         private static bool TryAsegurarFacturaPdf(
             int clienteId,
             DataRow pago,
@@ -340,13 +354,20 @@ namespace BLL
             error = string.Empty;
 
             int pagoId = Convert.ToInt32(pago["Id"]);
+            DateTime fechaPago = pago["FechaPago"] != DBNull.Value
+                ? Convert.ToDateTime(pago["FechaPago"])
+                : DateTime.Now;
+
             rutaPdf = FacturaStorage.ResolverRutaFacturaExistente(pagoId);
-            if (!string.IsNullOrWhiteSpace(rutaPdf))
+            if (!string.IsNullOrWhiteSpace(rutaPdf)
+                && !FacturaStorage.FacturaPdfDesactualizada(pagoId, fechaPago))
                 return true;
 
             string concepto = pago["Concepto"]?.ToString()?.Trim();
             if (string.IsNullOrWhiteSpace(concepto))
                 concepto = "Membresía";
+
+            string nombrePlan = ExtraerNombrePlanDesdeConcepto(concepto);
 
             decimal monto = pago["Monto"] != DBNull.Value ? Convert.ToDecimal(pago["Monto"]) : 0m;
             DateTime vencimiento = pago["FechaVencimiento"] != DBNull.Value
@@ -358,7 +379,7 @@ namespace BLL
             {
                 rutaPdf = FacturaMembresiaPdfGenerator.GenerarDesdePago(
                     clienteId,
-                    concepto,
+                    nombrePlan,
                     monto,
                     vencimiento,
                     metodo,

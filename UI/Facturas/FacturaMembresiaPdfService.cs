@@ -49,7 +49,14 @@ namespace UI.Facturas
                     ? operacion.PagoId
                     : (operacion.MembresiaId > 0 ? operacion.MembresiaId : clienteId);
 
-                string? path = forzarRegenerar
+                DateTime fechaPagoRef = operacion.FechaPago != default
+                    ? operacion.FechaPago
+                    : DateTime.Now;
+
+                bool pdfDesactualizado = FacturaStorage.FacturaPdfDesactualizada(pagoId, fechaPagoRef);
+                bool debeGenerar = forzarRegenerar || pdfDesactualizado;
+
+                string? path = debeGenerar
                     ? null
                     : FacturaStorage.ResolverRutaFacturaExistente(pagoId);
 
