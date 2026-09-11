@@ -33,6 +33,7 @@ namespace DL
         {
             const string query = @"
                 SELECT
+                    Id AS DetalleId,
                     ProductoId,
                     Producto,
                     Precio,
@@ -46,6 +47,149 @@ namespace DL
             {
                 new SqlParameter("@Id", SqlDbType.Int) { Value = saldoClienteId }
             });
+        }
+
+        public DataRow? ObtenerLineaDetalleActiva(int saldoClienteId, int detalleId)
+        {
+            const string query = @"
+                SELECT d.Id AS DetalleId, d.ProductoId, d.Producto, d.Precio, d.Cantidad, d.Total
+                FROM dbo.SaldoClientesDetalle d
+                INNER JOIN dbo.SaldoClientes s ON s.Id = d.SaldoClienteId
+                WHERE d.Id = @DetalleId
+                  AND d.SaldoClienteId = @SaldoId
+                  AND s.Estado = N'ACTIVO'";
+
+            DataTable dt = db.ExecuteQuery(query, new[]
+            {
+                new SqlParameter("@DetalleId", SqlDbType.Int) { Value = detalleId },
+                new SqlParameter("@SaldoId", SqlDbType.Int) { Value = saldoClienteId }
+            });
+
+            return dt.Rows.Count > 0 ? dt.Rows[0] : null;
+        }
+
+        /// <summary>
+        /// Resta unidades de una línea. Si llega a 0, elimina la línea.
+        /// Si no quedan líneas, marca DESPACHADO; si quedan, recalcula TotalReserva.
+        /// </summary>
+        public bool ConsumirDetalleTrasDespacho(
+            int saldoClienteId,
+            int detalleId,
+            int cantidadDespachada,
+            int ventaId,
+            string usuario)
+        {
+            if (cantidadDespachada <= 0)
+                throw new Exception("Cantidad a despachar inválida.");
+
+            using var conn = new SqlConnection(db.ConnectionString);
+            conn.Open();
+            using var tx = conn.BeginTransaction();
+
+            try
+            {
+                int cantidadActual;
+                decimal precio;
+                using (var cmd = new SqlCommand(@"
+                    SELECT d.Cantidad, d.Precio
+                    FROM dbo.SaldoClientesDetalle d WITH (UPDLOCK, ROWLOCK)
+                    INNER JOIN dbo.SaldoClientes s WITH (UPDLOCK, ROWLOCK)
+                        ON s.Id = d.SaldoClienteId
+                    WHERE d.Id = @DetalleId
+                      AND d.SaldoClienteId = @SaldoId
+                      AND s.Estado = N'ACTIVO';", conn, tx))
+                {
+                    cmd.Parameters.Add("@DetalleId", SqlDbType.Int).Value = detalleId;
+                    cmd.Parameters.Add("@SaldoId", SqlDbType.Int).Value = saldoClienteId;
+                    using var reader = cmd.ExecuteReader();
+                    if (!reader.Read())
+                        throw new Exception("La línea de reserva ya no está disponible.");
+
+                    cantidadActual = reader.GetInt32(0);
+                    precio = reader.GetDecimal(1);
+                }
+
+                if (cantidadDespachada > cantidadActual)
+                    throw new Exception(
+                        $"Solo quedan {cantidadActual} unidad(es) de ese producto en la reserva.");
+
+                int restante = cantidadActual - cantidadDespachada;
+                if (restante == 0)
+                {
+                    using var del = new SqlCommand(@"
+                        DELETE FROM dbo.SaldoClientesDetalle
+                        WHERE Id = @DetalleId AND SaldoClienteId = @SaldoId;", conn, tx);
+                    del.Parameters.Add("@DetalleId", SqlDbType.Int).Value = detalleId;
+                    del.Parameters.Add("@SaldoId", SqlDbType.Int).Value = saldoClienteId;
+                    del.ExecuteNonQuery();
+                }
+                else
+                {
+                    decimal totalLinea = Math.Round(precio * restante, 2, MidpointRounding.AwayFromZero);
+                    using var upd = new SqlCommand(@"
+                        UPDATE dbo.SaldoClientesDetalle
+                        SET Cantidad = @Cantidad, Total = @Total
+                        WHERE Id = @DetalleId AND SaldoClienteId = @SaldoId;", conn, tx);
+                    upd.Parameters.Add("@Cantidad", SqlDbType.Int).Value = restante;
+                    upd.Parameters.Add("@Total", SqlDbType.Decimal).Value = totalLinea;
+                    upd.Parameters.Add("@DetalleId", SqlDbType.Int).Value = detalleId;
+                    upd.Parameters.Add("@SaldoId", SqlDbType.Int).Value = saldoClienteId;
+                    upd.ExecuteNonQuery();
+                }
+
+                int lineasRestantes;
+                decimal totalRestante;
+                using (var cmdSum = new SqlCommand(@"
+                    SELECT COUNT(1), ISNULL(SUM(Total), 0)
+                    FROM dbo.SaldoClientesDetalle
+                    WHERE SaldoClienteId = @SaldoId;", conn, tx))
+                {
+                    cmdSum.Parameters.Add("@SaldoId", SqlDbType.Int).Value = saldoClienteId;
+                    using var reader = cmdSum.ExecuteReader();
+                    reader.Read();
+                    lineasRestantes = reader.GetInt32(0);
+                    totalRestante = reader.GetDecimal(1);
+                }
+
+                bool cerrado;
+                if (lineasRestantes == 0)
+                {
+                    using var cerrar = new SqlCommand(@"
+                        UPDATE dbo.SaldoClientes
+                        SET Estado = N'DESPACHADO',
+                            VentaId = @VentaId,
+                            FechaDespacho = SYSDATETIME(),
+                            TotalReserva = 0
+                        WHERE Id = @Id AND Estado = N'ACTIVO';", conn, tx);
+                    cerrar.Parameters.Add("@VentaId", SqlDbType.Int).Value = ventaId;
+                    cerrar.Parameters.Add("@Id", SqlDbType.Int).Value = saldoClienteId;
+                    if (cerrar.ExecuteNonQuery() == 0)
+                        throw new Exception("El saldo a favor ya no está activo.");
+                    cerrado = true;
+                }
+                else
+                {
+                    using var updCab = new SqlCommand(@"
+                        UPDATE dbo.SaldoClientes
+                        SET TotalReserva = @TotalReserva
+                        WHERE Id = @Id AND Estado = N'ACTIVO';", conn, tx);
+                    updCab.Parameters.Add("@TotalReserva", SqlDbType.Decimal).Value =
+                        Math.Round(totalRestante, 2, MidpointRounding.AwayFromZero);
+                    updCab.Parameters.Add("@Id", SqlDbType.Int).Value = saldoClienteId;
+                    if (updCab.ExecuteNonQuery() == 0)
+                        throw new Exception("El saldo a favor ya no está activo.");
+                    cerrado = false;
+                }
+
+                tx.Commit();
+                _ = usuario;
+                return cerrado;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
 
         public int? ObtenerIdActivoPorCliente(int clienteId)

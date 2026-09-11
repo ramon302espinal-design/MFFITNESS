@@ -1566,18 +1566,44 @@ namespace UI.DISEÑO
                     return;
                 }
 
-                if (ventaPausadaBLL.TienePausaActiva(clienteId))
+                int? pausaExistente = ventaPausadaBLL.ObtenerIdPausaActivaPorCliente(clienteId);
+                if (pausaExistente.HasValue)
                 {
-                    var cont = MessageBox.Show(
-                        $"{nombre} ya tiene una venta en pausa.\n\n¿Reemplazarla con el carrito actual?",
-                        "Pausa existente",
+                    // Solo el producto seleccionado en dgvCarrito (o todo si no hay fila válida).
+                    DataTable lineasAIntegrar = ObtenerLineasCarritoParaPausa();
+                    if (lineasAIntegrar.Rows.Count == 0)
+                    {
+                        MessageBox.Show("Seleccione un producto del carrito.");
+                        return;
+                    }
+
+                    string resumen = ResumirLineasCarrito(lineasAIntegrar);
+                    var sumar = MessageBox.Show(
+                        $"{nombre} ya tiene una venta en pausa.\n\n" +
+                        $"¿Sumar a la pausa existente?\n{resumen}\n\n" +
+                        "No se cobrará ni se descontará stock hasta despausar/cobrar.",
+                        "Agregar a pausa",
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Question);
-                    if (cont != DialogResult.Yes)
+
+                    if (sumar != DialogResult.Yes)
                         return;
+
+                    int pausaId = ventaPausadaBLL.AgregarCarritoAPausaActiva(
+                        clienteId,
+                        lineasAIntegrar,
+                        Sesion.Usuario);
+
+                    QuitarLineasDelCarrito(lineasAIntegrar);
+                    CalcularTotal();
+
+                    RefrescarMiembrosPausados(seleccionarPausaId: pausaId);
+                    MostrarDetallePausa(pausaId);
+                    return;
                 }
 
-                int pausaId = ventaPausadaBLL.PausarCarrito(
+                // Primera pausa: carrito completo (comportamiento original).
+                int nuevaPausaId = ventaPausadaBLL.PausarCarrito(
                     clienteId,
                     nombre,
                     carrito,
@@ -1586,13 +1612,94 @@ namespace UI.DISEÑO
                 carrito.Clear();
                 CalcularTotal();
 
-                RefrescarMiembrosPausados(seleccionarPausaId: pausaId);
-                MostrarDetallePausa(pausaId);
+                RefrescarMiembrosPausados(seleccionarPausaId: nuevaPausaId);
+                MostrarDetallePausa(nuevaPausaId);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error al pausar", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// Preferencia: fila seleccionada en dgvCarrito; si no hay selección válida, todo el carrito.
+        /// </summary>
+        private DataTable ObtenerLineasCarritoParaPausa()
+        {
+            var dt = carrito.Clone();
+
+            if (dgvCarrito?.CurrentRow?.DataBoundItem is DataRowView view
+                && view.Row.RowState != DataRowState.Deleted
+                && view.Row.RowState != DataRowState.Detached
+                && view.Row.Table == carrito)
+            {
+                DataRow src = view.Row;
+                int productoId = Convert.ToInt32(src["ProductoId"]);
+                int cantidad = Convert.ToInt32(src["Cantidad"]);
+                if (productoId > 0 && cantidad > 0)
+                {
+                    dt.Rows.Add(
+                        productoId,
+                        src["Producto"]?.ToString() ?? "Producto",
+                        Convert.ToDecimal(src["Precio"]),
+                        cantidad,
+                        Convert.ToDecimal(src["Total"]));
+                    return dt;
+                }
+            }
+
+            foreach (DataRow row in carrito.Rows)
+            {
+                if (row.RowState == DataRowState.Deleted)
+                    continue;
+
+                int productoId = Convert.ToInt32(row["ProductoId"]);
+                int cantidad = Convert.ToInt32(row["Cantidad"]);
+                if (productoId <= 0 || cantidad <= 0)
+                    continue;
+
+                dt.Rows.Add(
+                    productoId,
+                    row["Producto"]?.ToString() ?? "Producto",
+                    Convert.ToDecimal(row["Precio"]),
+                    cantidad,
+                    Convert.ToDecimal(row["Total"]));
+            }
+
+            return dt;
+        }
+
+        private static string ResumirLineasCarrito(DataTable lineas)
+        {
+            var partes = new System.Collections.Generic.List<string>();
+            foreach (DataRow row in lineas.Rows)
+            {
+                if (row.RowState == DataRowState.Deleted)
+                    continue;
+                partes.Add($"{Convert.ToInt32(row["Cantidad"])} × {row["Producto"]}");
+            }
+
+            return partes.Count == 0 ? "(sin productos)" : string.Join("\n", partes);
+        }
+
+        /// <summary>Quita del carrito las mismas ProductoId integradas a la pausa.</summary>
+        private void QuitarLineasDelCarrito(DataTable lineasIntegradas)
+        {
+            foreach (DataRow integ in lineasIntegradas.Rows)
+            {
+                if (integ.RowState == DataRowState.Deleted)
+                    continue;
+
+                int productoId = Convert.ToInt32(integ["ProductoId"]);
+                DataRow[] match = carrito.Select($"ProductoId = {productoId}");
+                foreach (DataRow row in match)
+                {
+                    if (row.RowState != DataRowState.Deleted)
+                        row.Delete();
+                }
+            }
+
+            carrito.AcceptChanges();
         }
 
         private void RefrescarMiembrosPausados(int? seleccionarPausaId = null)

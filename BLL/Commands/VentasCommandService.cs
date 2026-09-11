@@ -63,6 +63,38 @@ namespace BLL.Commands
         }
 
         /// <summary>
+        /// Despacho parcial (N unidades de una línea). Payload: (ventaId, saldoCerrado, producto).
+        /// </summary>
+        public static CommandResult RegistrarDespachoSaldoAFavorParcial(
+            int saldoClienteId,
+            int detalleId,
+            int cantidad = 1,
+            string? usuario = null)
+        {
+            try
+            {
+                var bll = new SaldoClienteBLL();
+                var (operacion, cerrado, producto) = bll.DespacharSaldoParcial(
+                    saldoClienteId,
+                    detalleId,
+                    cantidad,
+                    ResolveUsuario(usuario));
+
+                MovimientoFinancieroNotifier.VentaSinCaja();
+
+                string msg = cerrado
+                    ? $"Despachado {cantidad} × {producto}. Reserva completada."
+                    : $"Despachado {cantidad} × {producto}. Quedan productos en reserva.";
+
+                return CommandResult.Ok(msg, (operacion.VentaId, cerrado, producto));
+            }
+            catch (Exception ex)
+            {
+                return CommandResult.Fail(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Sincroniza historial, caja, deudas y dashboards que escuchan AppEventos.
         /// </summary>
         private static void NotificarEventosPostVentaProducto(VentaOperacionResult operacion)

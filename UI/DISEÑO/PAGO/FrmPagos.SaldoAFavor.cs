@@ -26,6 +26,7 @@ namespace UI.DISEÑO
 
             if (_tablaSaldoAbono.Columns.Count == 0)
             {
+                _tablaSaldoAbono.Columns.Add("DetalleId", typeof(int));
                 _tablaSaldoAbono.Columns.Add("ProductoId", typeof(int));
                 _tablaSaldoAbono.Columns.Add("Producto", typeof(string));
                 _tablaSaldoAbono.Columns.Add("Precio", typeof(decimal));
@@ -38,11 +39,22 @@ namespace UI.DISEÑO
             dgvSaldoAbono.AllowUserToDeleteRows = false;
             dgvSaldoAbono.ReadOnly = true;
             dgvSaldoAbono.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvSaldoAbono.MultiSelect = false;
             dgvSaldoAbono.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             ThemeApplier.ApplyReadOnlyGridBehavior(dgvSaldoAbono);
+            dgvSaldoAbono.DataBindingComplete -= dgvSaldoAbono_DataBindingComplete;
+            dgvSaldoAbono.DataBindingComplete += dgvSaldoAbono_DataBindingComplete;
 
             LimpiarVistaSaldoAbono();
             RefrescarMiembrosConSaldo();
+        }
+
+        private void dgvSaldoAbono_DataBindingComplete(object? sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            if (dgvSaldoAbono.Columns.Contains("DetalleId"))
+                dgvSaldoAbono.Columns["DetalleId"].Visible = false;
+            if (dgvSaldoAbono.Columns.Contains("ProductoId"))
+                dgvSaldoAbono.Columns["ProductoId"].Visible = false;
         }
 
         private void CargarCombosSaldoAFavor(DataTable clientesPos)
@@ -222,6 +234,7 @@ namespace UI.DISEÑO
                     continue;
 
                 _tablaSaldoAbono.Rows.Add(
+                    0,
                     Convert.ToInt32(row["ProductoId"]),
                     row["Producto"]?.ToString() ?? "Producto",
                     Convert.ToDecimal(row["Precio"]),
@@ -246,7 +259,11 @@ namespace UI.DISEÑO
             foreach (DataRow row in detalle.Rows)
             {
                 decimal linea = Convert.ToDecimal(row["Total"]);
+                int detalleId = row.Table.Columns.Contains("DetalleId") && row["DetalleId"] != DBNull.Value
+                    ? Convert.ToInt32(row["DetalleId"])
+                    : 0;
                 _tablaSaldoAbono.Rows.Add(
+                    detalleId,
                     Convert.ToInt32(row["ProductoId"]),
                     row["Producto"]?.ToString() ?? "Producto",
                     Convert.ToDecimal(row["Precio"]),
@@ -257,6 +274,7 @@ namespace UI.DISEÑO
 
             lblNombreSaldoAbono.Text = nombreCliente;
             lblTotalSaldoAbono.Text = $"RD$ {total:N2}";
+            dgvSaldoAbono.ClearSelection();
         }
 
         private void LimpiarVistaSaldoAbono()
@@ -390,8 +408,20 @@ namespace UI.DISEÑO
                     return;
                 }
 
+                if (cabecera["ClienteNombre"] != null && cabecera["ClienteNombre"] != DBNull.Value)
+                    nombre = Convert.ToString(cabecera["ClienteNombre"])?.Trim() ?? nombre;
+
+                // Fila con DetalleId > 0 → cantidad manual; sin selección → despacho total.
+                if (TryObtenerLineaDespachoSeleccionada(out int detalleId, out string producto, out int cantidadDisponible)
+                    && detalleId > 0)
+                {
+                    DespacharCantidadSaldo(saldoId, detalleId, producto, cantidadDisponible, nombre);
+                    return;
+                }
+
                 DialogResult confirmar = MessageBox.Show(
-                    $"¿Despachar los productos reservados de {nombre}?\n\n" +
+                    $"¿Despachar TODOS los productos reservados de {nombre}?\n\n" +
+                    "Tip: seleccione una fila del grid para indicar la cantidad a despachar.\n" +
                     "No se cobrará de nuevo (ya pagó con saldo a favor).",
                     "Despachar reserva",
                     MessageBoxButtons.YesNo,
@@ -427,6 +457,103 @@ namespace UI.DISEÑO
             {
                 MessageBox.Show(ex.Message, "Despachar reserva", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// Despacha N unidades de la línea seleccionada (cantidad vía mini diálogo).
+        /// Conserva cableo: venta/stock + refresco historial (OnPagoRegistrado).
+        /// </summary>
+        private void DespacharCantidadSaldo(
+            int saldoId,
+            int detalleId,
+            string producto,
+            int cantidadDisponible,
+            string nombre)
+        {
+            int? elegida = SeleccionCantidadDespachoDialog.Mostrar(
+                this,
+                producto,
+                cantidadDisponible,
+                valorInicial: Math.Min(1, cantidadDisponible));
+
+            if (elegida is not int cantidad || cantidad <= 0)
+                return;
+
+            var result = VentasCommandService.RegistrarDespachoSaldoAFavorParcial(
+                saldoId,
+                detalleId,
+                cantidad,
+                Sesion.Usuario);
+
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            bool cerrado = false;
+            int ventaId = 0;
+            if (result.Payload is ValueTuple<int, bool, string> payload)
+            {
+                ventaId = payload.Item1;
+                cerrado = payload.Item2;
+            }
+
+            CargarProductos();
+            ProgramarRefrescoDashboard();
+
+            if (cerrado)
+            {
+                RefrescarMiembrosConSaldo();
+                LimpiarVistaSaldoAbono();
+                MessageBox.Show(
+                    $"Despachado {cantidad} × {producto} para {nombre}.\n" +
+                    $"Reserva completada.\n\nVenta Id {ventaId}",
+                    "Despachar",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            RefrescarMiembrosConSaldo(seleccionarSaldoId: saldoId);
+            MostrarDetalleSaldoActivo(saldoId, nombre);
+            MessageBox.Show(
+                $"Despachado {cantidad} × {producto} para {nombre}.\n" +
+                $"Puede seguir despachando el resto.\n\nVenta Id {ventaId}",
+                "Despachar",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        private bool TryObtenerLineaDespachoSeleccionada(
+            out int detalleId,
+            out string producto,
+            out int cantidad)
+        {
+            detalleId = 0;
+            producto = string.Empty;
+            cantidad = 0;
+
+            if (dgvSaldoAbono?.CurrentRow == null || dgvSaldoAbono.CurrentRow.IsNewRow)
+                return false;
+
+            if (dgvSaldoAbono.CurrentRow.DataBoundItem is not DataRowView view)
+                return false;
+
+            DataRow row = view.Row;
+            if (row.RowState == DataRowState.Deleted || row.RowState == DataRowState.Detached)
+                return false;
+
+            if (!row.Table.Columns.Contains("DetalleId") || row["DetalleId"] == DBNull.Value)
+                return false;
+
+            detalleId = Convert.ToInt32(row["DetalleId"]);
+            if (detalleId <= 0)
+                return false;
+
+            producto = row["Producto"]?.ToString()?.Trim() ?? "Producto";
+            cantidad = Convert.ToInt32(row["Cantidad"]);
+            return cantidad > 0;
         }
 
         private bool TryObtenerClienteAsignarSaldo(out int clienteId, out string nombre)

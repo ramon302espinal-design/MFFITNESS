@@ -183,5 +183,85 @@ namespace BLL
             // Notificación: VentasCommandService.RegistrarDespachoSaldoAFavor
             return operacion;
         }
+
+        /// <summary>
+        /// Despacha N unidades de una línea (venta + stock, sin caja).
+        /// Si no quedan productos, cierra el saldo; si quedan, sigue ACTIVO.
+        /// </summary>
+        public (VentaOperacionResult Operacion, bool SaldoCerrado, string Producto) DespacharSaldoParcial(
+            int saldoClienteId,
+            int detalleId,
+            int cantidad,
+            string? usuario)
+        {
+            if (saldoClienteId <= 0)
+                throw new Exception("Seleccione un miembro con saldo a favor.");
+
+            if (detalleId <= 0)
+                throw new Exception("Seleccione un producto de la reserva.");
+
+            if (cantidad <= 0)
+                throw new Exception("Cantidad inválida.");
+
+            var cabecera = dal.ObtenerCabeceraActiva(saldoClienteId)
+                ?? throw new Exception("El saldo a favor ya no está activo.");
+
+            DataRow linea = dal.ObtenerLineaDetalleActiva(saldoClienteId, detalleId)
+                ?? throw new Exception("Ese producto ya no está en la reserva.");
+
+            int clienteId = Convert.ToInt32(cabecera["ClienteId"]);
+            int productoId = Convert.ToInt32(linea["ProductoId"]);
+            string producto = linea["Producto"]?.ToString()?.Trim() ?? "Producto";
+            decimal precio = Convert.ToDecimal(linea["Precio"]);
+            int disponible = Convert.ToInt32(linea["Cantidad"]);
+
+            if (cantidad > disponible)
+                throw new Exception($"Solo quedan {disponible} unidad(es) de {producto}.");
+
+            decimal total = Math.Round(precio * cantidad, 2, MidpointRounding.AwayFromZero);
+            string user = string.IsNullOrWhiteSpace(usuario) ? "ADMIN" : usuario.Trim();
+
+            var carrito = new DataTable();
+            carrito.Columns.Add("ProductoId", typeof(int));
+            carrito.Columns.Add("Producto", typeof(string));
+            carrito.Columns.Add("Precio", typeof(decimal));
+            carrito.Columns.Add("Cantidad", typeof(int));
+            carrito.Columns.Add("Total", typeof(decimal));
+            carrito.Rows.Add(productoId, producto, precio, cantidad, total);
+
+            VentaOperacionResult operacion;
+            try
+            {
+                operacion = ventasBLL.RegistrarVentaDespachoSaldoAFavor(
+                    clienteId,
+                    total,
+                    user,
+                    carrito,
+                    saldoClienteId);
+            }
+            catch
+            {
+                throw;
+            }
+
+            bool cerrado;
+            try
+            {
+                cerrado = dal.ConsumirDetalleTrasDespacho(
+                    saldoClienteId,
+                    detalleId,
+                    cantidad,
+                    operacion.VentaId,
+                    user);
+            }
+            catch
+            {
+                try { ventasBLL.RevertirVenta(operacion, user); }
+                catch { /* best effort */ }
+                throw;
+            }
+
+            return (operacion, cerrado, producto);
+        }
     }
 }

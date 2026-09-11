@@ -57,6 +57,8 @@ namespace UI.DISEÑO
 
             CargarHistorialPagos();
             CargarHistorialMembresia();
+            // Ventas de producto (incl. despacho saldo a favor / VentaSinCaja → OnPagoRegistrado).
+            CargarVentas();
         }
 
         public FrmHistorialVentas()

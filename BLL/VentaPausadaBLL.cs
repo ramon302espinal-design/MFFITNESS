@@ -89,6 +89,50 @@ namespace BLL
                 lineas);
         }
 
+        /// <summary>
+        /// Suma el carrito a la pausa activa del cliente (misma ProductoId acumula).
+        /// No reemplaza ni cancela la pausa.
+        /// </summary>
+        public int AgregarCarritoAPausaActiva(
+            int clienteId,
+            DataTable carrito,
+            string? usuario)
+        {
+            if (clienteId <= 0)
+                throw new Exception("Seleccione un miembro válido.");
+
+            int? pausaId = ObtenerIdPausaActivaPorCliente(clienteId)
+                ?? throw new Exception("Ese miembro no tiene una venta en pausa.");
+
+            if (carrito == null || carrito.Rows.Count == 0)
+                throw new Exception("El carrito está vacío.");
+
+            var lineas = carrito.Clone();
+            foreach (DataRow row in carrito.Rows)
+            {
+                if (row.RowState == DataRowState.Deleted)
+                    continue;
+
+                int productoId = Convert.ToInt32(row["ProductoId"]);
+                string producto = Convert.ToString(row["Producto"])?.Trim() ?? "Producto";
+                decimal precio = Convert.ToDecimal(row["Precio"]);
+                int cantidad = Convert.ToInt32(row["Cantidad"]);
+                decimal lineaTotal = Convert.ToDecimal(row["Total"]);
+
+                if (productoId <= 0 || cantidad <= 0)
+                    continue;
+
+                lineas.Rows.Add(productoId, producto, precio, cantidad, lineaTotal);
+            }
+
+            if (lineas.Rows.Count == 0)
+                throw new Exception("No hay líneas válidas para agregar a la pausa.");
+
+            _ = usuario;
+            dal.AgregarLineasAPausa(pausaId.Value, lineas);
+            return pausaId.Value;
+        }
+
         public DataTable Despausar(int ventaPausadaId)
         {
             if (ventaPausadaId <= 0)
