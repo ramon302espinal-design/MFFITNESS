@@ -96,5 +96,35 @@ namespace CORE
 
             return CalcularFechaVencimiento(fechaInicio);
         }
+
+        /// <summary>
+        /// Próximo día 15 de ciclo (inclusive hoy si hoy es 15).
+        /// </summary>
+        public static DateTime ObtenerProximoDia15(DateTime referencia)
+        {
+            DateTime hoy = referencia.Date;
+            DateTime candidato = new DateTime(hoy.Year, hoy.Month, 15);
+            return hoy.Day <= 15 ? candidato : candidato.AddMonths(1);
+        }
+
+        /// <summary>
+        /// Próximo fin de mes de ciclo (último día del mes de <paramref name="referencia"/>).
+        /// </summary>
+        public static DateTime ObtenerProximoFinDeMes(DateTime referencia)
+        {
+            DateTime hoy = referencia.Date;
+            int ultimo = DateTime.DaysInMonth(hoy.Year, hoy.Month);
+            return new DateTime(hoy.Year, hoy.Month, ultimo);
+        }
+
+        /// <summary>FechaFin cae en día 15 (ciclo quincena).</summary>
+        public static bool EsCicloDia15(DateTime fechaFin) => fechaFin.Date.Day == 15;
+
+        /// <summary>FechaFin cae en el último día de su mes (ciclo fin de mes).</summary>
+        public static bool EsCicloFinDeMes(DateTime fechaFin)
+        {
+            DateTime d = fechaFin.Date;
+            return d.Day == DateTime.DaysInMonth(d.Year, d.Month);
+        }
     }
 }

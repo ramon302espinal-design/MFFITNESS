@@ -28,18 +28,13 @@ namespace UI.DISEÑO
         private readonly MensajeAutomaticoBLL mensajeBLL = new MensajeAutomaticoBLL();
         private readonly ReporteBLL reporteBLL = new ReporteBLL();
         private readonly ChatBLL chatBLL = new ChatBLL();
-        private readonly BindingSource _bsEstado = new BindingSource();
         private static readonly CultureInfo CulturaDo = CultureInfo.GetCultureInfo("es-DO");
-        private ContextMenuStrip? _menuEstado;
-        private ToolStripMenuItem? _mnuAjustarFechaFin;
 
         // ===============================
         // CONTROL
         // ===============================
-        private System.Windows.Forms.Timer timerActualizacion = new System.Windows.Forms.Timer();
         private bool cargando = false;
         private bool _estadoUiInicializado;
-        private Label? _lblEstadoConteos;
         private DateTime _ultimaSyncEstado = DateTime.MinValue;
 
         /// <summary>Constructor para el diseñador de WinForms.</summary>
@@ -59,8 +54,6 @@ namespace UI.DISEÑO
                 return;
 
             ModuloNavBar.Wire(panelNav, this, ModuloNavBar.ModuloEstado);
-            // Columnas vienen del DataSource; AutoGenerate solo en runtime.
-            dgvEstado.AutoGenerateColumns = true;
         }
 
         // ===============================
@@ -105,8 +98,10 @@ namespace UI.DISEÑO
 
             _estadoUiInicializado = true;
 
+            if (cmbEstaCategoria.SelectedIndex < 0 && cmbEstaCategoria.Items.Count > 0)
+                cmbEstaCategoria.SelectedIndex = 0;
+
             InicializarComboMesesPanel();
-            InicializarEtiquetaConteos();
 
             AppEventos.OnPagoRegistrado -= OnDatosEstadoCambiaron;
             AppEventos.OnDeudaModificada -= OnDatosEstadoCambiaron;
@@ -118,17 +113,7 @@ namespace UI.DISEÑO
             AppEventos.OnProgramacionActivada += OnProgramacionActivadaEstado;
 
             CargarEstado();
-
-            ConfigurarMenuContextualEstado();
-
-            timerActualizacion.Interval = 30000;
-            timerActualizacion.Tick -= TimerActualizacion_Tick;
-            timerActualizacion.Tick += TimerActualizacion_Tick;
             timerActualizacion.Start();
-
-            // Rojo fijo; no enganchar BackColorChanged→Load (congelaba con el tema/hover).
-            btnDesactivar.BackColor = Color.Red;
-            btnDesactivar.ForeColor = Color.White;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -153,29 +138,9 @@ namespace UI.DISEÑO
             CargarEstado();
         }
 
-        private void InicializarEtiquetaConteos()
-        {
-            if (_lblEstadoConteos != null || panelBusqueda == null || panelBusqueda.IsDisposed)
-                return;
-
-            _lblEstadoConteos = new Label
-            {
-                AutoSize = false,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 8F),
-                ForeColor = Color.FromArgb(64, 64, 64),
-                Location = new Point(12, 38),
-                Name = "lblEstadoConteos",
-                Size = new Size(panelBusqueda.Width - 680, 18),
-                Text = "Conteos alineados con home (SSOT Estado)."
-            };
-            panelBusqueda.Controls.Add(_lblEstadoConteos);
-            panelBusqueda.Height = Math.Max(panelBusqueda.Height, 64);
-        }
-
         private void ActualizarEtiquetaConteos(DataTable tabla)
         {
-            if (_lblEstadoConteos == null || _lblEstadoConteos.IsDisposed)
+            if (lblEstadoConteos == null || lblEstadoConteos.IsDisposed)
                 return;
 
             bool ok = EstadoConteosSSOT.CoincidenConTabla(tabla, out string resumen);
@@ -183,11 +148,11 @@ namespace UI.DISEÑO
                 ? "sin eventos en sesión"
                 : $"sync {_ultimaSyncEstado:HH:mm:ss}";
 
-            _lblEstadoConteos.Text =
+            lblEstadoConteos.Text =
                 (ok ? "✓ " : "⚠ ") +
                 resumen +
                 " · Home usa mismos conteos · WhatsApp solo deudas con saldo · " + sync;
-            _lblEstadoConteos.ForeColor = ok
+            lblEstadoConteos.ForeColor = ok
                 ? Color.FromArgb(64, 64, 64)
                 : Color.FromArgb(180, 83, 9);
         }
@@ -223,13 +188,15 @@ namespace UI.DISEÑO
 
                 AsegurarColumnasEstado(tabla);
 
-                _bsEstado.DataSource = tabla;
-                dgvEstado.DataSource = _bsEstado;
-                AplicarFiltroBusqueda();
+                bsEstado.DataSource = tabla;
+                dgvEstado.DataSource = bsEstado;
+                AplicarFiltrosEstado();
                 FormatearGrid();
                 ActualizarKpisSegunPeriodo(tabla);
+                ActualizarKpisCicloVencimiento(tabla);
                 ActualizarEtiquetaTiempo();
                 ActualizarEtiquetaConteos(tabla);
+                ActualizarLabelsConteoCategorias(tabla);
                 dgvEstado.ClearSelection();
             }
             catch (Exception ex)
@@ -243,6 +210,54 @@ namespace UI.DISEÑO
                 dgvEstado.ResumeLayout();
                 cargando = false;
             }
+        }
+
+        /// <summary>
+        /// Conteos en vivo del DataTable del grid (sin BindingSource.Filter),
+        /// mismas reglas que cmbEstaCategoria / EstadoConteosSSOT.
+        /// </summary>
+        private void ActualizarLabelsConteoCategorias(DataTable? tabla)
+        {
+            var c = EstadoConteosSSOT.ContarDesdeTabla(tabla);
+            int conDeuda = ContarConDeudaDesdeTabla(tabla);
+
+            SetLabelConteoCategoria(lblVencidos, "VENCIDOS", c.Vencidos);
+            SetLabelConteoCategoria(lblDesactivados, "DESACTIVADOS", c.Desactivados);
+            SetLabelConteoCategoria(lblCongelado, "CONGELADOS", c.Congelados);
+            SetLabelConteoCategoria(lblCondeuda, "CON DEUDA", conDeuda);
+        }
+
+        /// <summary>Misma regla que filtro CON DEUDA: EstadoDeuda ACTIVA y SaldoPendiente &gt; 0.</summary>
+        private static int ContarConDeudaDesdeTabla(DataTable? tabla)
+        {
+            if (tabla == null
+                || !tabla.Columns.Contains("EstadoDeuda")
+                || !tabla.Columns.Contains("SaldoPendiente"))
+                return 0;
+
+            int n = 0;
+            foreach (DataRow row in tabla.Rows)
+            {
+                string estadoDeuda = Convert.ToString(row["EstadoDeuda"])?.Trim() ?? string.Empty;
+                if (!string.Equals(estadoDeuda, "ACTIVA", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (row["SaldoPendiente"] == null || row["SaldoPendiente"] == DBNull.Value)
+                    continue;
+
+                if (Convert.ToDecimal(row["SaldoPendiente"]) > 0m)
+                    n++;
+            }
+
+            return n;
+        }
+
+        private static void SetLabelConteoCategoria(Label? label, string titulo, int cantidad)
+        {
+            if (label == null || label.IsDisposed)
+                return;
+
+            label.Text = titulo + ": " + cantidad.ToString("N0", CulturaDo);
         }
 
         /// <summary>M-A y MENSUALIDAD → bucket MENSUALIDAD; planes especiales con bucket propio; resto → OTROS (solo TOTAL).</summary>
@@ -315,7 +330,7 @@ namespace UI.DISEÑO
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Nombre", col =>
                 {
                     col.HeaderText = "Cliente";
-                    DataGridViewHelper.SetColumnWidth(col, 200);
+                    DataGridViewHelper.SetColumnFill(col, 200, 150);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "FechaInicio", col =>
@@ -324,8 +339,7 @@ namespace UI.DISEÑO
                     col.DefaultCellStyle.Format = "dd/MM/yyyy";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     col.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
-                    DataGridViewHelper.SetColumnWidth(col, 110);
-                    col.MinimumWidth = 110;
+                    DataGridViewHelper.SetColumnFill(col, 90, 100);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "FechaFin", col =>
@@ -334,15 +348,13 @@ namespace UI.DISEÑO
                     col.DefaultCellStyle.Format = "dd/MM/yyyy";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                     col.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
-                    DataGridViewHelper.SetColumnWidth(col, 110);
-                    col.MinimumWidth = 110;
+                    DataGridViewHelper.SetColumnFill(col, 90, 100);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Membresia", col =>
                 {
                     col.HeaderText = "Plan";
-                    DataGridViewHelper.SetColumnWidth(col, 130);
-                    col.MinimumWidth = 100;
+                    DataGridViewHelper.SetColumnFill(col, 110, 100);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "MontoPagado", col =>
@@ -350,7 +362,7 @@ namespace UI.DISEÑO
                     col.HeaderText = "Monto Pagado";
                     col.DefaultCellStyle.Format = "C2";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                    DataGridViewHelper.SetColumnWidth(col, 120);
+                    DataGridViewHelper.SetColumnFill(col, 100, 100);
                     col.DefaultCellStyle.ForeColor = Color.DarkGreen;
                     col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
                 });
@@ -358,13 +370,13 @@ namespace UI.DISEÑO
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Estado", col =>
                 {
                     col.HeaderText = "Estado";
-                    DataGridViewHelper.SetColumnWidth(col, 160);
+                    DataGridViewHelper.SetColumnFill(col, 130, 120);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "EstadoDeuda", col =>
                 {
                     col.HeaderText = "Estado Deuda";
-                    DataGridViewHelper.SetColumnWidth(col, 110);
+                    DataGridViewHelper.SetColumnFill(col, 90, 100);
                     col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
                 });
 
@@ -373,7 +385,7 @@ namespace UI.DISEÑO
                     col.HeaderText = "Saldo Pendiente";
                     col.DefaultCellStyle.Format = "C2";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                    DataGridViewHelper.SetColumnWidth(col, 120);
+                    DataGridViewHelper.SetColumnFill(col, 100, 100);
                     col.DefaultCellStyle.ForeColor = Color.Red;
                     col.DefaultCellStyle.Font = new Font(dgvEstado.Font, FontStyle.Bold);
                 });
@@ -383,16 +395,16 @@ namespace UI.DISEÑO
                     col.HeaderText = "Monto Financiado";
                     col.DefaultCellStyle.Format = "C2";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                    DataGridViewHelper.SetColumnWidth(col, 130);
+                    DataGridViewHelper.SetColumnFill(col, 110, 100);
                 });
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "VencimientoDeuda", col =>
                 {
                     col.HeaderText = "Vence Deuda";
                     col.DefaultCellStyle.Format = "dd/MM/yyyy";
-                    DataGridViewHelper.SetColumnWidth(col, 100);
+                    DataGridViewHelper.SetColumnFill(col, 90, 90);
                 });
-                });
+                }, restoreFill: true);
             }
             catch (Exception ex)
             {
@@ -400,17 +412,69 @@ namespace UI.DISEÑO
             }
         }
 
-        private void AplicarFiltroBusqueda()
+        private void AplicarFiltrosEstado()
         {
-            var termino = txtBuscar.Text.Trim();
-            _bsEstado.Filter = string.IsNullOrEmpty(termino)
-                ? null
-                : BusquedaGridHelper.ConstruirFiltroEstadoClientes(termino);
+            if (bsEstado.DataSource == null)
+                return;
+
+            var partes = new List<string>();
+
+            string? filtroCategoria = ObtenerFiltroCategoriaEstado();
+            if (!string.IsNullOrEmpty(filtroCategoria))
+                partes.Add(filtroCategoria);
+
+            var termino = txtBuscar?.Text?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(termino))
+                partes.Add("(" + BusquedaGridHelper.ConstruirFiltroEstadoClientes(termino) + ")");
+
+            bsEstado.Filter = partes.Count == 0 ? null : string.Join(" AND ", partes);
+        }
+
+        /// <summary>
+        /// Filtro UI sobre columnas SSOT ya cargadas. No altera SQL ni conteos home (usan tabla completa).
+        /// Activos = ACTIVO + ACTIVO Y PROGRAMADO. Deuda = EstadoDeuda ACTIVA (saldo &gt; 0 en DAL).
+        /// PAGOS PAL 15 / FIN DE MES = activos que vencen en la próxima fecha de ciclo.
+        /// </summary>
+        private string? ObtenerFiltroCategoriaEstado()
+        {
+            string categoria = cmbEstaCategoria?.SelectedItem?.ToString()?.Trim() ?? "TODOS";
+            string activos = "(Estado = 'ACTIVO' OR Estado = 'ACTIVO Y PROGRAMADO')";
+
+            return categoria.ToUpperInvariant() switch
+            {
+                "CON DEUDA" => "EstadoDeuda = 'ACTIVA' AND SaldoPendiente > 0",
+                "ACTIVOS" => activos,
+                "VENCIDOS" => "Estado = 'VENCIDO'",
+                "DESACTIVADOS" => "Estado = 'DESACTIVADO'",
+                "CONGELADOS" => "Estado = 'CONGELADO'",
+                "PAGOS PAL 15" => activos + " AND " + ConstruirFiltroFechaFinExacta(MembresiaHelper.ObtenerProximoDia15(DateTime.Today)),
+                "PAGOS PAL FIN DE MES" => activos + " AND " + ConstruirFiltroFechaFinExacta(MembresiaHelper.ObtenerProximoFinDeMes(DateTime.Today)),
+                _ => null // TODOS / desconocido → sin filtro de categoría
+            };
+        }
+
+        /// <summary>Filtro DataView para FechaFin en un día calendario (invariant #M/d/yyyy#).</summary>
+        private static string ConstruirFiltroFechaFinExacta(DateTime dia)
+        {
+            DateTime d = dia.Date;
+            DateTime siguiente = d.AddDays(1);
+            return $"FechaFin >= #{d.Month}/{d.Day}/{d.Year}# AND FechaFin < #{siguiente.Month}/{siguiente.Day}/{siguiente.Year}#";
         }
 
         private void txtBuscar_TextChanged(object sender, EventArgs e)
         {
-            AplicarFiltroBusqueda();
+            AplicarFiltrosEstado();
+        }
+
+        private void cmbEstaCategoria_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cargando || !_estadoUiInicializado)
+                return;
+
+            AplicarFiltrosEstado();
+
+            if (bsEstado.DataSource is DataTable tabla)
+                ActualizarKpisCicloVencimiento(tabla);
         }
 
         private void dgvEstado_SelectionChanged(object sender, EventArgs e)
@@ -496,18 +560,6 @@ namespace UI.DISEÑO
                 return;
 
             AbrirGestionDeudasCliente(clienteId);
-        }
-
-        private void ConfigurarMenuContextualEstado()
-        {
-            if (_menuEstado != null)
-                return;
-
-            _menuEstado = new ContextMenuStrip();
-            _mnuAjustarFechaFin = new ToolStripMenuItem("Modificar fecha de vencimiento…");
-            _mnuAjustarFechaFin.Click += mnuAjustarFechaFin_Click;
-            _menuEstado.Items.Add(_mnuAjustarFechaFin);
-            dgvEstado.ContextMenuStrip = _menuEstado;
         }
 
         private void dgvEstado_CellMouseDown(object? sender, DataGridViewCellMouseEventArgs e)
@@ -638,6 +690,35 @@ namespace UI.DISEÑO
         // ===============================
         // COLORES
         // ===============================
+        /// <summary>
+        /// Numeración 1..N de filas visibles (izquierda). Solo pintura de UI;
+        /// no altera DataTable, BindingSource, filtros, KPIs ni selección.
+        /// </summary>
+        private void dgvEstado_RowPostPaint(object? sender, DataGridViewRowPostPaintEventArgs e)
+        {
+            if (e.RowIndex < 0 || !dgvEstado.RowHeadersVisible)
+                return;
+
+            string texto = (e.RowIndex + 1).ToString(CulturaDo);
+            var bounds = new Rectangle(
+                e.RowBounds.Left + 2,
+                e.RowBounds.Top,
+                dgvEstado.RowHeadersWidth - 4,
+                e.RowBounds.Height);
+
+            Color color = dgvEstado.RowHeadersDefaultCellStyle.ForeColor;
+            if (color.IsEmpty)
+                color = Color.FromArgb(90, 90, 90);
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                texto,
+                dgvEstado.RowHeadersDefaultCellStyle.Font ?? dgvEstado.Font,
+                bounds,
+                color,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        }
+
         private void dgvEstado_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
         {
             if (cargando || e.RowIndex < 0 || e.ColumnIndex < 0)
@@ -1122,31 +1203,40 @@ namespace UI.DISEÑO
         }
 
         // ===============================
-        // KPIs POR MES (cbmMesesPanel + lblTiempo)
+        // KPIs POR MES / DÍA (cbmMesesPanel + lblTiempo)
         // ===============================
         private sealed class OpcionMesPanel
         {
             public bool EsHoy { get; init; }
+            public bool EsPersonalizado { get; init; }
             public int Mes { get; init; }
             public int Anio { get; init; }
-            public string Etiqueta { get; init; } = string.Empty;
+            public DateTime? FechaDia { get; set; }
+            public string Etiqueta { get; set; } = string.Empty;
 
             public override string ToString() => Etiqueta;
         }
 
         private bool _cmbMesesInicializado;
+        private int _cmbMesesIndicePrevio;
+        private bool _cmbMesesCambiando;
 
         private void InicializarComboMesesPanel()
         {
             if (_cmbMesesInicializado || cbmMesesPanel == null || cbmMesesPanel.IsDisposed)
                 return;
 
-            _cmbMesesInicializado = true;
-            cbmMesesPanel.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbmMesesPanel.SelectedIndexChanged -= cbmMesesPanel_SelectedIndexChanged;
 
             int anio = DateTime.Today.Year;
-            var items = new object[13];
+            var items = new object[14];
             items[0] = new OpcionMesPanel { EsHoy = true, Anio = anio, Etiqueta = "HOY" };
+            items[1] = new OpcionMesPanel
+            {
+                EsPersonalizado = true,
+                Anio = anio,
+                Etiqueta = "PERSONALIZADO…"
+            };
 
             for (int mes = 1; mes <= 12; mes++)
             {
@@ -1154,7 +1244,7 @@ namespace UI.DISEÑO
                 if (!string.IsNullOrEmpty(nombre))
                     nombre = char.ToUpper(nombre[0], CulturaDo) + nombre[1..];
 
-                items[mes] = new OpcionMesPanel
+                items[mes + 1] = new OpcionMesPanel
                 {
                     EsHoy = false,
                     Mes = mes,
@@ -1163,20 +1253,60 @@ namespace UI.DISEÑO
                 };
             }
 
+            cbmMesesPanel.Items.Clear();
             cbmMesesPanel.Items.AddRange(items);
             cbmMesesPanel.SelectedIndex = 0;
+            _cmbMesesIndicePrevio = 0;
             cbmMesesPanel.SelectedIndexChanged += cbmMesesPanel_SelectedIndexChanged;
+            _cmbMesesInicializado = true;
             ActualizarEtiquetaTiempo();
         }
 
         private void cbmMesesPanel_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (cargando || !_cmbMesesInicializado)
+            if (cargando || !_cmbMesesInicializado || _cmbMesesCambiando)
                 return;
 
+            if (cbmMesesPanel.SelectedItem is OpcionMesPanel opcion && opcion.EsPersonalizado)
+            {
+                DateTime inicial = opcion.FechaDia ?? DateTime.Today;
+                DateTime? elegida = SeleccionDiaEstadoDialog.Mostrar(this, inicial);
+                if (elegida == null)
+                {
+                    _cmbMesesCambiando = true;
+                    try
+                    {
+                        if (_cmbMesesIndicePrevio >= 0
+                            && _cmbMesesIndicePrevio < cbmMesesPanel.Items.Count)
+                            cbmMesesPanel.SelectedIndex = _cmbMesesIndicePrevio;
+                    }
+                    finally
+                    {
+                        _cmbMesesCambiando = false;
+                    }
+                    return;
+                }
+
+                opcion.FechaDia = elegida.Value.Date;
+                opcion.Etiqueta = elegida.Value.ToString("dd/MM/yyyy", CulturaDo);
+                _cmbMesesCambiando = true;
+                try
+                {
+                    // Fuerza refresco del texto del ítem seleccionado.
+                    int idx = cbmMesesPanel.SelectedIndex;
+                    cbmMesesPanel.Items[idx] = opcion;
+                    cbmMesesPanel.SelectedIndex = idx;
+                }
+                finally
+                {
+                    _cmbMesesCambiando = false;
+                }
+            }
+
+            _cmbMesesIndicePrevio = cbmMesesPanel.SelectedIndex;
             ActualizarEtiquetaTiempo();
 
-            if (_bsEstado.DataSource is DataTable tablaActual)
+            if (bsEstado.DataSource is DataTable tablaActual)
                 ActualizarKpisSegunPeriodo(tablaActual);
             else
                 ActualizarKpisSegunPeriodo(null);
@@ -1193,7 +1323,19 @@ namespace UI.DISEÑO
                 return;
             }
 
-            lblTiempo.Text = opcion.EsHoy ? "HOY" : opcion.Etiqueta.ToUpper(CulturaDo);
+            if (opcion.EsHoy)
+            {
+                lblTiempo.Text = "HOY";
+                return;
+            }
+
+            if (opcion.EsPersonalizado && opcion.FechaDia.HasValue)
+            {
+                lblTiempo.Text = opcion.FechaDia.Value.ToString("dd/MM/yyyy", CulturaDo);
+                return;
+            }
+
+            lblTiempo.Text = opcion.Etiqueta.ToUpper(CulturaDo);
         }
 
         private void ActualizarKpisSegunPeriodo(DataTable? tablaEstado)
@@ -1209,14 +1351,144 @@ namespace UI.DISEÑO
 
             try
             {
-                DataTable kpis = estadoBLL.ObtenerKpisPlanesPorMes(opcion.Anio, opcion.Mes);
+                DataTable kpis;
+                if (opcion.EsPersonalizado)
+                {
+                    if (!opcion.FechaDia.HasValue)
+                    {
+                        AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
+                        return;
+                    }
+
+                    kpis = estadoBLL.ObtenerKpisPlanesPorDia(opcion.FechaDia.Value);
+                }
+                else
+                {
+                    kpis = estadoBLL.ObtenerKpisPlanesPorMes(opcion.Anio, opcion.Mes);
+                }
+
                 ActualizarKpisPlanesHistorico(kpis);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"KPI mes estado: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"KPI período estado: {ex.Message}");
                 AplicarKpisAControles(0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m, 0, 0m);
             }
+        }
+
+        /// <summary>
+        /// KPIs de ciclo de vencimiento (regla gimnasio).
+        /// Default: activos por tipo de ciclo (día 15 vs fin de mes de su FechaFin).
+        /// Con PAGOS PAL 15 / FIN DE MES: proyección del próximo vencimiento de ese ciclo
+        /// (quiénes/cuántos/dinero pagarán en esa fecha venidera).
+        /// </summary>
+        private void ActualizarKpisCicloVencimiento(DataTable? tabla)
+        {
+            int quincena = 0;
+            int finMes = 0;
+            decimal montoQuincena = 0m;
+            decimal montoFinMes = 0m;
+
+            Dictionary<string, decimal> precios = ObtenerPreciosPlanes();
+            bool tieneMontoPagado = tabla != null && tabla.Columns.Contains("MontoPagado");
+            bool tieneMembresia = tabla != null && tabla.Columns.Contains("Membresia");
+
+            string categoria = cmbEstaCategoria?.SelectedItem?.ToString()?.Trim().ToUpperInvariant() ?? "TODOS";
+            bool soloPagos15 = categoria == "PAGOS PAL 15";
+            bool soloPagosFinMes = categoria == "PAGOS PAL FIN DE MES";
+            DateTime proximo15 = MembresiaHelper.ObtenerProximoDia15(DateTime.Today);
+            DateTime proximoFinMes = MembresiaHelper.ObtenerProximoFinDeMes(DateTime.Today);
+
+            if (tabla != null
+                && tabla.Columns.Contains("Estado")
+                && tabla.Columns.Contains("FechaFin"))
+            {
+                foreach (DataRow row in tabla.Rows)
+                {
+                    string estado = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
+                    if (!EstadoBLL.EsEstadoActivoVigente(estado))
+                        continue;
+
+                    if (row["FechaFin"] == null || row["FechaFin"] == DBNull.Value)
+                        continue;
+
+                    DateTime fin = Convert.ToDateTime(row["FechaFin"]).Date;
+                    decimal monto = ObtenerMontoActivoCiclo(row, precios, tieneMembresia, tieneMontoPagado);
+
+                    if (soloPagos15)
+                    {
+                        if (fin == proximo15)
+                        {
+                            quincena++;
+                            montoQuincena += monto;
+                        }
+                        continue;
+                    }
+
+                    if (soloPagosFinMes)
+                    {
+                        if (fin == proximoFinMes)
+                        {
+                            finMes++;
+                            montoFinMes += monto;
+                        }
+                        continue;
+                    }
+
+                    bool esQuincena = MembresiaHelper.EsCicloDia15(fin);
+                    bool esFinMes = MembresiaHelper.EsCicloFinDeMes(fin);
+                    if (!esQuincena && !esFinMes)
+                        continue;
+
+                    if (esQuincena)
+                    {
+                        quincena++;
+                        montoQuincena += monto;
+                    }
+                    else
+                    {
+                        finMes++;
+                        montoFinMes += monto;
+                    }
+                }
+            }
+
+            SetKpi(lblCQuincena, quincena.ToString("N0", CulturaDo));
+            SetKpi(lblCFinMes, finMes.ToString("N0", CulturaDo));
+            SetKpi(lblQuincenalActivo, "RD$ " + montoQuincena.ToString("N2", CulturaDo));
+            SetKpi(lblMensualActivo, "RD$ " + montoFinMes.ToString("N2", CulturaDo));
+        }
+
+        /// <summary>
+        /// Dinero de un activo para KPI de ciclo: precio de catálogo (igual panel planes);
+        /// si no hay plan, MontoPagado del grid (columna SSOT EstadoDAL).
+        /// </summary>
+        private static decimal ObtenerMontoActivoCiclo(
+            DataRow row,
+            Dictionary<string, decimal> precios,
+            bool tieneMembresia,
+            bool tieneMontoPagado)
+        {
+            if (tieneMembresia)
+            {
+                string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(plan)
+                    && !string.Equals(plan, "SIN MEMBRESIA", StringComparison.OrdinalIgnoreCase)
+                    && precios.TryGetValue(plan, out decimal precioCatalogo)
+                    && precioCatalogo > 0m)
+                {
+                    return precioCatalogo;
+                }
+            }
+
+            if (tieneMontoPagado
+                && row["MontoPagado"] != null
+                && row["MontoPagado"] != DBNull.Value)
+            {
+                return Convert.ToDecimal(row["MontoPagado"]);
+            }
+
+            return 0m;
         }
 
         private void ActualizarKpisPlanesActivos(DataTable tabla)
@@ -1362,7 +1634,6 @@ namespace UI.DISEÑO
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             timerActualizacion.Stop();
-            timerActualizacion.Dispose();
             base.OnFormClosing(e);
         }
     }

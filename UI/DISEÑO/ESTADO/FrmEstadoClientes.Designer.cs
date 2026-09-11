@@ -28,6 +28,11 @@ namespace UI.DISEÑO
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
+            bsEstado = new BindingSource(components);
+            timerActualizacion = new System.Windows.Forms.Timer(components);
+            menuEstado = new ContextMenuStrip(components);
+            mnuAjustarFechaFin = new ToolStripMenuItem();
             panelNav = new Panel();
             btnNavClientes = new Button();
             btnNavReportes = new Button();
@@ -41,29 +46,24 @@ namespace UI.DISEÑO
             panelBusqueda = new Panel();
             btnDescargarPDF = new Button();
             cbmMesesPanel = new ComboBox();
+            cmbEstaCategoria = new ComboBox();
             lblBuscar = new Label();
             txtBuscar = new TextBox();
+            panelStatus = new Panel();
             panelAcciones = new Panel();
-            btnWhatsApp = new Button();
-            btnProgramar = new Button();
+            tlpAcciones = new TableLayoutPanel();
             btnAñadirMiembro = new Button();
             btnRenovar = new Button();
             btnDesactivar = new Button();
             btnCongelar = new Button();
-            dgvEstado = new DataGridView();
-            btnAtras = new Button();
+            btnProgramar = new Button();
+            btnWhatsApp = new Button();
+            panelKpis = new Panel();
+            tlpKpis = new TableLayoutPanel();
             panel2 = new Panel();
             lblCMensualidad = new Label();
             lblMMensualidad = new Label();
             labelStock = new Label();
-            panel1 = new Panel();
-            lblCPremium = new Label();
-            lblMPremium = new Label();
-            label3 = new Label();
-            panel3 = new Panel();
-            lblCPro = new Label();
-            lblMPro = new Label();
-            label6 = new Label();
             panel4 = new Panel();
             lblC3x = new Label();
             lblM3x = new Label();
@@ -72,6 +72,14 @@ namespace UI.DISEÑO
             lblCAbdomenPlano = new Label();
             lblMAbdomenPlano = new Label();
             label12 = new Label();
+            panel1 = new Panel();
+            lblCPremium = new Label();
+            lblMPremium = new Label();
+            label3 = new Label();
+            panel3 = new Panel();
+            lblCPro = new Label();
+            lblMPro = new Label();
+            label6 = new Label();
             panel6 = new Panel();
             lblCGluteosGrande = new Label();
             lblMGluteosGrande = new Label();
@@ -81,18 +89,64 @@ namespace UI.DISEÑO
             lblCTotal = new Label();
             lblMTotal = new Label();
             label4 = new Label();
+            dgvEstado = new DataGridView();
+            btnAtras = new Button();
+            panelCiclos = new Panel();
+            lblCondeuda = new Label();
+            lblCongelado = new Label();
+            lblDesactivados = new Label();
+            lblVencidos = new Label();
+            pnlQuincena = new Panel();
+            lblQuincenalActivo = new Label();
+            label1 = new Label();
+            lblCQuincena = new Label();
+            label5 = new Label();
+            label7 = new Label();
+            pnlMensualidad = new Panel();
+            lblMensualActivo = new Label();
+            label8 = new Label();
+            lblCFinMes = new Label();
+            label11 = new Label();
+            label13 = new Label();
+            ((System.ComponentModel.ISupportInitialize)bsEstado).BeginInit();
+            menuEstado.SuspendLayout();
             panelNav.SuspendLayout();
             panelBusqueda.SuspendLayout();
             panelAcciones.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)dgvEstado).BeginInit();
+            tlpAcciones.SuspendLayout();
+            panelKpis.SuspendLayout();
+            tlpKpis.SuspendLayout();
             panel2.SuspendLayout();
-            panel1.SuspendLayout();
-            panel3.SuspendLayout();
             panel4.SuspendLayout();
             panel5.SuspendLayout();
+            panel1.SuspendLayout();
+            panel3.SuspendLayout();
             panel6.SuspendLayout();
             panel7.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvEstado).BeginInit();
+            panelCiclos.SuspendLayout();
+            pnlQuincena.SuspendLayout();
+            pnlMensualidad.SuspendLayout();
             SuspendLayout();
+            // 
+            // timerActualizacion
+            // 
+            timerActualizacion.Interval = 30000;
+            timerActualizacion.Tick += TimerActualizacion_Tick;
+            // 
+            // menuEstado
+            // 
+            menuEstado.ImageScalingSize = new Size(20, 20);
+            menuEstado.Items.AddRange(new ToolStripItem[] { mnuAjustarFechaFin });
+            menuEstado.Name = "menuEstado";
+            menuEstado.Size = new Size(300, 28);
+            // 
+            // mnuAjustarFechaFin
+            // 
+            mnuAjustarFechaFin.Name = "mnuAjustarFechaFin";
+            mnuAjustarFechaFin.Size = new Size(299, 24);
+            mnuAjustarFechaFin.Text = "Modificar fecha de vencimiento…";
+            mnuAjustarFechaFin.Click += mnuAjustarFechaFin_Click;
             // 
             // panelNav
             // 
@@ -109,8 +163,9 @@ namespace UI.DISEÑO
             panelNav.Dock = DockStyle.Top;
             panelNav.Location = new Point(0, 0);
             panelNav.Name = "panelNav";
-            panelNav.Size = new Size(1672, 52);
+            panelNav.Size = new Size(1924, 52);
             panelNav.TabIndex = 0;
+            panelNav.Tag = "classic";
             // 
             // btnNavClientes
             // 
@@ -119,6 +174,7 @@ namespace UI.DISEÑO
             btnNavClientes.Name = "btnNavClientes";
             btnNavClientes.Size = new Size(120, 32);
             btnNavClientes.TabIndex = 8;
+            btnNavClientes.Tag = "classic";
             btnNavClientes.Text = "CLIENTES";
             btnNavClientes.UseVisualStyleBackColor = true;
             // 
@@ -129,6 +185,7 @@ namespace UI.DISEÑO
             btnNavReportes.Name = "btnNavReportes";
             btnNavReportes.Size = new Size(120, 32);
             btnNavReportes.TabIndex = 7;
+            btnNavReportes.Tag = "classic";
             btnNavReportes.Text = "REPORTES";
             btnNavReportes.UseVisualStyleBackColor = true;
             // 
@@ -139,6 +196,7 @@ namespace UI.DISEÑO
             btnNavInventario.Name = "btnNavInventario";
             btnNavInventario.Size = new Size(130, 32);
             btnNavInventario.TabIndex = 6;
+            btnNavInventario.Tag = "classic";
             btnNavInventario.Text = "INVENTARIO";
             btnNavInventario.UseVisualStyleBackColor = true;
             // 
@@ -149,6 +207,7 @@ namespace UI.DISEÑO
             btnNavHistorial.Name = "btnNavHistorial";
             btnNavHistorial.Size = new Size(120, 32);
             btnNavHistorial.TabIndex = 5;
+            btnNavHistorial.Tag = "classic";
             btnNavHistorial.Text = "HISTORIAL";
             btnNavHistorial.UseVisualStyleBackColor = true;
             // 
@@ -159,6 +218,7 @@ namespace UI.DISEÑO
             btnNavCaja.Name = "btnNavCaja";
             btnNavCaja.Size = new Size(110, 32);
             btnNavCaja.TabIndex = 4;
+            btnNavCaja.Tag = "classic";
             btnNavCaja.Text = "CAJA";
             btnNavCaja.UseVisualStyleBackColor = true;
             // 
@@ -169,6 +229,7 @@ namespace UI.DISEÑO
             btnNavEstado.Name = "btnNavEstado";
             btnNavEstado.Size = new Size(110, 32);
             btnNavEstado.TabIndex = 3;
+            btnNavEstado.Tag = "classic";
             btnNavEstado.Text = "ESTADO";
             btnNavEstado.UseVisualStyleBackColor = true;
             // 
@@ -179,6 +240,7 @@ namespace UI.DISEÑO
             btnNavDeudas.Name = "btnNavDeudas";
             btnNavDeudas.Size = new Size(110, 32);
             btnNavDeudas.TabIndex = 2;
+            btnNavDeudas.Tag = "classic";
             btnNavDeudas.Text = "DEUDAS";
             btnNavDeudas.UseVisualStyleBackColor = true;
             // 
@@ -191,6 +253,7 @@ namespace UI.DISEÑO
             btnNavPagar.Name = "btnNavPagar";
             btnNavPagar.Size = new Size(110, 32);
             btnNavPagar.TabIndex = 1;
+            btnNavPagar.Tag = "classic";
             btnNavPagar.Text = "COBRAR";
             btnNavPagar.UseVisualStyleBackColor = false;
             // 
@@ -203,20 +266,24 @@ namespace UI.DISEÑO
             btnBack.Name = "btnBack";
             btnBack.Size = new Size(43, 35);
             btnBack.TabIndex = 0;
+            btnBack.Tag = "classic";
             btnBack.UseVisualStyleBackColor = true;
             // 
             // panelBusqueda
             // 
+            panelBusqueda.BackColor = Color.Black;
             panelBusqueda.Controls.Add(btnDescargarPDF);
             panelBusqueda.Controls.Add(cbmMesesPanel);
+            panelBusqueda.Controls.Add(cmbEstaCategoria);
             panelBusqueda.Controls.Add(lblBuscar);
             panelBusqueda.Controls.Add(txtBuscar);
             panelBusqueda.Dock = DockStyle.Top;
             panelBusqueda.Location = new Point(0, 52);
             panelBusqueda.Name = "panelBusqueda";
             panelBusqueda.Padding = new Padding(12, 8, 12, 8);
-            panelBusqueda.Size = new Size(1672, 56);
+            panelBusqueda.Size = new Size(1924, 56);
             panelBusqueda.TabIndex = 1;
+            panelBusqueda.Tag = "classic";
             // 
             // btnDescargarPDF
             // 
@@ -227,10 +294,11 @@ namespace UI.DISEÑO
             btnDescargarPDF.FlatStyle = FlatStyle.Flat;
             btnDescargarPDF.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnDescargarPDF.ForeColor = Color.White;
-            btnDescargarPDF.Location = new Point(988, 12);
+            btnDescargarPDF.Location = new Point(1756, 10);
             btnDescargarPDF.Name = "btnDescargarPDF";
-            btnDescargarPDF.Size = new Size(330, 36);
+            btnDescargarPDF.Size = new Size(156, 36);
             btnDescargarPDF.TabIndex = 71;
+            btnDescargarPDF.Tag = "classic";
             btnDescargarPDF.Text = "DESCARGAR PDF";
             btnDescargarPDF.UseVisualStyleBackColor = false;
             btnDescargarPDF.Click += btnDescargarPDF_Click;
@@ -241,148 +309,648 @@ namespace UI.DISEÑO
             cbmMesesPanel.DropDownStyle = ComboBoxStyle.DropDownList;
             cbmMesesPanel.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             cbmMesesPanel.FormattingEnabled = true;
-            cbmMesesPanel.Location = new Point(1328, 12);
+            cbmMesesPanel.Location = new Point(1538, 11);
             cbmMesesPanel.Name = "cbmMesesPanel";
-            cbmMesesPanel.Size = new Size(320, 33);
+            cbmMesesPanel.Size = new Size(208, 33);
             cbmMesesPanel.TabIndex = 70;
+            cbmMesesPanel.Tag = "classic";
+            cbmMesesPanel.SelectedIndexChanged += cbmMesesPanel_SelectedIndexChanged;
+            // 
+            // cmbEstaCategoria
+            // 
+            cmbEstaCategoria.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            cmbEstaCategoria.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbEstaCategoria.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            cmbEstaCategoria.FormattingEnabled = true;
+            cmbEstaCategoria.Items.AddRange(new object[] { "TODOS", "CON DEUDA", "ACTIVOS", "VENCIDOS", "DESACTIVADOS", "CONGELADOS", "PAGOS PAL 15", "PAGOS PAL FIN DE MES" });
+            cmbEstaCategoria.Location = new Point(1298, 11);
+            cmbEstaCategoria.Name = "cmbEstaCategoria";
+            cmbEstaCategoria.Size = new Size(230, 33);
+            cmbEstaCategoria.TabIndex = 2;
+            cmbEstaCategoria.Tag = "classic";
+            cmbEstaCategoria.SelectedIndexChanged += cmbEstaCategoria_SelectedIndexChanged;
             // 
             // lblBuscar
             // 
             lblBuscar.AutoSize = true;
-            lblBuscar.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            lblBuscar.Location = new Point(16, 12);
+            lblBuscar.BackColor = Color.Transparent;
+            lblBuscar.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblBuscar.ForeColor = Color.White;
+            lblBuscar.Location = new Point(12, 14);
             lblBuscar.Name = "lblBuscar";
-            lblBuscar.Size = new Size(100, 35);
+            lblBuscar.Size = new Size(81, 28);
             lblBuscar.TabIndex = 0;
+            lblBuscar.Tag = "classic";
             lblBuscar.Text = "Buscar:";
             // 
             // txtBuscar
             // 
             txtBuscar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            txtBuscar.Font = new Font("Segoe UI", 15F);
-            txtBuscar.Location = new Point(122, 10);
+            txtBuscar.Font = new Font("Segoe UI", 12F);
+            txtBuscar.Location = new Point(100, 10);
             txtBuscar.Name = "txtBuscar";
             txtBuscar.PlaceholderText = "Nombre, plan, estado...";
-            txtBuscar.Size = new Size(645, 41);
+            txtBuscar.Size = new Size(1188, 34);
             txtBuscar.TabIndex = 1;
             txtBuscar.TabStop = false;
+            txtBuscar.Tag = "classic";
             txtBuscar.TextChanged += txtBuscar_TextChanged;
+            // 
+            // panelStatus
+            // 
+            panelStatus.BackColor = Color.FromArgb(245, 245, 245);
+            panelStatus.Dock = DockStyle.Top;
+            panelStatus.Location = new Point(0, 108);
+            panelStatus.Name = "panelStatus";
+            panelStatus.Padding = new Padding(12, 0, 12, 0);
+            panelStatus.Size = new Size(1924, 28);
+            panelStatus.TabIndex = 6;
+            panelStatus.Tag = "classic";
             // 
             // panelAcciones
             // 
-            panelAcciones.Controls.Add(btnWhatsApp);
-            panelAcciones.Controls.Add(btnProgramar);
-            panelAcciones.Controls.Add(btnAñadirMiembro);
-            panelAcciones.Controls.Add(btnRenovar);
-            panelAcciones.Controls.Add(btnDesactivar);
-            panelAcciones.Controls.Add(btnCongelar);
+            panelAcciones.BackColor = Color.Black;
+            panelAcciones.Controls.Add(tlpAcciones);
             panelAcciones.Dock = DockStyle.Bottom;
-            panelAcciones.Location = new Point(0, 841);
+            panelAcciones.Location = new Point(0, 991);
             panelAcciones.Name = "panelAcciones";
-            panelAcciones.Padding = new Padding(12, 8, 12, 8);
-            panelAcciones.Size = new Size(1672, 64);
+            panelAcciones.Padding = new Padding(8);
+            panelAcciones.Size = new Size(1924, 64);
             panelAcciones.TabIndex = 3;
             panelAcciones.Tag = "classic";
             // 
-            // btnWhatsApp
+            // tlpAcciones
             // 
-            btnWhatsApp.Anchor = AnchorStyles.None;
-            btnWhatsApp.BackColor = Color.FromArgb(37, 211, 102);
-            btnWhatsApp.Enabled = false;
-            btnWhatsApp.FlatStyle = FlatStyle.Flat;
-            btnWhatsApp.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnWhatsApp.ForeColor = Color.White;
-            btnWhatsApp.Location = new Point(1179, 11);
-            btnWhatsApp.Name = "btnWhatsApp";
-            btnWhatsApp.Size = new Size(130, 42);
-            btnWhatsApp.TabIndex = 6;
-            btnWhatsApp.Text = "WHATSAPP";
-            btnWhatsApp.UseVisualStyleBackColor = false;
-            btnWhatsApp.Click += btnWhatsApp_Click;
-            // 
-            // btnProgramar
-            // 
-            btnProgramar.Anchor = AnchorStyles.None;
-            btnProgramar.Enabled = false;
-            btnProgramar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnProgramar.Location = new Point(1017, 11);
-            btnProgramar.Name = "btnProgramar";
-            btnProgramar.Size = new Size(150, 42);
-            btnProgramar.TabIndex = 5;
-            btnProgramar.Text = "PROGRAMAR";
-            btnProgramar.UseVisualStyleBackColor = true;
-            btnProgramar.Click += btnProgramar_Click;
+            tlpAcciones.ColumnCount = 6;
+            tlpAcciones.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpAcciones.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpAcciones.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpAcciones.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpAcciones.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpAcciones.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpAcciones.Controls.Add(btnAñadirMiembro, 0, 0);
+            tlpAcciones.Controls.Add(btnRenovar, 1, 0);
+            tlpAcciones.Controls.Add(btnDesactivar, 2, 0);
+            tlpAcciones.Controls.Add(btnCongelar, 3, 0);
+            tlpAcciones.Controls.Add(btnProgramar, 4, 0);
+            tlpAcciones.Controls.Add(btnWhatsApp, 5, 0);
+            tlpAcciones.Dock = DockStyle.Fill;
+            tlpAcciones.Location = new Point(8, 8);
+            tlpAcciones.Name = "tlpAcciones";
+            tlpAcciones.RowCount = 1;
+            tlpAcciones.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tlpAcciones.Size = new Size(1908, 48);
+            tlpAcciones.TabIndex = 0;
+            tlpAcciones.Tag = "classic";
             // 
             // btnAñadirMiembro
             // 
-            btnAñadirMiembro.Anchor = AnchorStyles.None;
+            btnAñadirMiembro.Dock = DockStyle.Fill;
             btnAñadirMiembro.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnAñadirMiembro.Location = new Point(285, 10);
+            btnAñadirMiembro.Location = new Point(6, 2);
+            btnAñadirMiembro.Margin = new Padding(6, 2, 6, 2);
             btnAñadirMiembro.Name = "btnAñadirMiembro";
-            btnAñadirMiembro.Size = new Size(178, 42);
+            btnAñadirMiembro.Size = new Size(306, 44);
             btnAñadirMiembro.TabIndex = 3;
+            btnAñadirMiembro.Tag = "classic";
             btnAñadirMiembro.Text = "AÑADIR MIEMBRO";
             btnAñadirMiembro.UseVisualStyleBackColor = true;
             btnAñadirMiembro.Click += btnAñadirMiembro_Click;
             // 
             // btnRenovar
             // 
-            btnRenovar.Anchor = AnchorStyles.None;
+            btnRenovar.Dock = DockStyle.Fill;
             btnRenovar.Enabled = false;
             btnRenovar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnRenovar.Location = new Point(484, 11);
+            btnRenovar.Location = new Point(324, 2);
+            btnRenovar.Margin = new Padding(6, 2, 6, 2);
             btnRenovar.Name = "btnRenovar";
-            btnRenovar.Size = new Size(142, 42);
+            btnRenovar.Size = new Size(306, 44);
             btnRenovar.TabIndex = 0;
+            btnRenovar.Tag = "classic";
             btnRenovar.Text = "RENOVAR";
             btnRenovar.UseVisualStyleBackColor = true;
             btnRenovar.Click += btnRenovar_Click;
             // 
             // btnDesactivar
             // 
-            btnDesactivar.Anchor = AnchorStyles.None;
+            btnDesactivar.BackColor = Color.Red;
+            btnDesactivar.Dock = DockStyle.Fill;
             btnDesactivar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnDesactivar.Location = new Point(647, 11);
+            btnDesactivar.ForeColor = Color.White;
+            btnDesactivar.Location = new Point(642, 2);
+            btnDesactivar.Margin = new Padding(6, 2, 6, 2);
             btnDesactivar.Name = "btnDesactivar";
-            btnDesactivar.Size = new Size(200, 42);
+            btnDesactivar.Size = new Size(306, 44);
             btnDesactivar.TabIndex = 1;
+            btnDesactivar.Tag = "classic";
             btnDesactivar.Text = "DESACTIVAR/ACTIVAR";
-            btnDesactivar.UseVisualStyleBackColor = true;
+            btnDesactivar.UseVisualStyleBackColor = false;
             btnDesactivar.Click += btnDesactivar_Click;
             // 
             // btnCongelar
             // 
-            btnCongelar.Anchor = AnchorStyles.None;
+            btnCongelar.Dock = DockStyle.Fill;
             btnCongelar.Enabled = false;
             btnCongelar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnCongelar.Location = new Point(867, 11);
+            btnCongelar.Location = new Point(960, 2);
+            btnCongelar.Margin = new Padding(6, 2, 6, 2);
             btnCongelar.Name = "btnCongelar";
-            btnCongelar.Size = new Size(126, 42);
+            btnCongelar.Size = new Size(306, 44);
             btnCongelar.TabIndex = 2;
+            btnCongelar.Tag = "classic";
             btnCongelar.Text = "CONGELAR";
             btnCongelar.UseVisualStyleBackColor = true;
             btnCongelar.Click += btnCongelar_Click;
+            // 
+            // btnProgramar
+            // 
+            btnProgramar.Dock = DockStyle.Fill;
+            btnProgramar.Enabled = false;
+            btnProgramar.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnProgramar.Location = new Point(1278, 2);
+            btnProgramar.Margin = new Padding(6, 2, 6, 2);
+            btnProgramar.Name = "btnProgramar";
+            btnProgramar.Size = new Size(306, 44);
+            btnProgramar.TabIndex = 5;
+            btnProgramar.Tag = "classic";
+            btnProgramar.Text = "PROGRAMAR";
+            btnProgramar.UseVisualStyleBackColor = true;
+            btnProgramar.Click += btnProgramar_Click;
+            // 
+            // btnWhatsApp
+            // 
+            btnWhatsApp.BackColor = Color.FromArgb(37, 211, 102);
+            btnWhatsApp.Dock = DockStyle.Fill;
+            btnWhatsApp.Enabled = false;
+            btnWhatsApp.FlatStyle = FlatStyle.Flat;
+            btnWhatsApp.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnWhatsApp.ForeColor = Color.White;
+            btnWhatsApp.Location = new Point(1596, 2);
+            btnWhatsApp.Margin = new Padding(6, 2, 6, 2);
+            btnWhatsApp.Name = "btnWhatsApp";
+            btnWhatsApp.Size = new Size(306, 44);
+            btnWhatsApp.TabIndex = 6;
+            btnWhatsApp.Tag = "classic";
+            btnWhatsApp.Text = "WHATSAPP";
+            btnWhatsApp.UseVisualStyleBackColor = false;
+            btnWhatsApp.Click += btnWhatsApp_Click;
+            // 
+            // panelKpis
+            // 
+            panelKpis.BackColor = Color.White;
+            panelKpis.Controls.Add(tlpKpis);
+            panelKpis.Dock = DockStyle.Bottom;
+            panelKpis.Location = new Point(0, 843);
+            panelKpis.Name = "panelKpis";
+            panelKpis.Padding = new Padding(8, 6, 8, 6);
+            panelKpis.Size = new Size(1924, 148);
+            panelKpis.TabIndex = 4;
+            panelKpis.Tag = "classic";
+            // 
+            // tlpKpis
+            // 
+            tlpKpis.ColumnCount = 6;
+            tlpKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpKpis.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66667F));
+            tlpKpis.Controls.Add(panel2, 0, 0);
+            tlpKpis.Controls.Add(panel4, 1, 0);
+            tlpKpis.Controls.Add(panel5, 2, 0);
+            tlpKpis.Controls.Add(panel1, 3, 0);
+            tlpKpis.Controls.Add(panel3, 4, 0);
+            tlpKpis.Controls.Add(panel6, 5, 0);
+            tlpKpis.Dock = DockStyle.Fill;
+            tlpKpis.Location = new Point(8, 6);
+            tlpKpis.Name = "tlpKpis";
+            tlpKpis.RowCount = 1;
+            tlpKpis.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tlpKpis.Size = new Size(1908, 136);
+            tlpKpis.TabIndex = 0;
+            tlpKpis.Tag = "classic";
+            // 
+            // panel2
+            // 
+            panel2.BackColor = Color.Blue;
+            panel2.Controls.Add(lblCMensualidad);
+            panel2.Controls.Add(lblMMensualidad);
+            panel2.Controls.Add(labelStock);
+            panel2.Dock = DockStyle.Fill;
+            panel2.ForeColor = Color.Crimson;
+            panel2.Location = new Point(4, 4);
+            panel2.Margin = new Padding(4);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(310, 128);
+            panel2.TabIndex = 64;
+            panel2.Tag = "classic";
+            // 
+            // lblCMensualidad
+            // 
+            lblCMensualidad.AutoSize = true;
+            lblCMensualidad.BackColor = Color.Transparent;
+            lblCMensualidad.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCMensualidad.ForeColor = Color.White;
+            lblCMensualidad.Location = new Point(2, 36);
+            lblCMensualidad.Name = "lblCMensualidad";
+            lblCMensualidad.Size = new Size(38, 45);
+            lblCMensualidad.TabIndex = 62;
+            lblCMensualidad.Tag = "classic";
+            lblCMensualidad.Text = "0";
+            // 
+            // lblMMensualidad
+            // 
+            lblMMensualidad.AutoSize = true;
+            lblMMensualidad.BackColor = Color.Transparent;
+            lblMMensualidad.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMMensualidad.ForeColor = Color.White;
+            lblMMensualidad.Location = new Point(1, 81);
+            lblMMensualidad.Name = "lblMMensualidad";
+            lblMMensualidad.Size = new Size(38, 45);
+            lblMMensualidad.TabIndex = 61;
+            lblMMensualidad.Tag = "classic";
+            lblMMensualidad.Text = "0";
+            // 
+            // labelStock
+            // 
+            labelStock.AutoSize = true;
+            labelStock.BackColor = Color.Transparent;
+            labelStock.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            labelStock.ForeColor = Color.White;
+            labelStock.Location = new Point(25, 3);
+            labelStock.Name = "labelStock";
+            labelStock.Size = new Size(196, 35);
+            labelStock.TabIndex = 60;
+            labelStock.Tag = "classic";
+            labelStock.Text = "MENSUALIDAD";
+            // 
+            // panel4
+            // 
+            panel4.BackColor = Color.Blue;
+            panel4.Controls.Add(lblC3x);
+            panel4.Controls.Add(lblM3x);
+            panel4.Controls.Add(label9);
+            panel4.Dock = DockStyle.Fill;
+            panel4.ForeColor = Color.Crimson;
+            panel4.Location = new Point(322, 4);
+            panel4.Margin = new Padding(4);
+            panel4.Name = "panel4";
+            panel4.Size = new Size(310, 128);
+            panel4.TabIndex = 66;
+            panel4.Tag = "classic";
+            // 
+            // lblC3x
+            // 
+            lblC3x.AutoSize = true;
+            lblC3x.BackColor = Color.Transparent;
+            lblC3x.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblC3x.ForeColor = Color.White;
+            lblC3x.Location = new Point(2, 36);
+            lblC3x.Name = "lblC3x";
+            lblC3x.Size = new Size(38, 45);
+            lblC3x.TabIndex = 62;
+            lblC3x.Tag = "classic";
+            lblC3x.Text = "0";
+            // 
+            // lblM3x
+            // 
+            lblM3x.AutoSize = true;
+            lblM3x.BackColor = Color.Transparent;
+            lblM3x.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblM3x.ForeColor = Color.White;
+            lblM3x.Location = new Point(1, 81);
+            lblM3x.Name = "lblM3x";
+            lblM3x.Size = new Size(38, 45);
+            lblM3x.TabIndex = 61;
+            lblM3x.Tag = "classic";
+            lblM3x.Text = "0";
+            // 
+            // label9
+            // 
+            label9.AutoSize = true;
+            label9.BackColor = Color.Transparent;
+            label9.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label9.ForeColor = Color.White;
+            label9.Location = new Point(94, 3);
+            label9.Name = "label9";
+            label9.Size = new Size(43, 35);
+            label9.TabIndex = 60;
+            label9.Tag = "classic";
+            label9.Text = "3x";
+            // 
+            // panel5
+            // 
+            panel5.BackColor = Color.Blue;
+            panel5.Controls.Add(lblCAbdomenPlano);
+            panel5.Controls.Add(lblMAbdomenPlano);
+            panel5.Controls.Add(label12);
+            panel5.Dock = DockStyle.Fill;
+            panel5.ForeColor = Color.Crimson;
+            panel5.Location = new Point(640, 4);
+            panel5.Margin = new Padding(4);
+            panel5.Name = "panel5";
+            panel5.Size = new Size(310, 128);
+            panel5.TabIndex = 68;
+            panel5.Tag = "classic";
+            // 
+            // lblCAbdomenPlano
+            // 
+            lblCAbdomenPlano.AutoSize = true;
+            lblCAbdomenPlano.BackColor = Color.Transparent;
+            lblCAbdomenPlano.FlatStyle = FlatStyle.Flat;
+            lblCAbdomenPlano.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCAbdomenPlano.ForeColor = Color.White;
+            lblCAbdomenPlano.Location = new Point(2, 36);
+            lblCAbdomenPlano.Name = "lblCAbdomenPlano";
+            lblCAbdomenPlano.Size = new Size(38, 45);
+            lblCAbdomenPlano.TabIndex = 62;
+            lblCAbdomenPlano.Tag = "classic";
+            lblCAbdomenPlano.Text = "0";
+            // 
+            // lblMAbdomenPlano
+            // 
+            lblMAbdomenPlano.AutoSize = true;
+            lblMAbdomenPlano.BackColor = Color.Transparent;
+            lblMAbdomenPlano.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMAbdomenPlano.ForeColor = Color.White;
+            lblMAbdomenPlano.Location = new Point(1, 81);
+            lblMAbdomenPlano.Name = "lblMAbdomenPlano";
+            lblMAbdomenPlano.Size = new Size(38, 45);
+            lblMAbdomenPlano.TabIndex = 61;
+            lblMAbdomenPlano.Tag = "classic";
+            lblMAbdomenPlano.Text = "0";
+            // 
+            // label12
+            // 
+            label12.AutoSize = true;
+            label12.BackColor = Color.Transparent;
+            label12.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label12.ForeColor = Color.White;
+            label12.Location = new Point(25, 5);
+            label12.Name = "label12";
+            label12.Size = new Size(236, 35);
+            label12.TabIndex = 60;
+            label12.Tag = "classic";
+            label12.Text = "ABDOMEN PLANO";
+            // 
+            // panel1
+            // 
+            panel1.BackColor = Color.Blue;
+            panel1.Controls.Add(lblCPremium);
+            panel1.Controls.Add(lblMPremium);
+            panel1.Controls.Add(label3);
+            panel1.Dock = DockStyle.Fill;
+            panel1.ForeColor = Color.Crimson;
+            panel1.Location = new Point(958, 4);
+            panel1.Margin = new Padding(4);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(310, 128);
+            panel1.TabIndex = 65;
+            panel1.Tag = "classic";
+            // 
+            // lblCPremium
+            // 
+            lblCPremium.AutoSize = true;
+            lblCPremium.BackColor = Color.Transparent;
+            lblCPremium.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCPremium.ForeColor = Color.White;
+            lblCPremium.Location = new Point(2, 36);
+            lblCPremium.Name = "lblCPremium";
+            lblCPremium.Size = new Size(38, 45);
+            lblCPremium.TabIndex = 62;
+            lblCPremium.Tag = "classic";
+            lblCPremium.Text = "0";
+            // 
+            // lblMPremium
+            // 
+            lblMPremium.AutoSize = true;
+            lblMPremium.BackColor = Color.Transparent;
+            lblMPremium.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMPremium.ForeColor = Color.White;
+            lblMPremium.Location = new Point(1, 81);
+            lblMPremium.Name = "lblMPremium";
+            lblMPremium.Size = new Size(38, 45);
+            lblMPremium.TabIndex = 61;
+            lblMPremium.Tag = "classic";
+            lblMPremium.Text = "0";
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.BackColor = Color.Transparent;
+            label3.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label3.ForeColor = Color.White;
+            label3.Location = new Point(55, 4);
+            label3.Name = "label3";
+            label3.Size = new Size(133, 35);
+            label3.TabIndex = 60;
+            label3.Tag = "classic";
+            label3.Text = "PREMIUM";
+            // 
+            // panel3
+            // 
+            panel3.BackColor = Color.Blue;
+            panel3.Controls.Add(lblCPro);
+            panel3.Controls.Add(lblMPro);
+            panel3.Controls.Add(label6);
+            panel3.Dock = DockStyle.Fill;
+            panel3.ForeColor = Color.Crimson;
+            panel3.Location = new Point(1276, 4);
+            panel3.Margin = new Padding(4);
+            panel3.Name = "panel3";
+            panel3.Size = new Size(310, 128);
+            panel3.TabIndex = 67;
+            panel3.Tag = "classic";
+            // 
+            // lblCPro
+            // 
+            lblCPro.AutoSize = true;
+            lblCPro.BackColor = Color.Transparent;
+            lblCPro.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCPro.ForeColor = Color.White;
+            lblCPro.Location = new Point(2, 36);
+            lblCPro.Name = "lblCPro";
+            lblCPro.Size = new Size(38, 45);
+            lblCPro.TabIndex = 62;
+            lblCPro.Tag = "classic";
+            lblCPro.Text = "0";
+            // 
+            // lblMPro
+            // 
+            lblMPro.AutoSize = true;
+            lblMPro.BackColor = Color.Transparent;
+            lblMPro.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMPro.ForeColor = Color.White;
+            lblMPro.Location = new Point(1, 81);
+            lblMPro.Name = "lblMPro";
+            lblMPro.Size = new Size(38, 45);
+            lblMPro.TabIndex = 61;
+            lblMPro.Tag = "classic";
+            lblMPro.Text = "0";
+            // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.BackColor = Color.Transparent;
+            label6.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label6.ForeColor = Color.White;
+            label6.Location = new Point(85, 5);
+            label6.Name = "label6";
+            label6.Size = new Size(65, 35);
+            label6.TabIndex = 60;
+            label6.Tag = "classic";
+            label6.Text = "PRO";
+            // 
+            // panel6
+            // 
+            panel6.BackColor = Color.Blue;
+            panel6.Controls.Add(lblCGluteosGrande);
+            panel6.Controls.Add(lblMGluteosGrande);
+            panel6.Controls.Add(label15);
+            panel6.Dock = DockStyle.Fill;
+            panel6.ForeColor = Color.Crimson;
+            panel6.Location = new Point(1594, 4);
+            panel6.Margin = new Padding(4);
+            panel6.Name = "panel6";
+            panel6.Size = new Size(310, 128);
+            panel6.TabIndex = 69;
+            panel6.Tag = "classic";
+            // 
+            // lblCGluteosGrande
+            // 
+            lblCGluteosGrande.AutoSize = true;
+            lblCGluteosGrande.BackColor = Color.Transparent;
+            lblCGluteosGrande.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCGluteosGrande.ForeColor = Color.White;
+            lblCGluteosGrande.Location = new Point(2, 36);
+            lblCGluteosGrande.Name = "lblCGluteosGrande";
+            lblCGluteosGrande.Size = new Size(38, 45);
+            lblCGluteosGrande.TabIndex = 62;
+            lblCGluteosGrande.Tag = "classic";
+            lblCGluteosGrande.Text = "0";
+            // 
+            // lblMGluteosGrande
+            // 
+            lblMGluteosGrande.AutoSize = true;
+            lblMGluteosGrande.BackColor = Color.Transparent;
+            lblMGluteosGrande.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMGluteosGrande.ForeColor = Color.White;
+            lblMGluteosGrande.Location = new Point(1, 81);
+            lblMGluteosGrande.Name = "lblMGluteosGrande";
+            lblMGluteosGrande.Size = new Size(38, 45);
+            lblMGluteosGrande.TabIndex = 61;
+            lblMGluteosGrande.Tag = "classic";
+            lblMGluteosGrande.Text = "0";
+            // 
+            // label15
+            // 
+            label15.AutoSize = true;
+            label15.BackColor = Color.Transparent;
+            label15.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label15.ForeColor = Color.White;
+            label15.Location = new Point(21, 5);
+            label15.Name = "label15";
+            label15.Size = new Size(234, 35);
+            label15.TabIndex = 60;
+            label15.Tag = "classic";
+            label15.Text = "GLUTEOS GRANDE";
+            // 
+            // panel7
+            // 
+            panel7.BackColor = Color.Blue;
+            panel7.Controls.Add(lblTiempo);
+            panel7.Controls.Add(lblCTotal);
+            panel7.Controls.Add(lblMTotal);
+            panel7.Controls.Add(label4);
+            panel7.Dock = DockStyle.Top;
+            panel7.ForeColor = Color.Crimson;
+            panel7.Location = new Point(8, 8);
+            panel7.Margin = new Padding(0, 0, 0, 8);
+            panel7.Name = "panel7";
+            panel7.Size = new Size(274, 150);
+            panel7.TabIndex = 70;
+            panel7.Tag = "classic";
+            // 
+            // lblTiempo
+            // 
+            lblTiempo.AutoSize = true;
+            lblTiempo.BackColor = Color.Transparent;
+            lblTiempo.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblTiempo.ForeColor = Color.FromArgb(255, 224, 128);
+            lblTiempo.Location = new Point(78, 3);
+            lblTiempo.Name = "lblTiempo";
+            lblTiempo.Size = new Size(53, 25);
+            lblTiempo.TabIndex = 63;
+            lblTiempo.Tag = "classic";
+            lblTiempo.Text = "HOY";
+            // 
+            // lblCTotal
+            // 
+            lblCTotal.AutoSize = true;
+            lblCTotal.BackColor = Color.Transparent;
+            lblCTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCTotal.ForeColor = Color.White;
+            lblCTotal.Location = new Point(2, 58);
+            lblCTotal.Name = "lblCTotal";
+            lblCTotal.Size = new Size(38, 45);
+            lblCTotal.TabIndex = 62;
+            lblCTotal.Tag = "classic";
+            lblCTotal.Text = "0";
+            // 
+            // lblMTotal
+            // 
+            lblMTotal.AutoSize = true;
+            lblMTotal.BackColor = Color.Transparent;
+            lblMTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMTotal.ForeColor = Color.White;
+            lblMTotal.Location = new Point(1, 100);
+            lblMTotal.Name = "lblMTotal";
+            lblMTotal.Size = new Size(38, 45);
+            lblMTotal.TabIndex = 61;
+            lblMTotal.Tag = "classic";
+            lblMTotal.Text = "0";
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.BackColor = Color.Transparent;
+            label4.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label4.ForeColor = Color.White;
+            label4.Location = new Point(25, 28);
+            label4.Name = "label4";
+            label4.Size = new Size(91, 35);
+            label4.TabIndex = 60;
+            label4.Tag = "classic";
+            label4.Text = "TOTAL";
             // 
             // dgvEstado
             // 
             dgvEstado.AllowUserToAddRows = false;
             dgvEstado.AllowUserToDeleteRows = false;
-            dgvEstado.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             dgvEstado.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvEstado.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dgvEstado.BackgroundColor = Color.White;
+            dgvEstado.BorderStyle = BorderStyle.None;
             dgvEstado.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvEstado.Location = new Point(0, 108);
+            dgvEstado.ContextMenuStrip = menuEstado;
+            dgvEstado.Dock = DockStyle.Fill;
+            dgvEstado.Location = new Point(0, 136);
             dgvEstado.MultiSelect = false;
             dgvEstado.Name = "dgvEstado";
             dgvEstado.ReadOnly = true;
-            dgvEstado.RowHeadersWidth = 51;
+            dgvEstado.RowHeadersWidth = 48;
+            dgvEstado.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             dgvEstado.RowTemplate.Height = 32;
             dgvEstado.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvEstado.Size = new Size(1390, 476);
+            dgvEstado.Size = new Size(1634, 707);
             dgvEstado.TabIndex = 2;
+            dgvEstado.Tag = "classic";
             dgvEstado.CellDoubleClick += dgvEstado_CellDoubleClick;
             dgvEstado.CellFormatting += dgvEstado_CellFormatting;
             dgvEstado.CellMouseDown += dgvEstado_CellMouseDown;
+            dgvEstado.RowPostPaint += dgvEstado_RowPostPaint;
             dgvEstado.SelectionChanged += dgvEstado_SelectionChanged;
             // 
             // btnAtras
@@ -398,419 +966,296 @@ namespace UI.DISEÑO
             btnAtras.Name = "btnAtras";
             btnAtras.Size = new Size(44, 45);
             btnAtras.TabIndex = 20;
+            btnAtras.Tag = "classic";
             btnAtras.Text = "◀️";
             btnAtras.UseVisualStyleBackColor = false;
             btnAtras.Visible = false;
             // 
-            // panel2
+            // panelCiclos
             // 
-            panel2.BackColor = Color.Blue;
-            panel2.Controls.Add(lblCMensualidad);
-            panel2.Controls.Add(lblMMensualidad);
-            panel2.Controls.Add(labelStock);
-            panel2.ForeColor = Color.Crimson;
-            panel2.ImeMode = ImeMode.On;
-            panel2.Location = new Point(27, 590);
-            panel2.Name = "panel2";
-            panel2.Size = new Size(249, 140);
-            panel2.TabIndex = 64;
-            panel2.Tag = "classic";
+            panelCiclos.BackColor = Color.FromArgb(30, 30, 30);
+            panelCiclos.Controls.Add(lblCondeuda);
+            panelCiclos.Controls.Add(lblCongelado);
+            panelCiclos.Controls.Add(lblDesactivados);
+            panelCiclos.Controls.Add(lblVencidos);
+            panelCiclos.Controls.Add(pnlQuincena);
+            panelCiclos.Controls.Add(pnlMensualidad);
+            panelCiclos.Controls.Add(panel7);
+            panelCiclos.Dock = DockStyle.Right;
+            panelCiclos.Location = new Point(1634, 136);
+            panelCiclos.Name = "panelCiclos";
+            panelCiclos.Padding = new Padding(8);
+            panelCiclos.Size = new Size(290, 707);
+            panelCiclos.TabIndex = 5;
+            panelCiclos.Tag = "classic";
             // 
-            // lblCMensualidad
+            // lblCondeuda
             // 
-            lblCMensualidad.AutoSize = true;
-            lblCMensualidad.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblCMensualidad.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCMensualidad.ForeColor = Color.White;
-            lblCMensualidad.Location = new Point(2, 36);
-            lblCMensualidad.Name = "lblCMensualidad";
-            lblCMensualidad.Size = new Size(38, 45);
-            lblCMensualidad.TabIndex = 62;
-            lblCMensualidad.Text = "0";
+            lblCondeuda.AutoSize = true;
+            lblCondeuda.BackColor = Color.Black;
+            lblCondeuda.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblCondeuda.ForeColor = Color.White;
+            lblCondeuda.Location = new Point(4, 505);
+            lblCondeuda.Name = "lblCondeuda";
+            lblCondeuda.Size = new Size(111, 23);
+            lblCondeuda.TabIndex = 76;
+            lblCondeuda.Text = "CON DEUDA";
             // 
-            // lblMMensualidad
+            // lblCongelado
             // 
-            lblMMensualidad.AutoSize = true;
-            lblMMensualidad.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblMMensualidad.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMMensualidad.ForeColor = Color.White;
-            lblMMensualidad.Location = new Point(1, 81);
-            lblMMensualidad.Name = "lblMMensualidad";
-            lblMMensualidad.Size = new Size(38, 45);
-            lblMMensualidad.TabIndex = 61;
-            lblMMensualidad.Text = "0";
+            lblCongelado.AutoSize = true;
+            lblCongelado.BackColor = Color.Black;
+            lblCongelado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblCongelado.ForeColor = Color.White;
+            lblCongelado.Location = new Point(4, 526);
+            lblCongelado.Name = "lblCongelado";
+            lblCongelado.Size = new Size(125, 23);
+            lblCongelado.TabIndex = 75;
+            lblCongelado.Text = "CONGELADOS";
             // 
-            // labelStock
+            // lblDesactivados
             // 
-            labelStock.AutoSize = true;
-            labelStock.BackColor = Color.FromArgb(0, 0, 0, 0);
-            labelStock.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            labelStock.ForeColor = Color.White;
-            labelStock.Location = new Point(25, 3);
-            labelStock.Name = "labelStock";
-            labelStock.Size = new Size(196, 35);
-            labelStock.TabIndex = 60;
-            labelStock.Text = "MENSUALIDAD";
+            lblDesactivados.AutoSize = true;
+            lblDesactivados.BackColor = Color.Black;
+            lblDesactivados.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblDesactivados.ForeColor = Color.White;
+            lblDesactivados.Location = new Point(4, 484);
+            lblDesactivados.Name = "lblDesactivados";
+            lblDesactivados.Size = new Size(138, 23);
+            lblDesactivados.TabIndex = 74;
+            lblDesactivados.Text = "DESACTIVADOS";
             // 
-            // panel1
+            // lblVencidos
             // 
-            panel1.BackColor = Color.Blue;
-            panel1.Controls.Add(lblCPremium);
-            panel1.Controls.Add(lblMPremium);
-            panel1.Controls.Add(label3);
-            panel1.ForeColor = Color.Crimson;
-            panel1.ImeMode = ImeMode.On;
-            panel1.Location = new Point(821, 590);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(249, 140);
-            panel1.TabIndex = 65;
-            panel1.Tag = "classic";
+            lblVencidos.AutoSize = true;
+            lblVencidos.BackColor = Color.Black;
+            lblVencidos.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblVencidos.ForeColor = Color.White;
+            lblVencidos.Location = new Point(4, 461);
+            lblVencidos.Name = "lblVencidos";
+            lblVencidos.Size = new Size(95, 23);
+            lblVencidos.TabIndex = 73;
+            lblVencidos.Text = "VENCIDOS";
             // 
-            // lblCPremium
+            // pnlQuincena
             // 
-            lblCPremium.AutoSize = true;
-            lblCPremium.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblCPremium.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCPremium.ForeColor = Color.White;
-            lblCPremium.Location = new Point(2, 36);
-            lblCPremium.Name = "lblCPremium";
-            lblCPremium.Size = new Size(38, 45);
-            lblCPremium.TabIndex = 62;
-            lblCPremium.Text = "0";
+            pnlQuincena.BackColor = Color.Blue;
+            pnlQuincena.Controls.Add(lblQuincenalActivo);
+            pnlQuincena.Controls.Add(label1);
+            pnlQuincena.Controls.Add(lblCQuincena);
+            pnlQuincena.Controls.Add(label5);
+            pnlQuincena.Controls.Add(label7);
+            pnlQuincena.Dock = DockStyle.Top;
+            pnlQuincena.ForeColor = Color.Crimson;
+            pnlQuincena.Location = new Point(8, 308);
+            pnlQuincena.Name = "pnlQuincena";
+            pnlQuincena.Size = new Size(274, 150);
+            pnlQuincena.TabIndex = 71;
+            pnlQuincena.Tag = "classic";
             // 
-            // lblMPremium
+            // lblQuincenalActivo
             // 
-            lblMPremium.AutoSize = true;
-            lblMPremium.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblMPremium.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMPremium.ForeColor = Color.White;
-            lblMPremium.Location = new Point(1, 81);
-            lblMPremium.Name = "lblMPremium";
-            lblMPremium.Size = new Size(38, 45);
-            lblMPremium.TabIndex = 61;
-            lblMPremium.Text = "0";
+            lblQuincenalActivo.AutoSize = true;
+            lblQuincenalActivo.BackColor = Color.Transparent;
+            lblQuincenalActivo.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblQuincenalActivo.ForeColor = Color.White;
+            lblQuincenalActivo.Location = new Point(3, 94);
+            lblQuincenalActivo.Name = "lblQuincenalActivo";
+            lblQuincenalActivo.Size = new Size(38, 45);
+            lblQuincenalActivo.TabIndex = 65;
+            lblQuincenalActivo.Tag = "classic";
+            lblQuincenalActivo.Text = "0";
             // 
-            // label3
+            // label1
             // 
-            label3.AutoSize = true;
-            label3.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label3.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label3.ForeColor = Color.White;
-            label3.Location = new Point(55, 4);
-            label3.Name = "label3";
-            label3.Size = new Size(133, 35);
-            label3.TabIndex = 60;
-            label3.Text = "PREMIUM";
+            label1.AutoSize = true;
+            label1.BackColor = Color.Transparent;
+            label1.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            label1.ForeColor = Color.FromArgb(255, 224, 128);
+            label1.Location = new Point(78, 3);
+            label1.Name = "label1";
+            label1.Size = new Size(121, 25);
+            label1.TabIndex = 63;
+            label1.Tag = "classic";
+            label1.Text = "QUINCENAL";
             // 
-            // panel3
+            // lblCQuincena
             // 
-            panel3.BackColor = Color.Blue;
-            panel3.Controls.Add(lblCPro);
-            panel3.Controls.Add(lblMPro);
-            panel3.Controls.Add(label6);
-            panel3.ForeColor = Color.Crimson;
-            panel3.ImeMode = ImeMode.On;
-            panel3.Location = new Point(1076, 590);
-            panel3.Name = "panel3";
-            panel3.Size = new Size(249, 140);
-            panel3.TabIndex = 67;
-            panel3.Tag = "classic";
+            lblCQuincena.AutoSize = true;
+            lblCQuincena.BackColor = Color.Transparent;
+            lblCQuincena.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCQuincena.ForeColor = Color.White;
+            lblCQuincena.Location = new Point(2, 52);
+            lblCQuincena.Name = "lblCQuincena";
+            lblCQuincena.Size = new Size(38, 45);
+            lblCQuincena.TabIndex = 62;
+            lblCQuincena.Tag = "classic";
+            lblCQuincena.Text = "0";
             // 
-            // lblCPro
+            // label5
             // 
-            lblCPro.AutoSize = true;
-            lblCPro.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblCPro.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCPro.ForeColor = Color.White;
-            lblCPro.Location = new Point(2, 36);
-            lblCPro.Name = "lblCPro";
-            lblCPro.Size = new Size(38, 45);
-            lblCPro.TabIndex = 62;
-            lblCPro.Text = "0";
+            label5.AutoSize = true;
+            label5.BackColor = Color.Transparent;
+            label5.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            label5.ForeColor = Color.White;
+            label5.Location = new Point(1, 100);
+            label5.Name = "label5";
+            label5.Size = new Size(0, 45);
+            label5.TabIndex = 61;
+            label5.Tag = "classic";
+            label5.Visible = false;
             // 
-            // lblMPro
+            // label7
             // 
-            lblMPro.AutoSize = true;
-            lblMPro.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblMPro.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMPro.ForeColor = Color.White;
-            lblMPro.Location = new Point(1, 81);
-            lblMPro.Name = "lblMPro";
-            lblMPro.Size = new Size(38, 45);
-            lblMPro.TabIndex = 61;
-            lblMPro.Text = "0";
+            label7.AutoSize = true;
+            label7.BackColor = Color.Transparent;
+            label7.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label7.ForeColor = Color.White;
+            label7.Location = new Point(25, 24);
+            label7.Name = "label7";
+            label7.Size = new Size(122, 35);
+            label7.TabIndex = 60;
+            label7.Tag = "classic";
+            label7.Text = "ACTIVOS";
             // 
-            // label6
+            // pnlMensualidad
             // 
-            label6.AutoSize = true;
-            label6.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label6.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label6.ForeColor = Color.White;
-            label6.Location = new Point(85, 5);
-            label6.Name = "label6";
-            label6.Size = new Size(65, 35);
-            label6.TabIndex = 60;
-            label6.Text = "PRO";
+            pnlMensualidad.BackColor = Color.Blue;
+            pnlMensualidad.Controls.Add(lblMensualActivo);
+            pnlMensualidad.Controls.Add(label8);
+            pnlMensualidad.Controls.Add(lblCFinMes);
+            pnlMensualidad.Controls.Add(label11);
+            pnlMensualidad.Controls.Add(label13);
+            pnlMensualidad.Dock = DockStyle.Top;
+            pnlMensualidad.ForeColor = Color.Crimson;
+            pnlMensualidad.Location = new Point(8, 158);
+            pnlMensualidad.Name = "pnlMensualidad";
+            pnlMensualidad.Size = new Size(274, 150);
+            pnlMensualidad.TabIndex = 72;
+            pnlMensualidad.Tag = "classic";
             // 
-            // panel4
+            // lblMensualActivo
             // 
-            panel4.BackColor = Color.Blue;
-            panel4.Controls.Add(lblC3x);
-            panel4.Controls.Add(lblM3x);
-            panel4.Controls.Add(label9);
-            panel4.ForeColor = Color.Crimson;
-            panel4.ImeMode = ImeMode.On;
-            panel4.Location = new Point(282, 590);
-            panel4.Name = "panel4";
-            panel4.Size = new Size(249, 140);
-            panel4.TabIndex = 66;
-            panel4.Tag = "classic";
+            lblMensualActivo.AutoSize = true;
+            lblMensualActivo.BackColor = Color.Transparent;
+            lblMensualActivo.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblMensualActivo.ForeColor = Color.White;
+            lblMensualActivo.Location = new Point(3, 93);
+            lblMensualActivo.Name = "lblMensualActivo";
+            lblMensualActivo.Size = new Size(38, 45);
+            lblMensualActivo.TabIndex = 64;
+            lblMensualActivo.Tag = "classic";
+            lblMensualActivo.Text = "0";
             // 
-            // lblC3x
+            // label8
             // 
-            lblC3x.AutoSize = true;
-            lblC3x.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblC3x.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblC3x.ForeColor = Color.White;
-            lblC3x.Location = new Point(2, 36);
-            lblC3x.Name = "lblC3x";
-            lblC3x.Size = new Size(38, 45);
-            lblC3x.TabIndex = 62;
-            lblC3x.Text = "0";
+            label8.AutoSize = true;
+            label8.BackColor = Color.Transparent;
+            label8.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            label8.ForeColor = Color.FromArgb(255, 224, 128);
+            label8.Location = new Point(78, 3);
+            label8.Name = "label8";
+            label8.Size = new Size(103, 25);
+            label8.TabIndex = 63;
+            label8.Tag = "classic";
+            label8.Text = "MENSUAL";
             // 
-            // lblM3x
+            // lblCFinMes
             // 
-            lblM3x.AutoSize = true;
-            lblM3x.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblM3x.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblM3x.ForeColor = Color.White;
-            lblM3x.Location = new Point(1, 81);
-            lblM3x.Name = "lblM3x";
-            lblM3x.Size = new Size(38, 45);
-            lblM3x.TabIndex = 61;
-            lblM3x.Text = "0";
+            lblCFinMes.AutoSize = true;
+            lblCFinMes.BackColor = Color.Transparent;
+            lblCFinMes.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            lblCFinMes.ForeColor = Color.White;
+            lblCFinMes.Location = new Point(2, 56);
+            lblCFinMes.Name = "lblCFinMes";
+            lblCFinMes.Size = new Size(38, 45);
+            lblCFinMes.TabIndex = 62;
+            lblCFinMes.Tag = "classic";
+            lblCFinMes.Text = "0";
             // 
-            // label9
+            // label11
             // 
-            label9.AutoSize = true;
-            label9.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label9.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label9.ForeColor = Color.White;
-            label9.Location = new Point(94, 3);
-            label9.Name = "label9";
-            label9.Size = new Size(43, 35);
-            label9.TabIndex = 60;
-            label9.Text = "3x";
+            label11.AutoSize = true;
+            label11.BackColor = Color.Transparent;
+            label11.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
+            label11.ForeColor = Color.White;
+            label11.Location = new Point(1, 100);
+            label11.Name = "label11";
+            label11.Size = new Size(0, 45);
+            label11.TabIndex = 61;
+            label11.Tag = "classic";
+            label11.Visible = false;
             // 
-            // panel5
+            // label13
             // 
-            panel5.BackColor = Color.Blue;
-            panel5.Controls.Add(lblCAbdomenPlano);
-            panel5.Controls.Add(lblMAbdomenPlano);
-            panel5.Controls.Add(label12);
-            panel5.ForeColor = Color.Crimson;
-            panel5.ImeMode = ImeMode.On;
-            panel5.Location = new Point(537, 590);
-            panel5.Name = "panel5";
-            panel5.Size = new Size(278, 140);
-            panel5.TabIndex = 68;
-            panel5.Tag = "classic";
-            // 
-            // lblCAbdomenPlano
-            // 
-            lblCAbdomenPlano.AutoSize = true;
-            lblCAbdomenPlano.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblCAbdomenPlano.FlatStyle = FlatStyle.Flat;
-            lblCAbdomenPlano.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCAbdomenPlano.ForeColor = Color.White;
-            lblCAbdomenPlano.Location = new Point(2, 36);
-            lblCAbdomenPlano.Name = "lblCAbdomenPlano";
-            lblCAbdomenPlano.Size = new Size(38, 45);
-            lblCAbdomenPlano.TabIndex = 62;
-            lblCAbdomenPlano.Text = "0";
-            // 
-            // lblMAbdomenPlano
-            // 
-            lblMAbdomenPlano.AutoSize = true;
-            lblMAbdomenPlano.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblMAbdomenPlano.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMAbdomenPlano.ForeColor = Color.White;
-            lblMAbdomenPlano.Location = new Point(1, 81);
-            lblMAbdomenPlano.Name = "lblMAbdomenPlano";
-            lblMAbdomenPlano.Size = new Size(38, 45);
-            lblMAbdomenPlano.TabIndex = 61;
-            lblMAbdomenPlano.Text = "0";
-            // 
-            // label12
-            // 
-            label12.AutoSize = true;
-            label12.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label12.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label12.ForeColor = Color.White;
-            label12.Location = new Point(25, 5);
-            label12.Name = "label12";
-            label12.Size = new Size(236, 35);
-            label12.TabIndex = 60;
-            label12.Text = "ABDOMEN PLANO";
-            // 
-            // panel6
-            // 
-            panel6.BackColor = Color.Blue;
-            panel6.Controls.Add(lblCGluteosGrande);
-            panel6.Controls.Add(lblMGluteosGrande);
-            panel6.Controls.Add(label15);
-            panel6.ForeColor = Color.Crimson;
-            panel6.ImeMode = ImeMode.On;
-            panel6.Location = new Point(1331, 590);
-            panel6.Name = "panel6";
-            panel6.Size = new Size(278, 140);
-            panel6.TabIndex = 69;
-            panel6.Tag = "classic";
-            // 
-            // lblCGluteosGrande
-            // 
-            lblCGluteosGrande.AutoSize = true;
-            lblCGluteosGrande.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblCGluteosGrande.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCGluteosGrande.ForeColor = Color.White;
-            lblCGluteosGrande.Location = new Point(2, 36);
-            lblCGluteosGrande.Name = "lblCGluteosGrande";
-            lblCGluteosGrande.Size = new Size(38, 45);
-            lblCGluteosGrande.TabIndex = 62;
-            lblCGluteosGrande.Text = "0";
-            // 
-            // lblMGluteosGrande
-            // 
-            lblMGluteosGrande.AutoSize = true;
-            lblMGluteosGrande.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblMGluteosGrande.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMGluteosGrande.ForeColor = Color.White;
-            lblMGluteosGrande.Location = new Point(1, 81);
-            lblMGluteosGrande.Name = "lblMGluteosGrande";
-            lblMGluteosGrande.Size = new Size(38, 45);
-            lblMGluteosGrande.TabIndex = 61;
-            lblMGluteosGrande.Text = "0";
-            // 
-            // label15
-            // 
-            label15.AutoSize = true;
-            label15.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label15.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label15.ForeColor = Color.White;
-            label15.Location = new Point(21, 5);
-            label15.Name = "label15";
-            label15.Size = new Size(234, 35);
-            label15.TabIndex = 60;
-            label15.Text = "GLUTEOS GRANDE";
-            // 
-            // panel7
-            // 
-            panel7.BackColor = Color.Blue;
-            panel7.Controls.Add(lblTiempo);
-            panel7.Controls.Add(lblCTotal);
-            panel7.Controls.Add(lblMTotal);
-            panel7.Controls.Add(label4);
-            panel7.ForeColor = Color.Crimson;
-            panel7.ImeMode = ImeMode.On;
-            panel7.Location = new Point(1330, 735);
-            panel7.Name = "panel7";
-            panel7.Size = new Size(278, 140);
-            panel7.TabIndex = 69;
-            panel7.Tag = "classic";
-            // 
-            // lblTiempo
-            // 
-            lblTiempo.AutoSize = true;
-            lblTiempo.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblTiempo.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblTiempo.ForeColor = Color.FromArgb(255, 224, 128);
-            lblTiempo.Location = new Point(78, 3);
-            lblTiempo.Name = "lblTiempo";
-            lblTiempo.Size = new Size(53, 25);
-            lblTiempo.TabIndex = 63;
-            lblTiempo.Text = "HOY";
-            // 
-            // lblCTotal
-            // 
-            lblCTotal.AutoSize = true;
-            lblCTotal.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblCTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblCTotal.ForeColor = Color.White;
-            lblCTotal.Location = new Point(2, 58);
-            lblCTotal.Name = "lblCTotal";
-            lblCTotal.Size = new Size(38, 45);
-            lblCTotal.TabIndex = 62;
-            lblCTotal.Text = "0";
-            // 
-            // lblMTotal
-            // 
-            lblMTotal.AutoSize = true;
-            lblMTotal.BackColor = Color.FromArgb(0, 0, 0, 0);
-            lblMTotal.Font = new Font("Segoe UI", 19F, FontStyle.Bold);
-            lblMTotal.ForeColor = Color.White;
-            lblMTotal.Location = new Point(1, 100);
-            lblMTotal.Name = "lblMTotal";
-            lblMTotal.Size = new Size(38, 45);
-            lblMTotal.TabIndex = 61;
-            lblMTotal.Text = "0";
-            // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.BackColor = Color.FromArgb(0, 0, 0, 0);
-            label4.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label4.ForeColor = Color.White;
-            label4.Location = new Point(25, 28);
-            label4.Name = "label4";
-            label4.Size = new Size(91, 35);
-            label4.TabIndex = 60;
-            label4.Text = "TOTAL";
+            label13.AutoSize = true;
+            label13.BackColor = Color.Transparent;
+            label13.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            label13.ForeColor = Color.White;
+            label13.Location = new Point(25, 26);
+            label13.Name = "label13";
+            label13.Size = new Size(122, 35);
+            label13.TabIndex = 60;
+            label13.Tag = "classic";
+            label13.Text = "ACTIVOS";
             // 
             // FrmEstadoClientes
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1672, 905);
-            Controls.Add(panel7);
-            Controls.Add(panel6);
-            Controls.Add(panel5);
-            Controls.Add(panel3);
-            Controls.Add(panel4);
-            Controls.Add(panel1);
-            Controls.Add(panel2);
+            ClientSize = new Size(1924, 1055);
             Controls.Add(dgvEstado);
+            Controls.Add(panelCiclos);
+            Controls.Add(panelKpis);
             Controls.Add(panelAcciones);
+            Controls.Add(panelStatus);
             Controls.Add(panelBusqueda);
             Controls.Add(panelNav);
             Controls.Add(btnAtras);
             Name = "FrmEstadoClientes";
+            Tag = "classic";
             Text = "ESTADO Y RENOVACION";
             WindowState = FormWindowState.Maximized;
             Load += FrmEstadoClientes_Load;
+            ((System.ComponentModel.ISupportInitialize)bsEstado).EndInit();
+            menuEstado.ResumeLayout(false);
             panelNav.ResumeLayout(false);
             panelBusqueda.ResumeLayout(false);
             panelBusqueda.PerformLayout();
             panelAcciones.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)dgvEstado).EndInit();
+            tlpAcciones.ResumeLayout(false);
+            panelKpis.ResumeLayout(false);
+            tlpKpis.ResumeLayout(false);
             panel2.ResumeLayout(false);
             panel2.PerformLayout();
-            panel1.ResumeLayout(false);
-            panel1.PerformLayout();
-            panel3.ResumeLayout(false);
-            panel3.PerformLayout();
             panel4.ResumeLayout(false);
             panel4.PerformLayout();
             panel5.ResumeLayout(false);
             panel5.PerformLayout();
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            panel3.ResumeLayout(false);
+            panel3.PerformLayout();
             panel6.ResumeLayout(false);
             panel6.PerformLayout();
             panel7.ResumeLayout(false);
             panel7.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvEstado).EndInit();
+            panelCiclos.ResumeLayout(false);
+            panelCiclos.PerformLayout();
+            pnlQuincena.ResumeLayout(false);
+            pnlQuincena.PerformLayout();
+            pnlMensualidad.ResumeLayout(false);
+            pnlMensualidad.PerformLayout();
             ResumeLayout(false);
         }
 
         #endregion
 
+        private BindingSource bsEstado;
+        private System.Windows.Forms.Timer timerActualizacion;
+        private ContextMenuStrip menuEstado;
+        private ToolStripMenuItem mnuAjustarFechaFin;
         private Panel panelNav;
         private Button btnBack;
         private Button btnNavPagar;
@@ -822,9 +1267,15 @@ namespace UI.DISEÑO
         private Button btnNavReportes;
         private Button btnNavClientes;
         private Panel panelBusqueda;
+        private Panel panelStatus;
+        private Label lblEstadoConteos;
         private Panel panelAcciones;
+        private TableLayoutPanel tlpAcciones;
+        private Panel panelKpis;
+        private TableLayoutPanel tlpKpis;
         private DataGridView dgvEstado;
         private Button btnAtras;
+        private Panel panelCiclos;
         private Button btnRenovar;
         private Button btnDesactivar;
         private Button btnCongelar;
@@ -858,11 +1309,28 @@ namespace UI.DISEÑO
         private Panel panel7;
         private Label lblTiempo;
         private ComboBox cbmMesesPanel;
+        private ComboBox cmbEstaCategoria;
         private Label lblCTotal;
         private Label lblMTotal;
         private Label label4;
         private Button btnProgramar;
         private Button btnWhatsApp;
         private Button btnAñadirMiembro;
+        private Panel pnlQuincena;
+        private Label label1;
+        private Label lblCQuincena;
+        private Label label5;
+        private Label label7;
+        private Panel pnlMensualidad;
+        private Label label8;
+        private Label lblCFinMes;
+        private Label label11;
+        private Label label13;
+        private Label lblMensualActivo;
+        private Label lblQuincenalActivo;
+        private Label lblCondeuda;
+        private Label lblVencidos;
+        private Label lblCongelado;
+        private Label lblDesactivados;
     }
 }

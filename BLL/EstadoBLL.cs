@@ -23,6 +23,12 @@ namespace BLL
             return estadoDAL.ObtenerKpisPlanesPorMes(anio, mes);
         }
 
+        /// <summary>KPIs de cobros/altas de un día (misma regla que por mes).</summary>
+        public DataTable ObtenerKpisPlanesPorDia(DateTime dia)
+        {
+            return estadoDAL.ObtenerKpisPlanesPorDia(dia.Date);
+        }
+
         public DataTable ObtenerDetalleMembresiasPorMes(int anio, int mes)
         {
             if (mes < 1 || mes > 12)

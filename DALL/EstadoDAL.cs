@@ -104,7 +104,21 @@ namespace DL
         {
             DateTime desde = new DateTime(anio, mes, 1);
             DateTime hasta = desde.AddMonths(1);
+            return ObtenerKpisPlanesPorRango(desde, hasta);
+        }
 
+        /// <summary>
+        /// Ingresos por plan en un día calendario (misma regla SSOT que por mes).
+        /// </summary>
+        public DataTable ObtenerKpisPlanesPorDia(DateTime dia)
+        {
+            DateTime desde = dia.Date;
+            DateTime hasta = desde.AddDays(1);
+            return ObtenerKpisPlanesPorRango(desde, hasta);
+        }
+
+        private DataTable ObtenerKpisPlanesPorRango(DateTime desde, DateTime hasta)
+        {
             string query = @"
                 SELECT
                     ISNULL(NULLIF(LTRIM(RTRIM(p.Nombre)), ''), N'SIN PLAN') AS PlanNombre,
