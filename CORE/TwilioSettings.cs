@@ -75,10 +75,17 @@ namespace CORE
         public static string VoiceTwimlUrl =>
             LeerOpcional("TWILIO_VOICE_TWIML_URL", "TwilioVoiceTwimlUrl");
 
+        /// <summary>Primer aviso de cuota/financiamiento (p. ej. 10 días antes).</summary>
         public static int DiasRecordatorioDeuda =>
             int.TryParse(ConfigurationManager.AppSettings["DiasRecordatorioDeuda"], out int dias) && dias > 0
                 ? dias
-                : 5;
+                : 10;
+
+        /// <summary>Segundo aviso urgente de cuota/financiamiento (p. ej. 2 días antes).</summary>
+        public static int DiasRecordatorioDeudaUrgente =>
+            int.TryParse(ConfigurationManager.AppSettings["DiasRecordatorioDeudaUrgente"], out int dias) && dias > 0
+                ? dias
+                : 2;
 
         public static int DiasRecordatorioMembresia =>
             int.TryParse(ConfigurationManager.AppSettings["DiasRecordatorioMembresia"], out int dias) && dias > 0

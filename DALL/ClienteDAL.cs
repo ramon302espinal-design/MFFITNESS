@@ -8,20 +8,39 @@ namespace DL
     {
         private readonly DBHelper db = new DBHelper();
         private static bool _sexoColumnReady;
+        private static bool _cedulaColumnReady;
+        private static bool _trabajoColumnsReady;
         private static readonly object SchemaLock = new();
 
         public void EnsureSexoColumn()
         {
-            if (_sexoColumnReady) return;
             lock (SchemaLock)
             {
-                if (_sexoColumnReady) return;
-
-                db.ExecuteNonQuery(@"
+                if (!_sexoColumnReady)
+                {
+                    db.ExecuteNonQuery(@"
 IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
     ALTER TABLE dbo.Clientes ADD Sexo NVARCHAR(20) NULL;");
+                    _sexoColumnReady = true;
+                }
 
-                _sexoColumnReady = true;
+                if (!_cedulaColumnReady)
+                {
+                    db.ExecuteNonQuery(@"
+IF COL_LENGTH('dbo.Clientes', 'Cedula') IS NULL
+    ALTER TABLE dbo.Clientes ADD Cedula NVARCHAR(30) NULL;");
+                    _cedulaColumnReady = true;
+                }
+
+                if (!_trabajoColumnsReady)
+                {
+                    db.ExecuteNonQuery(@"
+IF COL_LENGTH('dbo.Clientes', 'LugarTrabajo') IS NULL
+    ALTER TABLE dbo.Clientes ADD LugarTrabajo NVARCHAR(200) NULL;
+IF COL_LENGTH('dbo.Clientes', 'DireccionTrabajo') IS NULL
+    ALTER TABLE dbo.Clientes ADD DireccionTrabajo NVARCHAR(200) NULL;");
+                    _trabajoColumnsReady = true;
+                }
             }
         }
 
@@ -37,6 +56,9 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
                     c.ID AS Id,
                     c.Nombre,
                     c.Telefono,
+                    c.Cedula,
+                    c.LugarTrabajo,
+                    c.DireccionTrabajo,
                     c.Direccion,
                     c.FechaNacimiento,
                     c.Sexo,
@@ -163,15 +185,15 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
         }
 
         public int InsertarCliente(string nombre, DateTime fechaNacimiento,
-                                     string direccion, string telefono, string? sexo = null)
+                                     string direccion, string telefono, string? sexo = null, string? cedula = null)
         {
             EnsureSexoColumn();
 
             string query = @"INSERT INTO dbo.Clientes
-                             (Nombre, FechaNacimiento, Direccion, Telefono, Sexo)
+                             (Nombre, FechaNacimiento, Direccion, Telefono, Sexo, Cedula)
                              OUTPUT INSERTED.ID
                              VALUES
-                             (@Nombre, @FechaNacimiento, @Direccion, @Telefono, @Sexo)";
+                             (@Nombre, @FechaNacimiento, @Direccion, @Telefono, @Sexo, @Cedula)";
 
             SqlParameter[] parametros =
             {
@@ -179,14 +201,15 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
                 new SqlParameter("@FechaNacimiento", fechaNacimiento),
                 new SqlParameter("@Direccion", direccion),
                 new SqlParameter("@Telefono", telefono),
-                new SqlParameter("@Sexo", (object?)sexo ?? DBNull.Value)
+                new SqlParameter("@Sexo", (object?)sexo ?? DBNull.Value),
+                new SqlParameter("@Cedula", (object?)cedula ?? DBNull.Value)
             };
 
             return Convert.ToInt32(db.ExecuteScalar(query, parametros));
         }
 
         public void ActualizarCliente(int id, string nombre, DateTime fechaNacimiento,
-                                      string direccion, string telefono, string? sexo = null)
+                                      string direccion, string telefono, string? sexo = null, string? cedula = null)
         {
             EnsureSexoColumn();
 
@@ -195,7 +218,8 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
                                  FechaNacimiento = @FechaNacimiento,
                                  Direccion = @Direccion,
                                  Telefono = @Telefono,
-                                 Sexo = @Sexo
+                                 Sexo = @Sexo,
+                                 Cedula = @Cedula
                              WHERE ID = @Id";
 
             SqlParameter[] parametros =
@@ -205,7 +229,42 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
                 new SqlParameter("@FechaNacimiento", fechaNacimiento.Date),
                 new SqlParameter("@Direccion", direccion),
                 new SqlParameter("@Telefono", telefono),
-                new SqlParameter("@Sexo", (object?)sexo ?? DBNull.Value)
+                new SqlParameter("@Sexo", (object?)sexo ?? DBNull.Value),
+                new SqlParameter("@Cedula", (object?)cedula ?? DBNull.Value)
+            };
+
+            int filas = db.ExecuteNonQuery(query, parametros);
+            if (filas <= 0)
+                throw new InvalidOperationException("No se encontró el cliente a actualizar.");
+        }
+
+        /// <summary>
+        /// Actualiza cédula y datos laborales (tabCrear → ficha datos generales).
+        /// No toca nombre/teléfono/dirección ni ficha de salud.
+        /// </summary>
+        public void ActualizarCedulaYTrabajo(
+            int id,
+            string? cedula,
+            string? lugarTrabajo,
+            string? direccionTrabajo)
+        {
+            if (id <= 0)
+                throw new InvalidOperationException("Cliente inválido.");
+
+            EnsureSexoColumn();
+
+            string query = @"UPDATE dbo.Clientes
+                             SET Cedula = @Cedula,
+                                 LugarTrabajo = @LugarTrabajo,
+                                 DireccionTrabajo = @DireccionTrabajo
+                             WHERE ID = @Id";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Id", id),
+                new SqlParameter("@Cedula", (object?)cedula ?? DBNull.Value),
+                new SqlParameter("@LugarTrabajo", (object?)lugarTrabajo ?? DBNull.Value),
+                new SqlParameter("@DireccionTrabajo", (object?)direccionTrabajo ?? DBNull.Value)
             };
 
             int filas = db.ExecuteNonQuery(query, parametros);
@@ -296,7 +355,7 @@ IF COL_LENGTH('dbo.Clientes', 'Sexo') IS NULL
         {
             EnsureSexoColumn();
 
-            string query = @"SELECT ID as Id, Nombre, Telefono, Direccion, FechaNacimiento, Sexo
+            string query = @"SELECT ID as Id, Nombre, Telefono, Cedula, LugarTrabajo, DireccionTrabajo, Direccion, FechaNacimiento, Sexo
                              FROM dbo.Clientes
                              WHERE ID = @Id";
 

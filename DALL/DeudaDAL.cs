@@ -137,7 +137,7 @@ namespace DL
                     {
                         // 🔒 BLOQUEAR DEUDA
                         SqlCommand cmd = new SqlCommand(@"
-                SELECT Saldo, ClienteId 
+                SELECT Saldo, ClienteId, MontoPagado
                 FROM Deudas WITH (UPDLOCK, ROWLOCK)
                 WHERE Id = @Id", conn, tx);
 
@@ -145,6 +145,7 @@ namespace DL
 
                         int clienteId;
                         decimal saldo;
+                        decimal montoPagadoAntes;
 
                         using (var reader = cmd.ExecuteReader())
                         {
@@ -153,6 +154,9 @@ namespace DL
 
                             saldo = Convert.ToDecimal(reader["Saldo"]);
                             clienteId = Convert.ToInt32(reader["ClienteId"]);
+                            montoPagadoAntes = reader["MontoPagado"] == DBNull.Value
+                                ? 0m
+                                : Convert.ToDecimal(reader["MontoPagado"]);
 
                             if (monto <= 0)
                                 throw new Exception("Monto inválido");
@@ -160,6 +164,8 @@ namespace DL
                             if (monto > saldo)
                                 throw new Exception($"Excede saldo: {saldo:N2}");
                         }
+
+                        EnsureHistorialEvidenciaColumns(conn, tx);
 
                         // 🔹 INSERTAR PAGO
                         SqlCommand cmdPago = new SqlCommand(@"
@@ -191,18 +197,41 @@ namespace DL
 
                         ventasDAL.SincronizarMontoPagadoDesdeDeuda(conn, tx, deudaId);
 
-                        // 🔹 HISTORIAL
-                        SqlCommand cmdHistorial = new SqlCommand(@"
-                INSERT INTO HistorialDeudas
-                (DeudaId, ClienteId, TipoMovimiento, Monto, Descripcion, Fecha, Usuario)
-                VALUES
-                (@DeudaId, @ClienteId, 'PAGO', @Monto, 'Pago de deuda', GETDATE(), @Usuario)", conn, tx);
+                        decimal saldoNuevo = saldo - monto;
+                        decimal montoPagadoDespues = montoPagadoAntes + monto;
+                        string metodoNorm = string.IsNullOrWhiteSpace(metodo) ? "N/D" : metodo.Trim();
 
-                        cmdHistorial.Parameters.Add("@DeudaId", SqlDbType.Int).Value = deudaId;
-                        cmdHistorial.Parameters.Add("@ClienteId", SqlDbType.Int).Value = clienteId;
-                        cmdHistorial.Parameters.Add("@Monto", SqlDbType.Decimal).Value = monto;
-                        cmdHistorial.Parameters.Add("@Usuario", SqlDbType.VarChar, 100).Value = usuario;
-                        cmdHistorial.ExecuteNonQuery();
+                        var snap = PrestamoCuotaEvidenciaHelper.Resolver(
+                            conn, tx, deudaId, montoPagadoAntes, montoPagadoDespues);
+
+                        string descPago = ConstruirDescripcionAbono(
+                            monto, metodoNorm, saldo, saldoNuevo, snap);
+
+                        InsertHistorialEvidencia(
+                            conn, tx,
+                            deudaId, clienteId, "PAGO", monto, descPago, usuario,
+                            saldoNuevo, metodoNorm,
+                            snap.CuotaNumero, snap.FaltaCuota);
+
+                        foreach (var cubierta in snap.CuotasCubiertas)
+                        {
+                            string proxTxt = snap.ProximaCuotaNumero.HasValue
+                                && snap.ProximaCuotaFecha.HasValue
+                                ? $"Próxima cuota #{snap.ProximaCuotaNumero} vence {snap.ProximaCuotaFecha:dd/MM/yyyy}."
+                                : (saldoNuevo <= 0m
+                                    ? "Deuda liquidada."
+                                    : "Sin cuotas pendientes en cronograma.");
+
+                            string descCubierta =
+                                $"Se cubrió la cuota #{cubierta.NumeroCuota} " +
+                                $"(venc. {cubierta.FechaVencimiento:dd/MM/yyyy}, RD$ {cubierta.Total:N2}). {proxTxt}";
+
+                            InsertHistorialEvidencia(
+                                conn, tx,
+                                deudaId, clienteId, "CUOTA_CUBIERTA", cubierta.Total, descCubierta, usuario,
+                                saldoNuevo, metodoNorm,
+                                cubierta.NumeroCuota, 0m);
+                        }
 
                         // 🔥 CAJA (MISMA TRANSACCIÓN)
                         SqlCommand cmdCaja = new SqlCommand(@"
@@ -1231,6 +1260,7 @@ VALUES
         public DataTable ObtenerDeudas(bool soloActivas = true)
         {
             // Pendientes reales: ACTIVA con saldo > 0 (mismo criterio que Estado Clientes y WhatsApp).
+            // LEFT JOIN PrestamosCuotas: solo lectura/display; no cambia Saldo ni abonos.
             string condicionEstado = soloActivas ? "WHERE d.Estado = 'ACTIVA' AND d.Saldo > 0" : string.Empty;
             string query = $@"
             SELECT 
@@ -1250,11 +1280,31 @@ VALUES
                 ISNULL(p.Nombre, 'N/A') AS [Plan],
                 m.FechaInicio AS FechaInicioMembresia,
                 m.FechaFin AS FechaFinMembresia,
-                ISNULL(pi.PagoInicial, 0) AS PagoInicialFinanciamiento
+                ISNULL(pi.PagoInicial, 0) AS PagoInicialFinanciamiento,
+                pc.Id AS PrestamoId,
+                pc.Frecuencia AS FrecuenciaPrestamo,
+                pc.InteresPorcentaje,
+                pc.InteresTotal,
+                pc.TotalConInteres,
+                pc.NumeroPlazos,
+                pc.CuotaBase,
+                CASE
+                    WHEN pc.Id IS NULL THEN CAST(NULL AS NVARCHAR(10))
+                    WHEN pc.ActivarMora = 1 THEN N'Sí'
+                    ELSE N'No'
+                END AS MoraPrestamo,
+                prox.ProximaCuotaNumero,
+                prox.ProximaCuotaFecha,
+                prox.ProximaCuotaMonto,
+                prox.FaltaEstaCuota,
+                up.UltimoPagoFecha
             FROM Deudas d
             INNER JOIN Clientes c ON c.ID = d.ClienteId
             LEFT JOIN Membresias m ON m.Id = d.MembresiaId
             LEFT JOIN Planes p ON p.Id = d.PlanId
+            LEFT JOIN dbo.PrestamosCuotas pc
+                ON pc.DeudaId = d.Id
+               AND pc.Estado = N'ACTIVO'
             OUTER APPLY (
                 SELECT SUM(CASE WHEN h.TipoMovimiento = 'PAGO_INICIAL'
                                 THEN h.Monto ELSE -h.Monto END) AS PagoInicial
@@ -1262,8 +1312,50 @@ VALUES
                 WHERE h.DeudaId = d.Id
                   AND h.TipoMovimiento IN ('PAGO_INICIAL', 'REVERSO_PAGO_INICIAL')
             ) pi
+            OUTER APPLY (
+                -- Abonos al cronograma: MontoPagado − aporte inicial.
+                -- El PI redujo el capital antes de armar el cronograma; no debe consumir cuotas.
+                SELECT CAST(
+                    CASE
+                        WHEN ISNULL(d.MontoPagado, 0) - ISNULL(pi.PagoInicial, 0) < 0 THEN 0
+                        ELSE ISNULL(d.MontoPagado, 0) - ISNULL(pi.PagoInicial, 0)
+                    END
+                    AS DECIMAL(18,2)) AS AbonadoACuotas
+            ) abono
+            OUTER APPLY (
+                -- Primera cuota no cubierta por abonos; FaltaEstaCuota = lo que falta de esa cuota.
+                SELECT TOP (1)
+                    det.NumeroCuota AS ProximaCuotaNumero,
+                    det.FechaVencimiento AS ProximaCuotaFecha,
+                    det.Total AS ProximaCuotaMonto,
+                    CAST(
+                        det.Total - CASE
+                            WHEN abono.AbonadoACuotas <= prev.SumaAnteriores THEN 0
+                            WHEN abono.AbonadoACuotas >= prev.SumaAnteriores + det.Total THEN det.Total
+                            ELSE abono.AbonadoACuotas - prev.SumaAnteriores
+                        END
+                    AS DECIMAL(18,2)) AS FaltaEstaCuota
+                FROM dbo.PrestamoDetalleCuotas det
+                CROSS APPLY (
+                    SELECT CAST(ISNULL(SUM(ant.Total), 0) AS DECIMAL(18,2)) AS SumaAnteriores
+                    FROM dbo.PrestamoDetalleCuotas ant
+                    WHERE ant.PrestamoId = det.PrestamoId
+                      AND ant.NumeroCuota < det.NumeroCuota
+                ) prev
+                WHERE det.PrestamoId = pc.Id
+                  AND abono.AbonadoACuotas < (prev.SumaAnteriores + det.Total)
+                ORDER BY det.NumeroCuota ASC
+            ) prox
+            OUTER APPLY (
+                SELECT TOP (1) pd.Fecha AS UltimoPagoFecha
+                FROM dbo.PagosDeuda pd
+                WHERE pd.DeudaId = d.Id
+                  AND ISNULL(pd.Estado, N'ACTIVO') = N'ACTIVO'
+                  AND ISNULL(pd.MetodoPago, N'') <> N'REVERSO'
+                ORDER BY pd.Fecha DESC, pd.Id DESC
+            ) up
             {condicionEstado}
-            ORDER BY d.FechaVencimiento ASC";
+            ORDER BY ISNULL(prox.ProximaCuotaFecha, d.FechaVencimiento) ASC, d.Id ASC";
 
             return db.ExecuteQuery(query);
         }
@@ -1518,6 +1610,9 @@ VALUES
                        d.MembresiaId,
                        d.Concepto,
                        d.MontoTotal AS SaldoDeuda,
+                       d.MontoTotal,
+                       ISNULL(pc.TotalConInteres, 0) AS TotalConInteres,
+                       ISNULL(pc.InteresTotal, 0) AS InteresTotal,
                        ISNULL((
                            SELECT SUM(CASE
                                WHEN h.TipoMovimiento = 'PAGO_INICIAL' THEN h.Monto
@@ -1527,9 +1622,238 @@ VALUES
                            WHERE h.DeudaId = d.Id
                        ), 0) AS PagoInicialFinanciamiento
                 FROM Deudas d
+                LEFT JOIN dbo.PrestamosCuotas pc
+                    ON pc.DeudaId = d.Id
+                   AND pc.Estado = N'ACTIVO'
                 WHERE d.Id IN ({ids})";
 
             return db.ExecuteQuery(query);
+        }
+
+        // ===============================
+        // EVIDENCIA HistorialDeudas
+        // ===============================
+        private static bool _historialEvidenciaReady;
+        private static readonly object HistorialEvidenciaLock = new();
+
+        public void EnsureHistorialEvidenciaSchema()
+        {
+            if (_historialEvidenciaReady)
+                return;
+
+            lock (HistorialEvidenciaLock)
+            {
+                if (_historialEvidenciaReady)
+                    return;
+
+                using SqlConnection conn = db.GetConnection();
+                conn.Open();
+                EnsureHistorialEvidenciaColumns(conn, null);
+                EnsureSpObtenerHistorial(conn);
+                _historialEvidenciaReady = true;
+            }
+        }
+
+        private static void EnsureSpObtenerHistorial(SqlConnection conn)
+        {
+            const string sql = @"
+CREATE OR ALTER PROCEDURE dbo.sp_ObtenerHistorial
+    @ClienteId INT = NULL,
+    @Tipo VARCHAR(50) = NULL,
+    @Desde DATETIME = NULL,
+    @Hasta DATETIME = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        h.Id,
+        h.DeudaId,
+        c.Nombre,
+        h.TipoMovimiento AS Tipo,
+        h.Descripcion,
+        ISNULL(d.Concepto, N'') AS ConceptoDeuda,
+        d.FechaVencimiento AS FechaLimitePago,
+        h.Monto,
+        h.SaldoResultante,
+        h.MetodoPago,
+        h.CuotaNumero,
+        h.FaltaCuota,
+        h.Fecha,
+        h.Usuario,
+        (
+            SELECT COUNT(1)
+            FROM dbo.RegistroMensajes rm
+            WHERE rm.ReferenciaId = h.DeudaId
+              AND ISNULL(rm.Estado, N'') = N'ENVIADO'
+        ) AS AvisosWhatsApp
+    FROM dbo.HistorialDeudas h
+    INNER JOIN dbo.Clientes c ON c.ID = h.ClienteId
+    LEFT JOIN dbo.Deudas d ON d.Id = h.DeudaId
+    WHERE (@ClienteId IS NULL OR h.ClienteId = @ClienteId)
+      AND (@Tipo IS NULL OR h.TipoMovimiento = @Tipo)
+      AND (@Desde IS NULL OR h.Fecha >= @Desde)
+      AND (@Hasta IS NULL OR h.Fecha <= @Hasta)
+    ORDER BY h.Fecha DESC, h.Id DESC;
+END";
+
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private static void EnsureHistorialEvidenciaColumns(SqlConnection conn, SqlTransaction? tx)
+        {
+            void Exec(string sql)
+            {
+                using var cmd = new SqlCommand(sql, conn, tx);
+                cmd.ExecuteNonQuery();
+            }
+
+            Exec(@"
+IF COL_LENGTH(N'dbo.HistorialDeudas', N'SaldoResultante') IS NULL
+    ALTER TABLE dbo.HistorialDeudas ADD SaldoResultante DECIMAL(18,2) NULL;");
+            Exec(@"
+IF COL_LENGTH(N'dbo.HistorialDeudas', N'MetodoPago') IS NULL
+    ALTER TABLE dbo.HistorialDeudas ADD MetodoPago NVARCHAR(50) NULL;");
+            Exec(@"
+IF COL_LENGTH(N'dbo.HistorialDeudas', N'CuotaNumero') IS NULL
+    ALTER TABLE dbo.HistorialDeudas ADD CuotaNumero INT NULL;");
+            Exec(@"
+IF COL_LENGTH(N'dbo.HistorialDeudas', N'FaltaCuota') IS NULL
+    ALTER TABLE dbo.HistorialDeudas ADD FaltaCuota DECIMAL(18,2) NULL;");
+        }
+
+        private static string ConstruirDescripcionAbono(
+            decimal monto,
+            string metodo,
+            decimal saldoAntes,
+            decimal saldoDespues,
+            CuotaEvidenciaSnapshot snap)
+        {
+            string baseTxt =
+                $"Abono RD$ {monto:N2} ({metodo}). Saldo RD$ {saldoAntes:N2} → RD$ {saldoDespues:N2}.";
+
+            if (saldoDespues <= 0m)
+                return $"{baseTxt} Deuda saldada.";
+
+            if (snap.CuotaNumero.HasValue && snap.FaltaCuota.HasValue)
+            {
+                string fecha = snap.CuotaFecha.HasValue
+                    ? $" (venc. {snap.CuotaFecha:dd/MM/yyyy})"
+                    : string.Empty;
+                return
+                    $"{baseTxt} Cuota #{snap.CuotaNumero}{fecha}: " +
+                    $"falta RD$ {snap.FaltaCuota:N2} de esta cuota.";
+            }
+
+            if (snap.CuotasCubiertas.Count > 0)
+                return $"{baseTxt} Cubrió cuota(s) del cronograma.";
+
+            return baseTxt;
+        }
+
+        private static void InsertHistorialEvidencia(
+            SqlConnection conn,
+            SqlTransaction tx,
+            int deudaId,
+            int clienteId,
+            string tipo,
+            decimal monto,
+            string descripcion,
+            string usuario,
+            decimal? saldoResultante,
+            string? metodoPago,
+            int? cuotaNumero,
+            decimal? faltaCuota)
+        {
+            string desc = descripcion ?? string.Empty;
+            if (desc.Length > 500)
+                desc = desc[..497] + "...";
+
+            using var cmd = new SqlCommand(@"
+INSERT INTO dbo.HistorialDeudas
+(DeudaId, ClienteId, TipoMovimiento, Monto, Descripcion, Fecha, Usuario,
+ SaldoResultante, MetodoPago, CuotaNumero, FaltaCuota)
+VALUES
+(@DeudaId, @ClienteId, @Tipo, @Monto, @Descripcion, GETDATE(), @Usuario,
+ @SaldoResultante, @MetodoPago, @CuotaNumero, @FaltaCuota);", conn, tx);
+
+            cmd.Parameters.Add("@DeudaId", SqlDbType.Int).Value = deudaId;
+            cmd.Parameters.Add("@ClienteId", SqlDbType.Int).Value = clienteId;
+            cmd.Parameters.Add("@Tipo", SqlDbType.VarChar, 50).Value = tipo;
+            cmd.Parameters.Add("@Monto", SqlDbType.Decimal).Value = monto;
+            cmd.Parameters.Add("@Descripcion", SqlDbType.NVarChar, 500).Value = desc;
+            cmd.Parameters.Add("@Usuario", SqlDbType.VarChar, 100).Value =
+                (object?)usuario ?? DBNull.Value;
+            cmd.Parameters.Add("@SaldoResultante", SqlDbType.Decimal).Value =
+                (object?)saldoResultante ?? DBNull.Value;
+            cmd.Parameters.Add("@MetodoPago", SqlDbType.NVarChar, 50).Value =
+                string.IsNullOrWhiteSpace(metodoPago) ? DBNull.Value : metodoPago.Trim();
+            cmd.Parameters.Add("@CuotaNumero", SqlDbType.Int).Value =
+                (object?)cuotaNumero ?? DBNull.Value;
+            cmd.Parameters.Add("@FaltaCuota", SqlDbType.Decimal).Value =
+                (object?)faltaCuota ?? DBNull.Value;
+            cmd.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Evidencia de mora diaria (no capitaliza Saldo). Idempotente por deuda+día.
+        /// </summary>
+        public bool RegistrarMoraGeneradaEvidencia(
+            int deudaId,
+            int clienteId,
+            decimal moraHoy,
+            decimal moraAcumulada,
+            int? cuotaNumero,
+            DateTime? fechaCuota,
+            decimal saldoActual,
+            string? usuario)
+        {
+            EnsureHistorialEvidenciaSchema();
+
+            using SqlConnection conn = db.GetConnection();
+            conn.Open();
+            using SqlTransaction tx = conn.BeginTransaction();
+
+            try
+            {
+                using (var cmdCheck = new SqlCommand(@"
+SELECT COUNT(1)
+FROM dbo.HistorialDeudas
+WHERE DeudaId = @DeudaId
+  AND TipoMovimiento = N'MORA_GENERADA'
+  AND CAST(Fecha AS DATE) = CAST(GETDATE() AS DATE);", conn, tx))
+                {
+                    cmdCheck.Parameters.AddWithValue("@DeudaId", deudaId);
+                    if (Convert.ToInt32(cmdCheck.ExecuteScalar()) > 0)
+                    {
+                        tx.Commit();
+                        return false;
+                    }
+                }
+
+                string fechaTxt = fechaCuota.HasValue
+                    ? fechaCuota.Value.ToString("dd/MM/yyyy")
+                    : "N/D";
+                string cuotaTxt = cuotaNumero.HasValue ? $"#{cuotaNumero}" : "N/D";
+                string desc =
+                    $"Mora generada hoy RD$ {moraHoy:N2}. Acumulada RD$ {moraAcumulada:N2}. " +
+                    $"Cuota {cuotaTxt} (pago {fechaTxt}). Saldo deuda RD$ {saldoActual:N2} (mora no capitalizada).";
+
+                InsertHistorialEvidencia(
+                    conn, tx,
+                    deudaId, clienteId, "MORA_GENERADA", moraHoy, desc,
+                    usuario ?? "SISTEMA",
+                    saldoActual, null, cuotaNumero, null);
+
+                tx.Commit();
+                return true;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
     }
 }

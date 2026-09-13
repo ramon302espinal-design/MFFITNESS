@@ -84,7 +84,8 @@ namespace UI
             cmbTipo.Items.AddRange(new string[]
             {
                 "Todos", "DEUDA", "PAGO_INICIAL", "REVERSO_PAGO_INICIAL", "PAGO",
-                "REVERSO_PAGO", "EDICION", "ANULACION"
+                "REVERSO_PAGO", "CUOTA_CUBIERTA", "PRESTAMO_PLAZOS", "MORA_GENERADA",
+                "EDICION", "ANULACION"
             });
             cmbTipo.SelectedIndex = 0;
 
@@ -193,11 +194,18 @@ namespace UI
                 DateTime hastaFin = dtpHasta.Value.Date.AddDays(1).AddTicks(-1);
                 filtro += $" AND Fecha >= #{dtpDesde.Value:MM/dd/yyyy}# AND Fecha <= #{hastaFin:MM/dd/yyyy HH:mm:ss}#";
 
-                // Filtro por búsqueda de cliente
+                // Filtro por búsqueda: cliente, deuda #, concepto, descripción
                 string textoCliente = txtCliente.Text.Trim();
                 if (!string.IsNullOrEmpty(textoCliente))
                 {
-                    filtro += $" AND Nombre LIKE '%{textoCliente.Replace("'", "''")}%'";
+                    string seguro = textoCliente.Replace("'", "''");
+                    filtro +=
+                        $" AND (Nombre LIKE '%{seguro}%'" +
+                        $" OR Descripcion LIKE '%{seguro}%'" +
+                        (dtHistorialCompleto.Columns.Contains("ConceptoDeuda")
+                            ? $" OR ConceptoDeuda LIKE '%{seguro}%'"
+                            : string.Empty) +
+                        $" OR Convert(DeudaId, 'System.String') LIKE '%{seguro}%')";
                 }
 
                 dv.RowFilter = filtro;
@@ -245,46 +253,79 @@ namespace UI
             DataGridViewHelper.RunColumnLayout(dgvHistorial, () =>
             {
             DataGridViewHelper.HideColumn(dgvHistorial, "Id");
-            DataGridViewHelper.HideColumn(dgvHistorial, "DeudaId");
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "DeudaId", col =>
+            {
+                col.HeaderText = "Deuda #";
+                col.Visible = true;
+                DataGridViewHelper.SetColumnFill(col, 70, 55);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 0);
+            });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Nombre", col =>
             {
                 col.HeaderText = "Cliente";
-                DataGridViewHelper.SetColumnFill(col, 160, 120);
+                DataGridViewHelper.SetColumnFill(col, 140, 100);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 1);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Tipo", col =>
             {
                 col.HeaderText = "Tipo";
-                DataGridViewHelper.SetColumnFill(col, 70, 55);
+                DataGridViewHelper.SetColumnFill(col, 110, 80);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 2);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Descripcion", col =>
             {
-                col.HeaderText = "Descripción";
-                DataGridViewHelper.SetColumnFill(col, 220, 120);
+                col.HeaderText = "Descripción / Evidencia";
+                DataGridViewHelper.SetColumnFill(col, 260, 140);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 3);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "ConceptoDeuda", col =>
+            {
+                col.HeaderText = "Concepto";
+                DataGridViewHelper.SetColumnFill(col, 140, 90);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 4);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "FechaLimitePago", col =>
             {
-                col.HeaderText = "Fecha Límite Pago";
+                col.HeaderText = "Vence deuda";
                 col.DefaultCellStyle.Format = "dd/MM/yyyy";
-                DataGridViewHelper.SetColumnFill(col, 110, 95);
-                DataGridViewHelper.SetDisplayIndexSafe(col, 3);
+                DataGridViewHelper.SetColumnFill(col, 95, 80);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 5);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "CuotaNumero", col =>
+            {
+                col.HeaderText = "Cuota #";
+                DataGridViewHelper.SetColumnFill(col, 65, 50);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 6);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "FaltaCuota", col =>
+            {
+                col.HeaderText = "Falta cuota";
+                col.DefaultCellStyle.Format = "C2";
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                DataGridViewHelper.SetColumnFill(col, 90, 70);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 7);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "AporteInicial", col =>
             {
                 col.HeaderText = "Pago Inicial";
-                DataGridViewHelper.SetColumnFill(col, 95, 80);
-                DataGridViewHelper.SetDisplayIndexSafe(col, 4);
+                DataGridViewHelper.SetColumnFill(col, 90, 70);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 8);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "OrigenPrecio", col =>
             {
                 col.HeaderText = "Origen";
-                DataGridViewHelper.SetColumnFill(col, 75, 60);
-                DataGridViewHelper.SetDisplayIndexSafe(col, 5);
+                DataGridViewHelper.SetColumnFill(col, 70, 55);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 9);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "PrecioTotal", col =>
@@ -292,8 +333,8 @@ namespace UI
                 col.HeaderText = "Precio Total";
                 col.DefaultCellStyle.Format = "C2";
                 col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                DataGridViewHelper.SetColumnFill(col, 95, 80);
-                DataGridViewHelper.SetDisplayIndexSafe(col, 6);
+                DataGridViewHelper.SetColumnFill(col, 90, 70);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 10);
             });
 
             DataGridViewHelper.HideColumn(dgvHistorial, "SaldoDeuda");
@@ -303,21 +344,46 @@ namespace UI
                 col.HeaderText = "Monto";
                 col.DefaultCellStyle.Format = "C2";
                 col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                DataGridViewHelper.SetColumnFill(col, 85, 70);
-                DataGridViewHelper.SetDisplayIndexSafe(col, 7);
+                DataGridViewHelper.SetColumnFill(col, 80, 65);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 11);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "SaldoResultante", col =>
+            {
+                col.HeaderText = "Saldo tras mov.";
+                col.DefaultCellStyle.Format = "C2";
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                DataGridViewHelper.SetColumnFill(col, 95, 75);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 12);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "MetodoPago", col =>
+            {
+                col.HeaderText = "Método";
+                DataGridViewHelper.SetColumnFill(col, 75, 55);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 13);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvHistorial, "AvisosWhatsApp", col =>
+            {
+                col.HeaderText = "Avisos WA";
+                DataGridViewHelper.SetColumnFill(col, 70, 55);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 14);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Fecha", col =>
             {
                 col.HeaderText = "Fecha";
                 col.DefaultCellStyle.Format = FechaHoraFormats.FechaHora;
-                DataGridViewHelper.SetColumnFill(col, 120, 100);
+                DataGridViewHelper.SetColumnFill(col, 115, 95);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 15);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvHistorial, "Usuario", col =>
             {
                 col.HeaderText = "Usuario";
-                DataGridViewHelper.SetColumnFill(col, 85, 70);
+                DataGridViewHelper.SetColumnFill(col, 80, 60);
+                DataGridViewHelper.SetDisplayIndexSafe(col, 16);
             });
             }, restoreFill: true);
         }
@@ -396,7 +462,8 @@ namespace UI
             if (columna != "Tipo" && columna != "Monto" && columna != "PrecioTotal")
                 return;
 
-            if (!TryColorMovimiento(ObtenerTipoFila(e.RowIndex), out Color color))
+            string tipo = ObtenerTipoFila(e.RowIndex);
+            if (!TryColorMovimiento(tipo, out Color color))
                 return;
 
             e.CellStyle.ForeColor = color;
@@ -406,6 +473,14 @@ namespace UI
             {
                 fuenteTipo ??= new Font(dgvHistorial.Font, FontStyle.Bold);
                 e.CellStyle.Font = fuenteTipo;
+                if (tipo == "PRESTAMO_PLAZOS")
+                    e.Value = "CRONOGRAMA";
+                else if (tipo == "CUOTA_CUBIERTA")
+                    e.Value = "CUOTA OK";
+                else if (tipo == "MORA_GENERADA")
+                    e.Value = "MORA";
+                else if (tipo == "PAGO")
+                    e.Value = "ABONO";
             }
         }
 
@@ -432,6 +507,15 @@ namespace UI
                     return true;
                 case "PAGO":
                     color = Color.ForestGreen;
+                    return true;
+                case "CUOTA_CUBIERTA":
+                    color = Color.FromArgb(0x00, 0x96, 0x88);
+                    return true;
+                case "PRESTAMO_PLAZOS":
+                    color = Color.FromArgb(0x0D, 0x47, 0xA1);
+                    return true;
+                case "MORA_GENERADA":
+                    color = Color.FromArgb(0xC6, 0x28, 0x28);
                     return true;
                 case "REVERSO_PAGO":
                 case "REVERSO_PAGO_INICIAL":

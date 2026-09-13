@@ -15,6 +15,8 @@ namespace BLL
         {
             try
             {
+                deudaDAL.EnsureHistorialEvidenciaSchema();
+
                 using (SqlConnection conn = new SqlConnection(db.ConnectionString))
                 {
                     SqlCommand cmd = new SqlCommand("sp_ObtenerHistorial", conn);

@@ -205,8 +205,50 @@ namespace UI.DISEÑO
             FormClosing -= FrmPagos_ProtegerCierrePorReboteTecla;
             FormClosing += FrmPagos_ProtegerCierrePorReboteTecla;
 
+            AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiadoPagos;
+            AppEventos.OnClienteCatalogoCambiado += OnClienteCatalogoCambiadoPagos;
+
             if (tabProductos.SelectedTab == tabPago)
                 EnfocarEscannerPos();
+        }
+
+        private void OnClienteCatalogoCambiadoPagos()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(OnClienteCatalogoCambiadoPagos));
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
+            try
+            {
+                int? clienteSel = null;
+                if (cmbCliente.SelectedValue != null
+                    && cmbCliente.SelectedValue != DBNull.Value
+                    && int.TryParse(cmbCliente.SelectedValue.ToString(), out int id)
+                    && id > 0)
+                    clienteSel = id;
+
+                CargarClientes();
+
+                if (clienteSel.HasValue)
+                {
+                    try { cmbCliente.SelectedValue = clienteSel.Value; }
+                    catch { /* id ya no existe */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Pagos] refresh catálogo clientes: {ex.Message}");
+            }
         }
 
         private void ConfigurarProteccionBtnBack()
@@ -386,6 +428,7 @@ namespace UI.DISEÑO
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiadoPagos;
             base.OnFormClosed(e);
         }
 
@@ -2141,16 +2184,15 @@ namespace UI.DISEÑO
                 return;
             }
 
-            string? notaFin = null;
-            if (pagoInicial > 0 && result.Payload is MembresiaOperacionResult opFin)
+            if (result.Payload is MembresiaOperacionResult opFin)
             {
-                notaFin = saldo > 0
+                string? notaFin = saldo > 0
                     ? $"Tu membresía está activa. Saldo pendiente: RD${saldo:N2}. Vence el {fin:dd/MM/yyyy}."
                     : null;
                 string nombrePlan = string.IsNullOrWhiteSpace(plan.Nombre)
                     ? cmbMembresia.Text.Trim()
                     : plan.Nombre.Trim();
-                // WhatsApp financiamiento lo dispara MembresiaBLL; aquí PDF con precio lista + abono.
+                // WhatsApp lo dispara MembresiaBLL (PDF FINANCIADA); aquí solo PDF local.
                 EjecutarPostPagoMembresia(
                     clienteId,
                     planId,
@@ -2161,7 +2203,9 @@ namespace UI.DISEÑO
                     opFin,
                     notaExtra: notaFin,
                     enviarWhatsAppFactura: false,
-                    precioLista: plan.Precio);
+                    precioLista: plan.Precio,
+                    esFinanciada: saldo > 0,
+                    saldoPendiente: saldo > 0 ? saldo : null);
             }
 
             LimpiarCampos();
@@ -2403,7 +2447,9 @@ namespace UI.DISEÑO
             decimal? descuentoMonto = null,
             decimal? descuentoPorcentaje = null,
             string? asuntoOferta = null,
-            bool enviarWhatsAppOferta = false)
+            bool enviarWhatsAppOferta = false,
+            bool esFinanciada = false,
+            decimal? saldoPendiente = null)
         {
             string planFactura = !string.IsNullOrWhiteSpace(opPago.PlanNombre)
                 ? opPago.PlanNombre!.Trim()
@@ -2428,7 +2474,9 @@ namespace UI.DISEÑO
                 descuentoMonto,
                 descuentoPorcentaje,
                 asuntoOferta,
-                enviarWhatsAppOferta);
+                enviarWhatsAppOferta,
+                esFinanciada,
+                saldoPendiente);
 
             IniciarPostPagoMembresiaEnSegundoPlano(ctx);
         }
@@ -2499,7 +2547,9 @@ namespace UI.DISEÑO
                     descuentoMonto: ctx.DescuentoMonto,
                     descuentoPorcentaje: ctx.DescuentoPorcentaje,
                     asuntoOferta: ctx.AsuntoOferta,
-                    forzarRegenerar: true);
+                    forzarRegenerar: true,
+                    esFinanciada: ctx.EsFinanciada,
+                    saldoPendiente: ctx.SaldoPendiente);
             }
             catch (Exception ex)
             {
@@ -2569,7 +2619,9 @@ namespace UI.DISEÑO
                 decimal? descuentoMonto,
                 decimal? descuentoPorcentaje,
                 string? asuntoOferta,
-                bool enviarWhatsAppOferta)
+                bool enviarWhatsAppOferta,
+                bool esFinanciada = false,
+                decimal? saldoPendiente = null)
             {
                 ClienteId = clienteId;
                 PlanId = planId;
@@ -2589,6 +2641,8 @@ namespace UI.DISEÑO
                 DescuentoPorcentaje = descuentoPorcentaje;
                 AsuntoOferta = asuntoOferta;
                 EnviarWhatsAppOferta = enviarWhatsAppOferta;
+                EsFinanciada = esFinanciada;
+                SaldoPendiente = saldoPendiente;
             }
 
             public int ClienteId { get; }
@@ -2609,6 +2663,8 @@ namespace UI.DISEÑO
             public decimal? DescuentoPorcentaje { get; }
             public string? AsuntoOferta { get; }
             public bool EnviarWhatsAppOferta { get; }
+            public bool EsFinanciada { get; }
+            public decimal? SaldoPendiente { get; }
         }
 
         /// <summary>Compat: delega al flujo en segundo plano.</summary>

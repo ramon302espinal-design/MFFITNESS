@@ -12,7 +12,8 @@ namespace UI
 {
     /// <summary>
     /// Lógica de la pantalla "Nueva Deuda" (tabCrear): financiamiento de plan y
-    /// venta de producto a crédito. Los controles viven en el diseñador de tabCrear.
+    /// venta de producto a crédito (solo categoría Suplementos del inventario).
+    /// Los controles viven en el diseñador de tabCrear.
     /// </summary>
     public partial class FrmModuloDeudas
     {
@@ -37,8 +38,12 @@ namespace UI
         private DataRow? _productoPendiente;
         private decimal _precioUnitarioPendiente;
         private decimal _precioPlan;
-        private bool _suppressProductoSearch;
         private bool _crearDeudaInicializado;
+        private bool _suppressDatosClienteUi;
+        private bool _datosLaboralesCableados;
+        private bool _operacionProductoCableada;
+        private bool _omitirRefreshCatalogoPorGuardadoLocal;
+        private string _huellaLaboralGuardada = string.Empty;
 
         private sealed class LineaProductoCredito
         {
@@ -82,9 +87,10 @@ namespace UI
 
             _crearDeudaInicializado = true;
 
-            dtpFechaVencimientodeuda.Value = DateTime.Today.AddDays(30);
-            dtpFechaVencimientodeuda.MinDate = DateTime.Today;
-
+            CablearDatosClienteUi();
+            CablearOperacionProductoUi();
+            CablearInteresesPlazosUi();
+            pnlIntereses.Enabled = false;
             CargarClientes();
             CargarPlanes();
             CargarProductosInventario();
@@ -92,15 +98,82 @@ namespace UI
             CalcularSaldoRestante();
         }
 
+        /// <summary>
+        /// Cablea pnlOperacion (Designer perdió los +=). Idempotente.
+        /// </summary>
+        private void CablearOperacionProductoUi()
+        {
+            if (_operacionProductoCableada)
+                return;
+
+            _operacionProductoCableada = true;
+
+            cmbTipoPlan.SelectedIndexChanged -= cmbTipoPlan_SelectedIndexChanged;
+            cmbTipoPlan.SelectedIndexChanged += cmbTipoPlan_SelectedIndexChanged;
+
+            ConfigurarComboBuscarProductos();
+
+            numCantidad.ValueChanged -= numCantidad_ValueChanged;
+            numCantidad.ValueChanged += numCantidad_ValueChanged;
+
+            btnagregar.Click -= btnagregar_Click;
+            btnagregar.Click += btnagregar_Click;
+            btnlimpiar.Click -= btnlimpiar_Click;
+            btnlimpiar.Click += btnlimpiar_Click;
+
+            txtPagodeinicio.TextChanged -= txtPagodeinicio_TextChanged;
+            txtPagodeinicio.TextChanged += txtPagodeinicio_TextChanged;
+            txtPagodeinicio.KeyPress -= txtPagodeinicio_KeyPress;
+            txtPagodeinicio.KeyPress += txtPagodeinicio_KeyPress;
+
+            btnGuardar.Click -= btnGuardar_Click;
+            btnGuardar.Click += btnGuardar_Click;
+            btnCancelar.Click -= btnCancelar_Click;
+            btnCancelar.Click += btnCancelar_Click;
+
+            // Lista legacy: ya no se usa (reemplazada por cmbbuscarproductos).
+            if (lstSugerenciasProductos != null)
+            {
+                lstSugerenciasProductos.Visible = false;
+                lstSugerenciasProductos.Enabled = false;
+                lstSugerenciasProductos.TabStop = false;
+            }
+        }
+
+        private void CablearDatosClienteUi()
+        {
+            if (_datosLaboralesCableados)
+                return;
+
+            _datosLaboralesCableados = true;
+
+            cbClientes.SelectedIndexChanged -= cbClientes_SelectedIndexChanged;
+            cbClientes.SelectedIndexChanged += cbClientes_SelectedIndexChanged;
+
+            txtCedula.Leave -= DatosLaborales_Leave;
+            txtTrabaja.Leave -= DatosLaborales_Leave;
+            txtDirTrabaja.Leave -= DatosLaborales_Leave;
+            txtCedula.Leave += DatosLaborales_Leave;
+            txtTrabaja.Leave += DatosLaborales_Leave;
+            txtDirTrabaja.Leave += DatosLaborales_Leave;
+
+            if (txtCedula.MaxLength <= 0 || txtCedula.MaxLength > 30)
+                txtCedula.MaxLength = 30;
+            txtTrabaja.MaxLength = 200;
+            txtDirTrabaja.MaxLength = 200;
+        }
+
         private void CargarClientes()
         {
             try
             {
+                _suppressDatosClienteUi = true;
                 DataTable dt = clienteBLL.ObtenerClientes();
                 cbClientes.DataSource = dt;
                 cbClientes.DisplayMember = "Nombre";
                 cbClientes.ValueMember = "Id";
                 cbClientes.SelectedIndex = -1;
+                LimpiarCamposDatosCliente();
             }
             catch (Exception ex)
             {
@@ -109,6 +182,179 @@ namespace UI
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
+            }
+            finally
+            {
+                _suppressDatosClienteUi = false;
+            }
+        }
+
+        private void CargarClientesPreservandoSeleccion()
+        {
+            int? sel = null;
+            if (cbClientes?.SelectedValue != null
+                && cbClientes.SelectedValue != DBNull.Value
+                && int.TryParse(cbClientes.SelectedValue.ToString(), out int id)
+                && id > 0)
+                sel = id;
+
+            CargarClientes();
+
+            if (sel.HasValue && cbClientes != null)
+            {
+                try
+                {
+                    _suppressDatosClienteUi = true;
+                    cbClientes.SelectedValue = sel.Value;
+                }
+                catch { /* cliente eliminado */ }
+                finally
+                {
+                    _suppressDatosClienteUi = false;
+                }
+
+                // Refrescar panel con datos actuales (cédula/trabajo pueden haber cambiado).
+                AplicarClienteSeleccionado();
+            }
+        }
+
+        private void cbClientes_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (_suppressDatosClienteUi)
+                return;
+
+            AplicarClienteSeleccionado();
+        }
+
+        private void AplicarClienteSeleccionado()
+        {
+            if (cbClientes.SelectedIndex < 0
+                || cbClientes.SelectedValue == null
+                || cbClientes.SelectedValue == DBNull.Value
+                || !int.TryParse(cbClientes.SelectedValue.ToString(), out int clienteId)
+                || clienteId <= 0)
+            {
+                LimpiarCamposDatosCliente();
+                return;
+            }
+
+            try
+            {
+                DataRow? row = clienteBLL.ObtenerPorId(clienteId);
+                if (row == null)
+                {
+                    LimpiarCamposDatosCliente();
+                    return;
+                }
+
+                _suppressDatosClienteUi = true;
+                try
+                {
+                    string nombre = row["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+                    txtNombre.Text = string.IsNullOrEmpty(nombre) ? "—" : nombre;
+                    txtDireccion.Text = row["Direccion"]?.ToString() ?? string.Empty;
+                    txtTelefono.Text = row["Telefono"]?.ToString() ?? string.Empty;
+                    txtCedula.Text = row.Table.Columns.Contains("Cedula")
+                        ? row["Cedula"]?.ToString() ?? string.Empty
+                        : string.Empty;
+                    txtTrabaja.Text = row.Table.Columns.Contains("LugarTrabajo")
+                        ? row["LugarTrabajo"]?.ToString() ?? string.Empty
+                        : string.Empty;
+                    txtDirTrabaja.Text = row.Table.Columns.Contains("DireccionTrabajo")
+                        ? row["DireccionTrabajo"]?.ToString() ?? string.Empty
+                        : string.Empty;
+
+                    var ficha = clienteBLL.ObtenerFichaSalud(clienteId);
+                    txtNombreEmergencia.Text = ficha?.EmergenciaNombre ?? string.Empty;
+                    txtTelEmergencia.Text = ficha?.EmergenciaTelefono ?? string.Empty;
+                    txtParentesco.Text = ficha?.EmergenciaParentesco ?? string.Empty;
+                    _huellaLaboralGuardada = HuellaLaboralActual();
+                }
+                finally
+                {
+                    _suppressDatosClienteUi = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "No se pudo cargar el cliente: " + ex.Message,
+                    "Deudas",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+        private void LimpiarCamposDatosCliente()
+        {
+            _suppressDatosClienteUi = true;
+            try
+            {
+                txtNombre.Text = "NOMBRE";
+                txtDireccion.Clear();
+                txtTelefono.Clear();
+                txtCedula.Clear();
+                txtTrabaja.Clear();
+                txtDirTrabaja.Clear();
+                txtNombreEmergencia.Clear();
+                txtTelEmergencia.Clear();
+                txtParentesco.Clear();
+                _huellaLaboralGuardada = string.Empty;
+            }
+            finally
+            {
+                _suppressDatosClienteUi = false;
+            }
+        }
+
+        private string HuellaLaboralActual() =>
+            $"{txtCedula.Text?.Trim()}\u001f{txtTrabaja.Text?.Trim()}\u001f{txtDirTrabaja.Text?.Trim()}";
+
+        private void DatosLaborales_Leave(object? sender, EventArgs e)
+        {
+            if (_suppressDatosClienteUi)
+                return;
+
+            PersistirCedulaYTrabajoSiAplica();
+        }
+
+        private void PersistirCedulaYTrabajoSiAplica()
+        {
+            if (cbClientes.SelectedIndex < 0
+                || cbClientes.SelectedValue == null
+                || cbClientes.SelectedValue == DBNull.Value
+                || !int.TryParse(cbClientes.SelectedValue.ToString(), out int clienteId)
+                || clienteId <= 0)
+                return;
+
+            string huella = HuellaLaboralActual();
+            if (string.Equals(huella, _huellaLaboralGuardada, StringComparison.Ordinal))
+                return;
+
+            _omitirRefreshCatalogoPorGuardadoLocal = true;
+            try
+            {
+                var result = ClienteCommandService.ActualizarCedulaYTrabajo(
+                    clienteId,
+                    txtCedula.Text,
+                    txtTrabaja.Text,
+                    txtDirTrabaja.Text);
+
+                if (!result.Success)
+                {
+                    MessageBox.Show(
+                        result.Message,
+                        "Datos del cliente",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                _huellaLaboralGuardada = huella;
+            }
+            finally
+            {
+                _omitirRefreshCatalogoPorGuardadoLocal = false;
             }
         }
 
@@ -140,7 +386,7 @@ namespace UI
                 credito["Precio"] = 0m;
                 if (opciones.Columns.Contains("DuracionDias"))
                     credito["DuracionDias"] = 0;
-                credito["Etiqueta"] = "Producto a crédito (venta)";
+                credito["Etiqueta"] = "Producto a crédito (solo suplementos)";
                 opciones.Rows.Add(credito);
 
                 cmbTipoPlan.DisplayMember = "Etiqueta";
@@ -166,10 +412,12 @@ namespace UI
             try
             {
                 _productos = productoBLL.ObtenerProductos() ?? new DataTable();
+                CargarProductosEnComboBusqueda();
             }
             catch (Exception ex)
             {
                 _productos = new DataTable();
+                CargarProductosEnComboBusqueda();
                 MessageBox.Show(
                     "Error al cargar productos: " + ex.Message,
                     "Error",
@@ -192,9 +440,21 @@ namespace UI
         private void AplicarModoProductoCredito(bool activo)
         {
             lblBuscarProducto.Enabled = activo;
-            txtbuscarproductos.Enabled = activo;
+            cmbbuscarproductos.Enabled = activo;
             lblCantidad.Enabled = activo;
             numCantidad.Enabled = activo;
+
+            // Deja claro en UI: crédito de producto = solo Suplementos.
+            if (lblBuscarProducto != null)
+                lblBuscarProducto.Text = activo ? "SUPLEMENTO" : "PRODUCTO";
+
+            txtConcepto.Enabled = true;
+            txtPagodeinicio.Enabled = true;
+            pnlCrearDeuda.Enabled = true;
+            pnlOperacion.Enabled = true;
+
+            if (!activo)
+                RestablecerComboBuscarProductos();
 
             if (activo && numCantidad.Value < 1)
                 numCantidad.Value = 1;
@@ -214,12 +474,7 @@ namespace UI
             _lineas.Clear();
             _productoPendiente = null;
             _precioUnitarioPendiente = 0m;
-            lstSugerenciasProductos.DataSource = null;
-
-            _suppressProductoSearch = true;
-            txtbuscarproductos.Clear();
-            _suppressProductoSearch = false;
-
+            RestablecerComboBuscarProductos();
             ResetearCantidad();
         }
 
@@ -246,6 +501,9 @@ namespace UI
                 CalcularSaldoRestante();
                 return;
             }
+
+            ResetearInteresesPlazosUi();
+            pnlIntereses.Enabled = false;
 
             if (cmbTipoPlan.SelectedItem is DataRowView row &&
                 row["Precio"] != DBNull.Value)
@@ -274,42 +532,6 @@ namespace UI
             CalcularSaldoRestante();
         }
 
-        private void txtbuscarproductos_TextChanged(object? sender, EventArgs e)
-        {
-            if (_suppressProductoSearch || !EsProductoCreditoSeleccionado())
-                return;
-
-            string termino = txtbuscarproductos.Text?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(termino))
-            {
-                lstSugerenciasProductos.DataSource = null;
-                DescartarProductoPendiente();
-                return;
-            }
-
-            try
-            {
-                var vista = new DataView(_productos)
-                {
-                    RowFilter = BusquedaGridHelper.ConstruirFiltroProductosPos(termino)
-                };
-
-                if (vista.Count == 0)
-                {
-                    lstSugerenciasProductos.DataSource = null;
-                    return;
-                }
-
-                lstSugerenciasProductos.DisplayMember = "Nombre";
-                lstSugerenciasProductos.ValueMember = "Id";
-                lstSugerenciasProductos.DataSource = vista;
-            }
-            catch
-            {
-                lstSugerenciasProductos.DataSource = null;
-            }
-        }
-
         private void DescartarProductoPendiente()
         {
             if (_productoPendiente == null)
@@ -336,59 +558,32 @@ namespace UI
             LimpiarProductosCredito();
             RecalcularProductoCredito();
             SincronizarBotonesProducto();
-            txtbuscarproductos.Focus();
+            cmbbuscarproductos.Focus();
         }
 
-        private void txtbuscarproductos_KeyDown(object? sender, KeyEventArgs e)
+        /// <summary>
+        /// Confirma el producto elegido en cmbbuscarproductos como pendiente de AGREGAR.
+        /// </summary>
+        private void ConfirmarProductoSeleccionadoDesdeCombo(DataRow fila)
         {
-            if (e.KeyCode == Keys.Down && lstSugerenciasProductos.Items.Count > 0)
+            if (!EsProductoCreditoSeleccionado() || fila == null)
+                return;
+
+            if (!EsCategoriaSuplemento(fila))
             {
-                lstSugerenciasProductos.Focus();
-                lstSugerenciasProductos.SelectedIndex = 0;
-                e.Handled = true;
+                MessageBox.Show(
+                    "En Producto a crédito solo se permiten productos de la categoría Suplementos (inventario).",
+                    "Categoría no permitida",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                RestablecerComboBuscarProductos();
+                DescartarProductoPendiente();
                 return;
             }
 
-            if (e.KeyCode == Keys.Enter)
-            {
-                if (lstSugerenciasProductos.Items.Count > 0)
-                {
-                    if (lstSugerenciasProductos.SelectedIndex < 0)
-                        lstSugerenciasProductos.SelectedIndex = 0;
-                    SeleccionarProductoDesdeLista();
-                    e.Handled = true;
-                    e.SuppressKeyPress = true;
-                }
-            }
-        }
-
-        private void lstSugerenciasProductos_Click(object? sender, EventArgs e) =>
-            SeleccionarProductoDesdeLista();
-
-        private void lstSugerenciasProductos_DoubleClick(object? sender, EventArgs e) =>
-            SeleccionarProductoDesdeLista();
-
-        private void lstSugerenciasProductos_KeyDown(object? sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                SeleccionarProductoDesdeLista();
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
-        }
-
-        private void SeleccionarProductoDesdeLista()
-        {
-            if (!EsProductoCreditoSeleccionado())
-                return;
-
-            if (lstSugerenciasProductos.SelectedItem is not DataRowView row)
-                return;
-
-            int productoId = Convert.ToInt32(row["Id"]);
-            string nombre = LeerNombre(row.Row);
-            int stock = LeerStock(row.Row);
+            int productoId = Convert.ToInt32(fila["Id"]);
+            string nombre = LeerNombre(fila);
+            int stock = LeerStock(fila);
             int disponible = stock - CantidadAgregada(productoId);
 
             if (disponible < 1)
@@ -401,17 +596,14 @@ namespace UI
                 return;
             }
 
-            _productoPendiente = row.Row;
-            _precioUnitarioPendiente = row["PrecioVenta"] != DBNull.Value
-                ? Convert.ToDecimal(row["PrecioVenta"])
+            _productoPendiente = fila;
+            _precioUnitarioPendiente = fila.Table.Columns.Contains("PrecioVenta")
+                && fila["PrecioVenta"] != DBNull.Value
+                ? Convert.ToDecimal(fila["PrecioVenta"])
                 : 0m;
 
             numCantidad.Maximum = disponible;
             numCantidad.Value = 1;
-
-            _suppressProductoSearch = true;
-            txtbuscarproductos.Text = nombre;
-            _suppressProductoSearch = false;
 
             RecalcularProductoCredito();
             SincronizarBotonesProducto();
@@ -433,8 +625,19 @@ namespace UI
 
             if (_productoPendiente == null)
             {
-                MessageBox.Show("Busque y seleccione un producto del inventario.");
-                txtbuscarproductos.Focus();
+                MessageBox.Show("Busque y seleccione un suplemento del inventario.");
+                cmbbuscarproductos.Focus();
+                return;
+            }
+
+            if (!EsCategoriaSuplemento(_productoPendiente))
+            {
+                MessageBox.Show(
+                    "En Producto a crédito solo se permiten productos de la categoría Suplementos (inventario).",
+                    "Categoría no permitida",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                DescartarProductoPendiente();
                 return;
             }
 
@@ -471,16 +674,12 @@ namespace UI
             // El pendiente ya está confirmado: concepto y monto no cambian de valor.
             _productoPendiente = null;
             _precioUnitarioPendiente = 0m;
-            lstSugerenciasProductos.DataSource = null;
-
-            _suppressProductoSearch = true;
-            txtbuscarproductos.Clear();
-            _suppressProductoSearch = false;
+            RestablecerComboBuscarProductos();
 
             ResetearCantidad();
             RecalcularProductoCredito();
             SincronizarBotonesProducto();
-            txtbuscarproductos.Focus();
+            cmbbuscarproductos.Focus();
         }
 
         private void AcumularLinea(int productoId, string nombre, decimal precioUnitario, int cantidad)
@@ -595,6 +794,31 @@ namespace UI
                 ? Convert.ToInt32(row["StockActual"])
                 : 0;
 
+        /// <summary>
+        /// Misma regla que reportes de suplementos: nombre de categoría contiene "SUPLEMENTO".
+        /// Ej.: Suplementos / Suplemento (inventario Categorias).
+        /// </summary>
+        private static bool EsCategoriaSuplemento(DataRow? fila)
+        {
+            if (fila == null || !fila.Table.Columns.Contains("Categoria"))
+                return false;
+
+            string cat = fila["Categoria"]?.ToString()?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(cat))
+                return false;
+
+            return cat.ToUpperInvariant().Contains("SUPLEMENTO", StringComparison.Ordinal);
+        }
+
+        private bool EsProductoSuplementoPorId(int productoId)
+        {
+            if (productoId <= 0 || _productos.Rows.Count == 0 || !_productos.Columns.Contains("Id"))
+                return false;
+
+            DataRow[] filas = _productos.Select("Id = " + productoId);
+            return filas.Length > 0 && EsCategoriaSuplemento(filas[0]);
+        }
+
         private int LeerStockPorId(int productoId)
         {
             if (_productos.Rows.Count == 0 || !_productos.Columns.Contains("Id"))
@@ -631,7 +855,24 @@ namespace UI
             if (saldo < 0) saldo = 0m;
 
             lblSaldorestante.Text = $"${saldo:N2}";
-            dtpFechaVencimientodeuda.Enabled = saldo > 0;
+            AplicarDisponibilidadInteresesProductoCredito();
+        }
+
+        /// <summary>
+        /// Sin UI de fecha límite: producto → última cuota del cronograma; membresía → hoy+30.
+        /// </summary>
+        private DateTime? ResolverFechaVencimientoDeuda(decimal saldo)
+        {
+            if (saldo <= 0m)
+                return null;
+
+            if (EsProductoCreditoSeleccionado()
+                && _ultimoCronogramaUi?.Cuotas is { Count: > 0 } cuotas)
+            {
+                return cuotas[^1].FechaVencimiento.Date;
+            }
+
+            return DateTime.Today.AddDays(30);
         }
 
         private bool TryObtenerPlanSeleccionado(out int planId, out string nombrePlan)
@@ -715,7 +956,7 @@ namespace UI
                 if (lineas.Count == 0)
                 {
                     MessageBox.Show("Busque un producto del inventario y pulse AGREGAR.");
-                    txtbuscarproductos.Focus();
+                    cmbbuscarproductos.Focus();
                     return false;
                 }
 
@@ -758,10 +999,16 @@ namespace UI
             }
 
             decimal saldo = _precioPlan - pagoInicio;
-            if (saldo > 0 && dtpFechaVencimientodeuda.Value.Date < DateTime.Today)
+            if (saldo < 0) saldo = 0m;
+
+            // Producto a crédito con saldo: exige cronograma del módulo nuevo.
+            if (EsProductoCreditoSeleccionado() && saldo > 0)
             {
-                MessageBox.Show("La fecha límite de pago no puede ser anterior a hoy.");
-                return false;
+                if (!TryObtenerCronogramaUi(out _, out string errorCronograma))
+                {
+                    MessageBox.Show(errorCronograma, "Plazos e interés", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
             }
 
             return true;
@@ -791,9 +1038,7 @@ namespace UI
                         : $"Pago inicial - Membresía {nombrePlan}")
                     : txtConcepto.Text.Trim();
 
-                DateTime? fechaVencimientoDeuda = saldo > 0
-                    ? dtpFechaVencimientodeuda.Value.Date
-                    : null;
+                DateTime? fechaVencimientoDeuda = ResolverFechaVencimientoDeuda(saldo);
 
                 // Producto a crédito: no bloquea por deuda pendiente (es venta, no plan).
                 if (EsProductoCreditoSeleccionado())
@@ -835,7 +1080,7 @@ namespace UI
                     return;
                 }
 
-                MostrarExitoYLimpiar(nombrePlan, pagoInicio, saldo);
+                MostrarExitoYLimpiar(nombrePlan, pagoInicio, saldo, fechaVencimientoDeuda);
             }
             catch (Exception ex)
             {
@@ -859,6 +1104,33 @@ namespace UI
             if (lineas.Count == 0)
                 return;
 
+            foreach (var linea in lineas)
+            {
+                if (EsProductoSuplementoPorId(linea.ProductoId))
+                    continue;
+
+                MessageBox.Show(
+                    $"«{linea.Nombre}» no pertenece a la categoría Suplementos.\n" +
+                    "Producto a crédito solo admite suplementos registrados en inventario.",
+                    "Categoría no permitida",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            PrestamoCronogramaDto? cronograma = null;
+            if (saldo > 0)
+            {
+                if (!TryObtenerCronogramaUi(out PrestamoCronogramaDto c, out string errorCronograma))
+                {
+                    MessageBox.Show(errorCronograma, "Plazos e interés", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                cronograma = c;
+                fechaVencimientoDeuda = c.Cuotas[^1].FechaVencimiento.Date;
+            }
+
             var carrito = new DataTable();
             carrito.Columns.Add("ProductoId", typeof(int));
             carrito.Columns.Add("Producto", typeof(string));
@@ -880,7 +1152,8 @@ namespace UI
 
             total = Math.Round(total, 2, MidpointRounding.AwayFromZero);
 
-            // Misma tubería POS: venta + salida de stock + caja (si hay pago) + deuda (si hay saldo).
+            // Misma tubería POS: venta + stock + caja + deuda (capital).
+            // Si hay cronograma, el WhatsApp se envía después del préstamo (detalle con interés/plazos).
             var result = VentasCommandService.RegistrarVentaPOS(
                 clienteId,
                 total,
@@ -889,7 +1162,8 @@ namespace UI
                 carrito,
                 usuario,
                 fechaVencimientoDeuda,
-                concepto);
+                concepto,
+                omitirNotificacionDeuda: cronograma != null);
 
             if (!result.Success)
             {
@@ -901,11 +1175,82 @@ namespace UI
                 return;
             }
 
+            decimal saldoMostrar = saldo;
+            string extraPrestamo = string.Empty;
+
+            if (cronograma != null
+                && result.Payload is BLL.Models.VentaOperacionResult operacion
+                && operacion.DeudaId > 0)
+            {
+                try
+                {
+                    PersistirCedulaYTrabajoSiAplica();
+                    new PrestamoCuotasBLL().RegistrarTrasDeudaProductoCredito(
+                        operacion.DeudaId,
+                        clienteId,
+                        cronograma,
+                        usuario,
+                        concepto);
+
+                    saldoMostrar = cronograma.TotalConInteres;
+                    extraPrestamo =
+                        $"\nPlazos: {cronograma.NumeroPlazos} ({cronograma.Frecuencia})" +
+                        $"\nInterés fijo: {cronograma.InteresPorcentaje:N2}% (${cronograma.InteresTotal:N2})" +
+                        $"\nTotal con interés: ${cronograma.TotalConInteres:N2}" +
+                        (cronograma.ActivarMora ? "\nMora: activa ($50/día desde día 3)" : "\nMora: desactivada");
+                }
+                catch (Exception exPrestamo)
+                {
+                    // Fallback: aviso clásico si el cronograma falló tras crear la deuda.
+                    try
+                    {
+                        new DeudaBLL().NotificarDeudaCreadaPostCommit(
+                            clienteId,
+                            concepto,
+                            saldo,
+                            fechaVencimientoDeuda ?? DateTime.Today.AddDays(30),
+                            operacion.DeudaId,
+                            pagoInicio > 0);
+                    }
+                    catch
+                    {
+                        // No bloquear el flujo de UI por el aviso.
+                    }
+
+                    MessageBox.Show(
+                        "La venta/deuda se registró, pero falló el cronograma de plazos:\n" + exPrestamo.Message +
+                        "\n\nRevise la deuda en Gestión y complete el préstamo si hace falta.",
+                        "Plazos",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+            }
+            else if (saldo > 0 && cronograma != null)
+            {
+                MessageBox.Show(
+                    "La venta se registró pero no se obtuvo el Id de deuda para guardar plazos.",
+                    "Plazos",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+
             CargarProductosInventario();
-            MostrarExitoYLimpiar(NombreProductoCredito, pagoInicio, saldo, esProducto: true);
+            MostrarExitoYLimpiar(
+                NombreProductoCredito,
+                pagoInicio,
+                saldoMostrar,
+                fechaVencimientoDeuda,
+                esProducto: true,
+                extraPrestamo);
         }
 
-        private void MostrarExitoYLimpiar(string nombrePlan, decimal pagoInicio, decimal saldo, bool esProducto = false)
+        private void MostrarExitoYLimpiar(
+            string nombrePlan,
+            decimal pagoInicio,
+            decimal saldo,
+            DateTime? fechaVencimientoDeuda = null,
+            bool esProducto = false,
+            string? extraPrestamo = null)
         {
             string resumen =
                 (esProducto
@@ -917,9 +1262,10 @@ namespace UI
                 $"Monto: ${_precioPlan:N2}\n" +
                 $"Pago de inicio: ${pagoInicio:N2}\n" +
                 $"Saldo pendiente: ${saldo:N2}\n" +
-                (saldo > 0
-                    ? $"Vence deuda: {dtpFechaVencimientodeuda.Value:dd/MM/yyyy}\n"
+                (fechaVencimientoDeuda.HasValue
+                    ? $"Vence deuda: {fechaVencimientoDeuda.Value:dd/MM/yyyy}\n"
                     : string.Empty) +
+                (extraPrestamo ?? string.Empty) +
                 (esProducto
                     ? "\nQueda reflejado en Inventario, Historial de ventas" +
                       (saldo > 0 ? ", Deudas" : string.Empty) +
@@ -938,7 +1284,17 @@ namespace UI
 
         private void LimpiarFormularioCrearDeuda()
         {
-            cbClientes.SelectedIndex = -1;
+            _suppressDatosClienteUi = true;
+            try
+            {
+                cbClientes.SelectedIndex = -1;
+            }
+            finally
+            {
+                _suppressDatosClienteUi = false;
+            }
+
+            LimpiarCamposDatosCliente();
             cmbTipoPlan.SelectedIndex = -1;
             LimpiarProductosCredito();
             txtConcepto.Clear();
@@ -946,9 +1302,10 @@ namespace UI
             txtPagodeinicio.Text = "0";
             _precioPlan = 0m;
             lblSaldorestante.Text = "$0.00";
-            dtpFechaVencimientodeuda.Value = DateTime.Today.AddDays(30);
             AplicarModoProductoCredito(false);
             CalcularSaldoRestante();
+            ResetearInteresesPlazosUi();
+            pnlIntereses.Enabled = false;
         }
 
         private void btnCancelar_Click(object sender, EventArgs e)

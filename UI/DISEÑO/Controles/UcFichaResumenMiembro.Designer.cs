@@ -36,6 +36,12 @@ namespace UI.DISEÑO.Controles
             lblDireccionValor = new Label();
             lblCapFechaIngreso = new Label();
             lblFechaIngresoValor = new Label();
+            lblCapCedula = new Label();
+            lblCedulaValor = new Label();
+            lblCapTrabajo = new Label();
+            lblTrabajoValor = new Label();
+            lblCapDirTrabajo = new Label();
+            lblDirTrabajoValor = new Label();
             grpEmergencia = new GroupBox();
             lblCapEmNombre = new Label();
             lblEmNombreValor = new Label();
@@ -140,12 +146,18 @@ namespace UI.DISEÑO.Controles
             grpDatosGenerales.Controls.Add(lblDireccionValor);
             grpDatosGenerales.Controls.Add(lblCapFechaIngreso);
             grpDatosGenerales.Controls.Add(lblFechaIngresoValor);
+            grpDatosGenerales.Controls.Add(lblCapCedula);
+            grpDatosGenerales.Controls.Add(lblCedulaValor);
+            grpDatosGenerales.Controls.Add(lblCapTrabajo);
+            grpDatosGenerales.Controls.Add(lblTrabajoValor);
+            grpDatosGenerales.Controls.Add(lblCapDirTrabajo);
+            grpDatosGenerales.Controls.Add(lblDirTrabajoValor);
             grpDatosGenerales.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             grpDatosGenerales.ForeColor = Color.FromArgb(15, 23, 42);
             grpDatosGenerales.Location = new Point(16, 68);
             grpDatosGenerales.Name = "grpDatosGenerales";
             grpDatosGenerales.Padding = new Padding(16);
-            grpDatosGenerales.Size = new Size(1360, 200);
+            grpDatosGenerales.Size = new Size(1360, 250);
             grpDatosGenerales.TabIndex = 1;
             grpDatosGenerales.TabStop = false;
             grpDatosGenerales.Text = "DATOS GENERALES";
@@ -328,6 +340,74 @@ namespace UI.DISEÑO.Controles
             lblFechaIngresoValor.TabIndex = 15;
             lblFechaIngresoValor.Text = "—";
             // 
+            // lblCapCedula
+            // 
+            lblCapCedula.AutoSize = true;
+            lblCapCedula.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblCapCedula.ForeColor = Color.FromArgb(100, 116, 139);
+            lblCapCedula.Location = new Point(24, 170);
+            lblCapCedula.Name = "lblCapCedula";
+            lblCapCedula.Size = new Size(55, 20);
+            lblCapCedula.TabIndex = 16;
+            lblCapCedula.Text = "Cédula";
+            // 
+            // lblCedulaValor
+            // 
+            lblCedulaValor.AutoSize = true;
+            lblCedulaValor.Font = new Font("Segoe UI", 10F);
+            lblCedulaValor.ForeColor = Color.FromArgb(15, 23, 42);
+            lblCedulaValor.Location = new Point(24, 194);
+            lblCedulaValor.Name = "lblCedulaValor";
+            lblCedulaValor.Size = new Size(18, 23);
+            lblCedulaValor.TabIndex = 17;
+            lblCedulaValor.Text = "—";
+            // 
+            // lblCapTrabajo
+            // 
+            lblCapTrabajo.AutoSize = true;
+            lblCapTrabajo.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblCapTrabajo.ForeColor = Color.FromArgb(100, 116, 139);
+            lblCapTrabajo.Location = new Point(280, 170);
+            lblCapTrabajo.Name = "lblCapTrabajo";
+            lblCapTrabajo.Size = new Size(114, 20);
+            lblCapTrabajo.TabIndex = 18;
+            lblCapTrabajo.Text = "Donde trabaja";
+            // 
+            // lblTrabajoValor
+            // 
+            lblTrabajoValor.AutoSize = true;
+            lblTrabajoValor.Font = new Font("Segoe UI", 10F);
+            lblTrabajoValor.ForeColor = Color.FromArgb(15, 23, 42);
+            lblTrabajoValor.Location = new Point(280, 194);
+            lblTrabajoValor.MaximumSize = new Size(320, 0);
+            lblTrabajoValor.Name = "lblTrabajoValor";
+            lblTrabajoValor.Size = new Size(18, 23);
+            lblTrabajoValor.TabIndex = 19;
+            lblTrabajoValor.Text = "—";
+            // 
+            // lblCapDirTrabajo
+            // 
+            lblCapDirTrabajo.AutoSize = true;
+            lblCapDirTrabajo.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblCapDirTrabajo.ForeColor = Color.FromArgb(100, 116, 139);
+            lblCapDirTrabajo.Location = new Point(640, 170);
+            lblCapDirTrabajo.Name = "lblCapDirTrabajo";
+            lblCapDirTrabajo.Size = new Size(133, 20);
+            lblCapDirTrabajo.TabIndex = 20;
+            lblCapDirTrabajo.Text = "Dir. del trabajo";
+            // 
+            // lblDirTrabajoValor
+            // 
+            lblDirTrabajoValor.AutoSize = true;
+            lblDirTrabajoValor.Font = new Font("Segoe UI", 10F);
+            lblDirTrabajoValor.ForeColor = Color.FromArgb(15, 23, 42);
+            lblDirTrabajoValor.Location = new Point(640, 194);
+            lblDirTrabajoValor.MaximumSize = new Size(420, 0);
+            lblDirTrabajoValor.Name = "lblDirTrabajoValor";
+            lblDirTrabajoValor.Size = new Size(18, 23);
+            lblDirTrabajoValor.TabIndex = 21;
+            lblDirTrabajoValor.Text = "—";
+            // 
             // grpEmergencia
             // 
             grpEmergencia.Controls.Add(lblCapEmNombre);
@@ -340,7 +420,7 @@ namespace UI.DISEÑO.Controles
             grpEmergencia.Controls.Add(lblEmTelAltValor);
             grpEmergencia.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             grpEmergencia.ForeColor = Color.FromArgb(15, 23, 42);
-            grpEmergencia.Location = new Point(16, 284);
+            grpEmergencia.Location = new Point(16, 334);
             grpEmergencia.Name = "grpEmergencia";
             grpEmergencia.Padding = new Padding(16);
             grpEmergencia.Size = new Size(1360, 140);
@@ -447,7 +527,7 @@ namespace UI.DISEÑO.Controles
             grpFitness.Controls.Add(lblHorarioValor);
             grpFitness.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             grpFitness.ForeColor = Color.FromArgb(15, 23, 42);
-            grpFitness.Location = new Point(16, 440);
+            grpFitness.Location = new Point(16, 490);
             grpFitness.Name = "grpFitness";
             grpFitness.Padding = new Padding(16);
             grpFitness.Size = new Size(1360, 180);
@@ -536,7 +616,7 @@ namespace UI.DISEÑO.Controles
             grpMedica.Controls.Add(lblCirugiasValor);
             grpMedica.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             grpMedica.ForeColor = Color.FromArgb(15, 23, 42);
-            grpMedica.Location = new Point(16, 636);
+            grpMedica.Location = new Point(16, 686);
             grpMedica.Name = "grpMedica";
             grpMedica.Padding = new Padding(16);
             grpMedica.Size = new Size(1360, 240);
@@ -705,6 +785,12 @@ namespace UI.DISEÑO.Controles
         private Label lblDireccionValor;
         private Label lblCapFechaIngreso;
         private Label lblFechaIngresoValor;
+        private Label lblCapCedula;
+        private Label lblCedulaValor;
+        private Label lblCapTrabajo;
+        private Label lblTrabajoValor;
+        private Label lblCapDirTrabajo;
+        private Label lblDirTrabajoValor;
         private GroupBox grpEmergencia;
         private Label lblCapEmNombre;
         private Label lblEmNombreValor;

@@ -15,7 +15,8 @@ namespace BLL.Commands
             DataTable carrito,
             string? usuario = null,
             DateTime? fechaVencimientoDeuda = null,
-            string? conceptoDeuda = null)
+            string? conceptoDeuda = null,
+            bool omitirNotificacionDeuda = false)
         {
             try
             {
@@ -28,11 +29,12 @@ namespace BLL.Commands
                     ResolveUsuario(usuario),
                     carrito,
                     fechaVencimientoDeuda,
-                    conceptoDeuda);
+                    conceptoDeuda,
+                    omitirNotificacionDeuda);
 
                 NotificarEventosPostVentaProducto(operacion);
 
-                return CommandResult.Ok("Venta registrada correctamente.", operacion.VentaId);
+                return CommandResult.Ok("Venta registrada correctamente.", operacion);
             }
             catch (Exception ex)
             {

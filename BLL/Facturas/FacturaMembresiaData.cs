@@ -19,5 +19,9 @@ namespace BLL.Facturas
         public string MetodoPago { get; init; } = "Efectivo";
         public int NumeroFactura { get; init; }
         public string? NotaImportanteExtra { get; init; }
+        /// <summary>Membresía con saldo pendiente (financiamiento). Badge FINANCIADA en rojo.</summary>
+        public bool EsFinanciada { get; init; }
+        /// <summary>Saldo pendiente del plan (precio lista − abono). Solo informativo en PDF.</summary>
+        public decimal SaldoPendiente { get; init; }
     }
 }

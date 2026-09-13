@@ -565,10 +565,10 @@ namespace UI.DISEÑO
 
         private void cmbProducto_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (cmbProducto.SelectedItem is DataRowView fila)
-            {
-                lblStockActual.Text = fila["StockActual"]?.ToString() ?? "0";
-            }
+            if (_cmbProductoFiltrando)
+                return;
+
+            ActualizarStockLabelDesdeCombo();
         }
 
         private void btnEntrada_Click(object sender, EventArgs e)

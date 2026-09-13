@@ -59,7 +59,8 @@ namespace BLL
                 }
 
                 variables["CLIENTE"] = nombreCliente;
-                variables["ASUNTO"] = AsuntoPorTipo(tipoPlantilla);
+                if (!variables.ContainsKey("ASUNTO") || string.IsNullOrWhiteSpace(variables["ASUNTO"]))
+                    variables["ASUNTO"] = AsuntoPorTipo(tipoPlantilla);
 
                 string plantilla = dal.ObtenerPlantilla(tipoPlantilla);
                 // cuerpoTwilioOverride == "" es valido (factura solo PDF, sin texto).
@@ -159,7 +160,11 @@ namespace BLL
             DateTime fechaVencimiento,
             string numeroRecibo,
             string metodoPago = "Efectivo",
-            int? pagoId = null)
+            int? pagoId = null,
+            bool esFinanciada = false,
+            decimal? precioLista = null,
+            decimal? saldoPendiente = null,
+            string? notaExtra = null)
         {
             UltimoDetalleEnvio = null;
 
@@ -168,7 +173,8 @@ namespace BLL
                 try
                 {
                     bool pdfViejo = FacturaStorage.FacturaPdfDesactualizada(pagoId.Value, fechaPago);
-                    if (pdfViejo)
+                    // Financiada: regenerar siempre para badge FINANCIADA + montos de plan/saldo.
+                    if (pdfViejo || esFinanciada)
                     {
                         Facturas.FacturaMembresiaPdfGenerator.GenerarDesdePago(
                             clienteId,
@@ -176,7 +182,11 @@ namespace BLL
                             monto,
                             fechaVencimiento,
                             metodoPago,
-                            pagoId.Value);
+                            pagoId.Value,
+                            notaExtra: notaExtra,
+                            precioLista: precioLista,
+                            esFinanciada: esFinanciada,
+                            saldoPendiente: saldoPendiente);
                     }
                 }
                 catch (Exception ex)
@@ -192,8 +202,17 @@ namespace BLL
                 : null;
 
             // Solo archivo PDF: sin URL pública, aviso de texto (PAGO_MEMBRESIA).
+            // Financiada: no mandar aviso de "pago" engañoso; el caller usa FINANCIAMIENTO.
             if (string.IsNullOrWhiteSpace(mediaUrl))
             {
+                if (esFinanciada)
+                {
+                    UltimoDetalleEnvio =
+                        "No se pudo publicar la factura PDF financiada (sin MediaUrl).";
+                    System.Diagnostics.Debug.WriteLine($"FACTURA_MEMBRESIA: {UltimoDetalleEnvio}");
+                    return UltimoDetalleEnvio;
+                }
+
                 bool avisoTexto = EnviarAvisoPagoMembresiaSinPdf(
                     clienteId, nombrePlan, monto, fechaVencimiento, pagoId);
                 UltimoDetalleEnvio = avisoTexto
@@ -507,6 +526,26 @@ namespace BLL
         }
 
         /// <summary>
+        /// Aviso DEUDA_CREADA tras préstamo con plazos (producto a crédito / pnlIntereses).
+        /// El envoltorio Hola/Miembro/Asunto/Fecha lo pone la plantilla UTILITY de Twilio.
+        /// </summary>
+        public bool EnviarNotificacionDeudaCreadaConPrestamo(
+            int clienteId,
+            string concepto,
+            PrestamoCronogramaDto cronograma,
+            int? deudaId = null)
+        {
+            if (cronograma == null)
+                throw new ArgumentNullException(nameof(cronograma));
+
+            string detalle = ConstruirDetallePrestamoPlazosWhatsApp(concepto, cronograma);
+            return EnviarMensajeTemplado(clienteId, "DEUDA_CREADA", new Dictionary<string, string>
+            {
+                ["DETALLE"] = detalle
+            }, deudaId);
+        }
+
+        /// <summary>
         /// Texto único para {{3}} UTILITY: sin Venta Id, sin "Se ha registrado una deuda".
         /// </summary>
         private static string ConstruirDetalleDeudaCreadaWhatsApp(
@@ -528,25 +567,217 @@ namespace BLL
                    CtaRegularizarPago;
         }
 
+        /// <summary>
+        /// Detalle multilínea para {{3}}: concepto, total con interés, plan y 1.ª cuota.
+        /// </summary>
+        private static string ConstruirDetallePrestamoPlazosWhatsApp(
+            string? concepto,
+            PrestamoCronogramaDto cronograma)
+        {
+            string limpio = LimpiarConceptoParaAviso(concepto, "Producto a credito");
+
+            string frecuenciaUi = (cronograma.Frecuencia ?? string.Empty).Trim().ToUpperInvariant() switch
+            {
+                "SEMANAL" => "semanales",
+                "QUINCENAL" => "quincenales",
+                "MENSUAL" => "mensuales",
+                _ => "plazos"
+            };
+
+            DateTime primeraCuota = cronograma.Cuotas.Count > 0
+                ? cronograma.Cuotas[0].FechaVencimiento.Date
+                : DateTime.Today;
+
+            // Saltos simples: Sanitizar los conserva; Meta puede aplanar si rechaza \\n.
+            string montoTxt = FormatearMontoEspaciado(cronograma.TotalConInteres);
+            string cuotaTxt = FormatearMontoEspaciado(cronograma.CuotaBase);
+
+            return
+                $"{limpio}\n" +
+                $"Monto total a financiar: {montoTxt} (Incluye interés fijado)\n" +
+                $"Plan de pago: {cronograma.NumeroPlazos} cuotas {frecuenciaUi} de {cuotaTxt}\n" +
+                $"Primera cuota a pagar: {primeraCuota:dd/MM/yyyy}";
+        }
+
+        private static string FormatearMontoEspaciado(decimal monto) =>
+            $"RD$ {monto.ToString("#,0.00", CultureInfo.GetCultureInfo("es-DO"))}";
+
+        /// <summary>Días de gracia (alineado a pnlIntereses) antes de acumular mora diaria.</summary>
+        private const int MoraAvisoDiasGracia = 3;
+
+        /// <summary>Mora diaria RD$ (alineado a pnlIntereses) tras el período de gracia.</summary>
+        private const decimal MoraAvisoPesosDiarios = 50m;
+
         public bool EnviarRecordatorioDeudaVenceHoy(int deudaId, bool forzar = false)
         {
             var deuda = ObtenerDeuda(deudaId);
             if (deuda == null) return false;
 
+            // Con mora activa el aviso del día de vencimiento es el de mora (50/día tras 3 días).
+            if (PrestamoTieneMoraActiva(deuda))
+                return EnviarAvisoMoraCuotaVencida(deudaId, forzar);
+
             int clienteId = Convert.ToInt32(deuda["ClienteId"]);
             if (!forzar && dal.NotificacionYaEnviada(clienteId, "DEUDA_VENCE_HOY", deudaId))
                 return true;
 
-            string concepto = deuda["Concepto"]?.ToString() ?? "Deuda";
-            decimal saldo = Convert.ToDecimal(deuda["Saldo"]);
-            DateTime fechaVencimiento = Convert.ToDateTime(deuda["FechaVencimiento"]);
+            DateTime fechaPago = LeerFechaPagoRecordatorio(deuda);
+            string limpio = LimpiarConceptoParaAviso(deuda["Concepto"]?.ToString(), "Financiamiento");
+            string detalle =
+                $"Tu cuota vence hoy y no está saldada.\n" +
+                $"Concepto: {limpio}\n" +
+                $"Saldo pendiente: {FormatearMontoEspaciado(LeerDecimal(deuda, "Saldo"))}\n" +
+                $"Cuota a pagar  {FormatearMontoEspaciado(LeerMontoCuotaPagar(deuda))}\n" +
+                $"Fecha de pago: {fechaPago:dd/MM/yyyy}\n" +
+                "Te recomendamos saldar tu cuota lo antes posible.";
 
             return EnviarMensajeTemplado(clienteId, "DEUDA_VENCE_HOY", new Dictionary<string, string>
             {
-                ["CONCEPTO"] = concepto,
-                ["SALDO"] = FormatearMonto(saldo),
-                ["FECHA_VENCIMIENTO"] = fechaVencimiento.ToString("dd/MM/yyyy")
+                ["DETALLE"] = detalle
             }, deudaId);
+        }
+
+        /// <summary>
+        /// Día de vencimiento de la cuota con mora activa: aviso de gracia (3 días) y RD$50/día.
+        /// </summary>
+        public bool EnviarAvisoMoraCuotaVencida(int deudaId, bool forzar = false)
+        {
+            var deuda = ObtenerDeuda(deudaId);
+            if (deuda == null) return false;
+            if (!PrestamoTieneMoraActiva(deuda))
+                return false;
+
+            int clienteId = Convert.ToInt32(deuda["ClienteId"]);
+            if (!forzar && dal.NotificacionYaEnviada(clienteId, "AVISO_MORA_CUOTA_VENCIDA", deudaId))
+                return true;
+
+            DateTime fechaPago = LeerFechaPagoRecordatorio(deuda);
+            string detalle = ConstruirDetalleAvisoMoraCuotaWhatsApp(
+                deuda["Concepto"]?.ToString(),
+                LeerDecimal(deuda, "Saldo"),
+                LeerMontoCuotaPagar(deuda),
+                fechaPago);
+
+            return EnviarMensajeTemplado(clienteId, "AVISO_MORA_CUOTA_VENCIDA", new Dictionary<string, string>
+            {
+                ["DETALLE"] = detalle
+            }, deudaId);
+        }
+
+        /// <summary>
+        /// Detalle {{3}}: cuota vencida + aviso de mora RD$50/día tras 3 días sin saldar.
+        /// </summary>
+        private static string ConstruirDetalleAvisoMoraCuotaWhatsApp(
+            string? concepto,
+            decimal saldoPendiente,
+            decimal cuotaVencida,
+            DateTime fechaPago)
+        {
+            string limpio = LimpiarConceptoParaAviso(concepto, "Financiamiento");
+            string moraTxt = FormatearMontoEspaciado(MoraAvisoPesosDiarios);
+
+            return
+                "Tu cuota venció y no está saldada.\n" +
+                $"Concepto: {limpio}\n" +
+                $"Saldo pendiente: {FormatearMontoEspaciado(saldoPendiente)}\n" +
+                $"Cuota vencida: {FormatearMontoEspaciado(cuotaVencida)}\n" +
+                $"Fecha de pago: {fechaPago:dd/MM/yyyy}\n" +
+                $"Si no regularizas en {MoraAvisoDiasGracia} días, se generarán {moraTxt} por día de mora.\n" +
+                "Te recomendamos saldar tu cuota lo antes posible.";
+        }
+
+        private static bool PrestamoTieneMoraActiva(DataRow row)
+        {
+            if (!row.Table.Columns.Contains("MoraPrestamo"))
+                return false;
+
+            string mora = row["MoraPrestamo"]?.ToString()?.Trim() ?? string.Empty;
+            return string.Equals(mora, "Sí", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(mora, "Si", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(mora, "Yes", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(mora, "1", StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Aviso diario desde el día 3 de vencido: mora del día + acumulado (50, 100, 150…).
+        /// </summary>
+        public bool EnviarAvisoMoraGenerada(int deudaId, bool forzar = false)
+        {
+            var deuda = ObtenerDeuda(deudaId);
+            if (deuda == null) return false;
+            if (!PrestamoTieneMoraActiva(deuda))
+                return false;
+
+            DateTime fechaPago = LeerFechaPagoRecordatorio(deuda);
+            int diasVencido = (DateTime.Today - fechaPago.Date).Days;
+            if (diasVencido < MoraAvisoDiasGracia)
+                return false;
+
+            if (!TryCalcularMoraAcumulada(diasVencido, out decimal moraHoy, out decimal moraAcumulada))
+                return false;
+
+            int clienteId = Convert.ToInt32(deuda["ClienteId"]);
+            if (!forzar && dal.NotificacionYaEnviada(clienteId, "AVISO_MORA_GENERADA", deudaId))
+                return true;
+
+            string detalle = ConstruirDetalleAvisoMoraGeneradaWhatsApp(
+                deuda["Concepto"]?.ToString(),
+                LeerDecimal(deuda, "Saldo"),
+                LeerMontoCuotaPagar(deuda),
+                fechaPago,
+                moraHoy,
+                moraAcumulada);
+
+            return EnviarMensajeTemplado(clienteId, "AVISO_MORA_GENERADA", new Dictionary<string, string>
+            {
+                ["DETALLE"] = detalle
+            }, deudaId);
+        }
+
+        /// <summary>
+        /// Detalle {{3}}: mora del día + acumulado progresivo.
+        /// </summary>
+        private static string ConstruirDetalleAvisoMoraGeneradaWhatsApp(
+            string? concepto,
+            decimal saldoPendiente,
+            decimal cuotaVencida,
+            DateTime fechaPago,
+            decimal moraHoy,
+            decimal moraAcumulada)
+        {
+            string limpio = LimpiarConceptoParaAviso(concepto, "Financiamiento");
+
+            return
+                "Se ha generado mora por atraso en tu financiamiento.\n" +
+                $"Concepto: {limpio}\n" +
+                $"Cuota vencida: {FormatearMontoEspaciado(cuotaVencida)}\n" +
+                $"Fecha de pago: {fechaPago:dd/MM/yyyy}\n" +
+                $"Mora generada hoy: {FormatearMontoEspaciado(moraHoy)}\n" +
+                $"Mora acumulada: {FormatearMontoEspaciado(moraAcumulada)}\n" +
+                $"Saldo pendiente: {FormatearMontoEspaciado(saldoPendiente)}\n" +
+                "Te recomendamos saldar tu cuota lo antes posible para evitar que la mora siga aumentando.";
+        }
+
+        /// <summary>
+        /// Misma fórmula que pnlIntereses: día 3 → $50, día 4 → $100, …
+        /// </summary>
+        private static bool TryCalcularMoraAcumulada(
+            int diasVencido,
+            out decimal moraHoy,
+            out decimal moraAcumulada)
+        {
+            moraHoy = 0m;
+            moraAcumulada = 0m;
+            if (diasVencido < MoraAvisoDiasGracia)
+                return false;
+
+            int diasConMora = diasVencido - (MoraAvisoDiasGracia - 1);
+            if (diasConMora <= 0)
+                return false;
+
+            moraHoy = MoraAvisoPesosDiarios;
+            moraAcumulada = diasConMora * MoraAvisoPesosDiarios;
+            return true;
         }
 
         public bool EnviarRecordatorioDeuda(int deudaId, bool forzar = false)
@@ -558,18 +789,93 @@ namespace BLL
             if (!forzar && dal.NotificacionYaEnviada(clienteId, "RECORDATORIO_VENCIMIENTO_DEUDA", deudaId))
                 return true;
 
-            string concepto = deuda["Concepto"]?.ToString() ?? "Deuda";
-            decimal saldo = Convert.ToDecimal(deuda["Saldo"]);
-            DateTime fechaVencimiento = Convert.ToDateTime(deuda["FechaVencimiento"]);
-            int diasRestantes = (fechaVencimiento.Date - DateTime.Today).Days;
+            DateTime fechaPago = LeerFechaPagoRecordatorio(deuda);
+            int diasRestantes = (fechaPago.Date - DateTime.Today).Days;
+            if (diasRestantes < 0)
+                return false;
+
+            string detalle = ConstruirDetalleRecordatorioPagoWhatsApp(
+                deuda["Concepto"]?.ToString(),
+                LeerDecimal(deuda, "Saldo"),
+                LeerMontoCuotaPagar(deuda),
+                fechaPago,
+                diasRestantes);
 
             return EnviarMensajeTemplado(clienteId, "RECORDATORIO_VENCIMIENTO_DEUDA", new Dictionary<string, string>
             {
-                ["CONCEPTO"] = concepto,
-                ["SALDO"] = FormatearMonto(saldo),
-                ["DIAS_RESTANTES"] = diasRestantes.ToString(),
-                ["FECHA_VENCIMIENTO"] = fechaVencimiento.ToString("dd/MM/yyyy")
+                ["DETALLE"] = detalle
             }, deudaId);
+        }
+
+        /// <summary>
+        /// Detalle {{3}} UTILITY: aviso de cuota/financiamiento (10 o 2 días).
+        /// Envoltorio Hola/Miembro/Asunto/Fecha lo pone Twilio.
+        /// </summary>
+        private static string ConstruirDetalleRecordatorioPagoWhatsApp(
+            string? concepto,
+            decimal saldoPendiente,
+            decimal cuotaPagar,
+            DateTime fechaPago,
+            int diasRestantes)
+        {
+            string limpio = LimpiarConceptoParaAviso(concepto, "Financiamiento");
+            string diasTxt = diasRestantes == 1 ? "1 día" : $"{diasRestantes} días";
+
+            return
+                $"Tu financiamiento vence en {diasTxt}.\n" +
+                $"Concepto: {limpio}\n" +
+                $"Saldo pendiente: {FormatearMontoEspaciado(saldoPendiente)}\n" +
+                $"Cuota a pagar  {FormatearMontoEspaciado(cuotaPagar)}\n" +
+                $"Fecha de pago: {fechaPago:dd/MM/yyyy}\n" +
+                "Te recomendamos preparar tu cuota a tiempo.";
+        }
+
+        private static string LimpiarConceptoParaAviso(string? concepto, string fallback)
+        {
+            string limpio = FinanciamientoVentaHelper.QuitarSufijoVentaIdParaAviso(concepto);
+            if (string.IsNullOrWhiteSpace(limpio))
+                limpio = fallback;
+
+            limpio = System.Text.RegularExpressions.Regex.Replace(
+                limpio,
+                @"\s*\(\s*RD\$?\s*[\d.,]+\s*\)\s*",
+                " ",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+            while (limpio.Contains("  ", StringComparison.Ordinal))
+                limpio = limpio.Replace("  ", " ", StringComparison.Ordinal);
+
+            return string.IsNullOrWhiteSpace(limpio) ? fallback : limpio;
+        }
+
+        /// <summary>
+        /// Fecha de la próxima cuota si hay préstamo; si no, vencimiento de la deuda.
+        /// </summary>
+        private static DateTime LeerFechaPagoRecordatorio(DataRow row)
+        {
+            if (row.Table.Columns.Contains("ProximaCuotaFecha")
+                && row["ProximaCuotaFecha"] != DBNull.Value
+                && row["ProximaCuotaFecha"] != null)
+                return Convert.ToDateTime(row["ProximaCuotaFecha"]).Date;
+
+            return LeerFecha(row, "FechaVencimiento").Date;
+        }
+
+        /// <summary>
+        /// Monto de la próxima cuota; sin cronograma = saldo pendiente (pago único).
+        /// </summary>
+        private static decimal LeerMontoCuotaPagar(DataRow row)
+        {
+            if (row.Table.Columns.Contains("ProximaCuotaMonto")
+                && row["ProximaCuotaMonto"] != DBNull.Value
+                && Convert.ToDecimal(row["ProximaCuotaMonto"]) > 0m)
+                return Convert.ToDecimal(row["ProximaCuotaMonto"]);
+
+            if (row.Table.Columns.Contains("CuotaBase")
+                && row["CuotaBase"] != DBNull.Value
+                && Convert.ToDecimal(row["CuotaBase"]) > 0m)
+                return Convert.ToDecimal(row["CuotaBase"]);
+
+            return LeerDecimal(row, "Saldo");
         }
 
         public bool EnviarNotificacionDeudaVencida(int deudaId, bool forzar = false)
@@ -704,6 +1010,125 @@ namespace BLL
             }, deudaId);
         }
 
+        /// <summary>
+        /// Comprobante automático tras abono (plantilla UTILITY). Asunto + Detalle según cuota completa/parcial.
+        /// </summary>
+        public bool EnviarComprobanteAbonoDeudaWhatsApp(
+            int clienteId,
+            int deudaId,
+            string? concepto,
+            decimal montoAbonado,
+            string? metodo,
+            decimal saldoAnterior,
+            decimal saldoActual,
+            bool esCuotaCompleta,
+            bool esAbonoParcial,
+            bool deudaLiquidada,
+            int? cuotaNumero,
+            DateTime? cuotaFecha,
+            decimal? faltaAntes,
+            decimal? faltaDespues,
+            int? proximaCuotaNumero,
+            DateTime? proximaCuotaFecha)
+        {
+            string asunto = esAbonoParcial
+                ? "Comprobante de abono parcial"
+                : esCuotaCompleta
+                    ? "Comprobante de cuota"
+                    : "Comprobante de pago";
+
+            string detalle = ConstruirDetalleComprobanteAbonoWhatsApp(
+                deudaId,
+                concepto,
+                montoAbonado,
+                metodo,
+                saldoAnterior,
+                saldoActual,
+                esCuotaCompleta,
+                esAbonoParcial,
+                deudaLiquidada,
+                cuotaNumero,
+                cuotaFecha,
+                faltaAntes,
+                faltaDespues,
+                proximaCuotaNumero,
+                proximaCuotaFecha);
+
+            return EnviarMensajeTemplado(clienteId, "COMPROBANTE_ABONO_DEUDA", new Dictionary<string, string>
+            {
+                ["ASUNTO"] = asunto,
+                ["DETALLE"] = detalle
+            }, deudaId);
+        }
+
+        private static string ConstruirDetalleComprobanteAbonoWhatsApp(
+            int deudaId,
+            string? concepto,
+            decimal montoAbonado,
+            string? metodo,
+            decimal saldoAnterior,
+            decimal saldoActual,
+            bool esCuotaCompleta,
+            bool esAbonoParcial,
+            bool deudaLiquidada,
+            int? cuotaNumero,
+            DateTime? cuotaFecha,
+            decimal? faltaAntes,
+            decimal? faltaDespues,
+            int? proximaCuotaNumero,
+            DateTime? proximaCuotaFecha)
+        {
+            // {{3}} Detalle UTILITY: un renglón por línea (Meta puede aplanar solo si rechaza \\n).
+            // Envoltorio Hola/Miembro/Asunto/Fecha/pie lo pone la plantilla Twilio.
+            string limpio = LimpiarConceptoParaAviso(concepto, "Financiamiento");
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine($"Concepto: {limpio}");
+
+            if (cuotaNumero.HasValue || cuotaFecha.HasValue || faltaAntes.HasValue)
+            {
+                if (cuotaNumero.HasValue)
+                    sb.AppendLine($"Cuota #: {cuotaNumero}");
+
+                if (cuotaFecha.HasValue)
+                {
+                    string etiquetaVence = cuotaNumero.HasValue
+                        ? $"Vence cuota #{cuotaNumero}"
+                        : "Vence cuota";
+                    sb.AppendLine($"{etiquetaVence}: {cuotaFecha:dd/MM/yyyy}");
+                }
+
+                if (faltaAntes.HasValue)
+                    sb.AppendLine($"Faltaba: {FormatearMontoEspaciado(faltaAntes.Value)}");
+            }
+
+            sb.AppendLine($"Abonado ahora: {FormatearMontoEspaciado(montoAbonado)}");
+
+            if (esAbonoParcial)
+            {
+                decimal aun = faltaDespues
+                    ?? (faltaAntes.HasValue ? Math.Max(0m, faltaAntes.Value - montoAbonado) : 0m);
+                sb.AppendLine($"Aún falta: {FormatearMontoEspaciado(aun)}");
+            }
+            else if (esCuotaCompleta
+                     && !deudaLiquidada
+                     && proximaCuotaNumero.HasValue
+                     && proximaCuotaFecha.HasValue)
+            {
+                sb.AppendLine(
+                    $"Próx. cuota: #{proximaCuotaNumero} — {proximaCuotaFecha:dd/MM/yyyy}");
+            }
+
+            sb.AppendLine($"Saldo total anterior: {FormatearMontoEspaciado(saldoAnterior)}");
+            sb.AppendLine($"Saldo total actual: {FormatearMontoEspaciado(saldoActual)}");
+
+            if (deudaLiquidada)
+                sb.AppendLine("DEUDA LIQUIDADA");
+
+            sb.Append("Gracias por su pago.");
+            return sb.ToString();
+        }
+
         // ===============================
         // AUTOMATIZACIÓN
         // ===============================
@@ -716,6 +1141,7 @@ namespace BLL
             enviados += ReintentarMensajesFallidos();
             enviados += VerificarRecordatoriosDeuda();
             enviados += VerificarDeudasVencenHoy();
+            enviados += VerificarMoraGeneradaDiaria();
             enviados += VerificarDeudasVencidas();
             enviados += VerificarMembresiasPorVencer();
             enviados += VerificarMembresiasVencenHoy();
@@ -773,7 +1199,10 @@ namespace BLL
         public int VerificarRecordatoriosDeuda()
         {
             int enviados = 0;
-            int diasAntes = TwilioSettings.DiasRecordatorioDeuda;
+            var diasActivos = new HashSet<int>(DiasRecordatorioDeudaActivos());
+            if (diasActivos.Count == 0)
+                return 0;
+
             var deudas = deudaDAL.ObtenerDeudas();
             DateTime hoy = DateTime.Today;
 
@@ -786,14 +1215,33 @@ namespace BLL
                     continue;
 
                 int deudaId = Convert.ToInt32(row["Id"]);
-                DateTime fechaVencimiento = Convert.ToDateTime(row["FechaVencimiento"]).Date;
-                int diasHastaVencimiento = (fechaVencimiento - hoy).Days;
+                // Con plazos: aviso por próxima cuota; sin préstamo: FechaVencimiento.
+                DateTime fechaPago = LeerFechaPagoRecordatorio(row);
+                int diasHastaPago = (fechaPago - hoy).Days;
 
-                if (diasHastaVencimiento == diasAntes && EnviarRecordatorioDeuda(deudaId))
+                if (!diasActivos.Contains(diasHastaPago))
+                    continue;
+
+                if (EnviarRecordatorioDeuda(deudaId))
                     enviados++;
             }
 
             return enviados;
+        }
+
+        /// <summary>Días configurados para aviso de financiamiento (p. ej. 10 y 2), sin duplicados.</summary>
+        private static IEnumerable<int> DiasRecordatorioDeudaActivos()
+        {
+            var vistos = new HashSet<int>();
+            foreach (int dias in new[]
+            {
+                TwilioSettings.DiasRecordatorioDeuda,
+                TwilioSettings.DiasRecordatorioDeudaUrgente
+            })
+            {
+                if (dias > 0 && vistos.Add(dias))
+                    yield return dias;
+            }
         }
 
         public int VerificarDeudasVencenHoy()
@@ -811,9 +1259,72 @@ namespace BLL
                     continue;
 
                 int deudaId = Convert.ToInt32(row["Id"]);
-                DateTime fechaVencimiento = Convert.ToDateTime(row["FechaVencimiento"]).Date;
+                // Misma referencia que recordatorios: próxima cuota o FechaVencimiento.
+                DateTime fechaPago = LeerFechaPagoRecordatorio(row);
 
-                if (fechaVencimiento == hoy && EnviarRecordatorioDeudaVenceHoy(deudaId))
+                if (fechaPago == hoy && EnviarRecordatorioDeudaVenceHoy(deudaId))
+                    enviados++;
+            }
+
+            return enviados;
+        }
+
+        /// <summary>
+        /// Desde el día 3 de vencido (mora activa): un WhatsApp diario con mora del día + acumulado.
+        /// </summary>
+        public int VerificarMoraGeneradaDiaria()
+        {
+            int enviados = 0;
+            var deudas = deudaDAL.ObtenerDeudas();
+            DateTime hoy = DateTime.Today;
+
+            foreach (DataRow row in deudas.Rows)
+            {
+                if (!DeudaTieneSaldoPendiente(row))
+                    continue;
+
+                if (!string.Equals(row["Estado"]?.ToString(), "ACTIVA", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!PrestamoTieneMoraActiva(row))
+                    continue;
+
+                DateTime fechaPago = LeerFechaPagoRecordatorio(row);
+                int diasVencido = (hoy - fechaPago).Days;
+                if (diasVencido < MoraAvisoDiasGracia)
+                    continue;
+
+                int deudaId = Convert.ToInt32(row["Id"]);
+                int clienteId = Convert.ToInt32(row["ClienteId"]);
+                decimal saldo = LeerDecimal(row, "Saldo");
+                int? cuotaNum = row.Table.Columns.Contains("ProximaCuotaNumero")
+                    && row["ProximaCuotaNumero"] != DBNull.Value
+                    ? Convert.ToInt32(row["ProximaCuotaNumero"])
+                    : null;
+
+                // Evidencia en historial (no capitaliza Saldo); luego WhatsApp.
+                try
+                {
+                    if (!TryCalcularMoraAcumulada(diasVencido, out decimal moraHoy, out decimal moraAcum))
+                        continue;
+
+                    deudaDAL.RegistrarMoraGeneradaEvidencia(
+                        deudaId,
+                        clienteId,
+                        moraHoy,
+                        moraAcum,
+                        cuotaNum,
+                        fechaPago,
+                        saldo,
+                        "SISTEMA");
+                }
+                catch (Exception exHist)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Historial MORA_GENERADA deuda {deudaId}: {exHist.Message}");
+                }
+
+                if (EnviarAvisoMoraGenerada(deudaId))
                     enviados++;
             }
 
@@ -1083,10 +1594,13 @@ namespace BLL
             "FINANCIAMIENTO" => "Financiamiento registrado",
             "DEUDA_CREADA" => "Financiamiento",
             "DEUDA_VENCE_HOY" => "Deuda vence hoy",
+            "AVISO_MORA_CUOTA_VENCIDA" => "Mora por atraso",
+            "AVISO_MORA_GENERADA" => "Mora generada",
             "RECORDATORIO_VENCIMIENTO_DEUDA" => "Recordatorio de pago",
             "DEUDA_VENCIDA" => "Deuda vencida",
             "PAGO_DEUDA_RECIBIDO" => "Pago recibido",
             "DEUDA_PAGADA_COMPLETA" => "Deuda saldada",
+            "COMPROBANTE_ABONO_DEUDA" => "Comprobante de pago",
             "RESUMEN_DEUDAS" => "Financiamiento",
             "PRUEBA_SISTEMA" => "Mensaje de prueba",
             "CONGELACION_MEMBRESIA" => "Membresia congelada",

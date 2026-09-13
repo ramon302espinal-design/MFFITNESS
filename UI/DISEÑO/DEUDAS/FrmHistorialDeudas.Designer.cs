@@ -28,6 +28,8 @@
         /// </summary>
         private void InitializeComponent()
         {
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             dgvHistorial = new DataGridView();
             cmbTipo = new ComboBox();
             dtpDesde = new DateTimePicker();
@@ -37,9 +39,9 @@
             lblTipo = new Label();
             lblDesde = new Label();
             lblHasta = new Label();
-            btnActualizar = new Button();
-            btnExportar = new Button();
             btnImprimir = new Button();
+            btnExportar = new Button();
+            btnActualizar = new Button();
             ((System.ComponentModel.ISupportInitialize)dgvHistorial).BeginInit();
             SuspendLayout();
             // 
@@ -47,17 +49,33 @@
             // 
             dgvHistorial.AllowUserToAddRows = false;
             dgvHistorial.AllowUserToDeleteRows = false;
-            dgvHistorial.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvHistorial.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = SystemColors.Control;
+            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
+            dgvHistorial.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             dgvHistorial.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvHistorial.Location = new Point(20, 150);
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = SystemColors.Window;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle2.ForeColor = SystemColors.ControlText;
+            dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            dgvHistorial.DefaultCellStyle = dataGridViewCellStyle2;
+            dgvHistorial.Dock = DockStyle.Bottom;
+            dgvHistorial.Location = new Point(0, 170);
             dgvHistorial.MultiSelect = false;
             dgvHistorial.Name = "dgvHistorial";
             dgvHistorial.ReadOnly = true;
             dgvHistorial.RowHeadersWidth = 51;
             dgvHistorial.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvHistorial.Size = new Size(1065, 672);
+            dgvHistorial.Size = new Size(1488, 672);
             dgvHistorial.TabIndex = 0;
             dgvHistorial.CellFormatting += dgvHistorial_CellFormatting;
             // 
@@ -142,47 +160,44 @@
             lblHasta.TabIndex = 9;
             lblHasta.Text = "Hasta Fecha:";
             // 
-            // btnActualizar
+            // btnImprimir
             // 
-            btnActualizar.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnActualizar.FlatStyle = FlatStyle.System;
-            btnActualizar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnActualizar.Location = new Point(980, 784);
-            btnActualizar.Name = "btnActualizar";
-            btnActualizar.Size = new Size(143, 40);
-            btnActualizar.TabIndex = 13;
-            btnActualizar.Tag = "classic";
-            btnActualizar.Text = "Actualizar";
-            btnActualizar.UseVisualStyleBackColor = true;
-            btnActualizar.Click += btnActualizar_Click;
+            btnImprimir.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnImprimir.FlatStyle = FlatStyle.System;
+            btnImprimir.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnImprimir.Location = new Point(1260, 95);
+            btnImprimir.Name = "btnImprimir";
+            btnImprimir.Size = new Size(130, 40);
+            btnImprimir.TabIndex = 18;
+            btnImprimir.Tag = "classic";
+            btnImprimir.Text = "Imprimir";
+            btnImprimir.UseVisualStyleBackColor = true;
             // 
             // btnExportar
             // 
             btnExportar.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             btnExportar.FlatStyle = FlatStyle.System;
             btnExportar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnExportar.Location = new Point(1151, 784);
+            btnExportar.Location = new Point(1103, 95);
             btnExportar.Name = "btnExportar";
             btnExportar.Size = new Size(130, 40);
-            btnExportar.TabIndex = 14;
+            btnExportar.TabIndex = 17;
             btnExportar.Tag = "classic";
             btnExportar.Text = "Exportar";
             btnExportar.UseVisualStyleBackColor = true;
-            btnExportar.Click += btnExportar_Click;
             // 
-            // btnImprimir
+            // btnActualizar
             // 
-            btnImprimir.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnImprimir.FlatStyle = FlatStyle.System;
-            btnImprimir.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnImprimir.Location = new Point(1308, 784);
-            btnImprimir.Name = "btnImprimir";
-            btnImprimir.Size = new Size(130, 40);
-            btnImprimir.TabIndex = 15;
-            btnImprimir.Tag = "classic";
-            btnImprimir.Text = "Imprimir";
-            btnImprimir.UseVisualStyleBackColor = true;
-            btnImprimir.Click += btnImprimir_Click;
+            btnActualizar.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnActualizar.FlatStyle = FlatStyle.System;
+            btnActualizar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnActualizar.Location = new Point(932, 95);
+            btnActualizar.Name = "btnActualizar";
+            btnActualizar.Size = new Size(143, 40);
+            btnActualizar.TabIndex = 16;
+            btnActualizar.Tag = "classic";
+            btnActualizar.Text = "Actualizar";
+            btnActualizar.UseVisualStyleBackColor = true;
             // 
             // FrmHistorialDeudas
             // 

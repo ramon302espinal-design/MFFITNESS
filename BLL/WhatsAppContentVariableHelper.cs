@@ -55,7 +55,7 @@ namespace BLL
                     sb.Append(' ');
                 else if (c == '\'' || c == '`')
                     sb.Append('\u2019');
-                else if (c == '"' || c == '\\' || c == '{' || c == '}' || c == '$')
+                else if (c == '"' || c == '\\' || c == '{' || c == '}')
                     continue;
                 else if (c < 32)
                     continue;
@@ -192,7 +192,7 @@ namespace BLL
                 {
                     ["1"] = Cortar(Sanitizar(miembro), 60),
                     ["2"] = Cortar(Sanitizar(asunto), 60),
-                    ["3"] = Cortar(Sanitizar(detalle, preservarSaltosLinea: preservarDetalle), 500),
+                    ["3"] = Cortar(Sanitizar(detalle, preservarSaltosLinea: preservarDetalle), 700),
                     ["4"] = Cortar(Sanitizar(fecha), 40)
                 },
                 JsonOpciones);

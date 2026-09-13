@@ -44,6 +44,9 @@ namespace UI.DISEÑO.Controles
             SetValor(lblSexoValor, "—");
             SetValor(lblTelefonoValor, "—");
             SetValor(lblDireccionValor, "—");
+            SetValor(lblCedulaValor, "—");
+            SetValor(lblTrabajoValor, "—");
+            SetValor(lblDirTrabajoValor, "—");
             SetValor(lblFechaIngresoValor, "—");
 
             SetValor(lblEmNombreValor, "—");
@@ -97,7 +100,10 @@ namespace UI.DISEÑO.Controles
             string direccion,
             DateTime? fechaNacimiento,
             string? sexo,
-            ClienteFichaSaludDTO? ficha)
+            ClienteFichaSaludDTO? ficha,
+            string? cedula = null,
+            string? lugarTrabajo = null,
+            string? direccionTrabajo = null)
         {
             _clienteId = id;
             _tieneMiembro = id > 0;
@@ -108,6 +114,9 @@ namespace UI.DISEÑO.Controles
             SetValor(lblNombreValor, TextoOGuion(nombre));
             SetValor(lblTelefonoValor, TextoOGuion(telefono));
             SetValor(lblDireccionValor, TextoOGuion(direccion));
+            SetValor(lblCedulaValor, TextoOGuion(cedula));
+            SetValor(lblTrabajoValor, TextoOGuion(lugarTrabajo));
+            SetValor(lblDirTrabajoValor, TextoOGuion(direccionTrabajo));
 
             if (fechaNacimiento.HasValue)
             {

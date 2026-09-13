@@ -23,6 +23,7 @@ namespace UI.Helpers
             return $"Convert(Id, 'System.String') LIKE {like} " +
                    $"OR Nombre LIKE {like} " +
                    $"OR Telefono LIKE {like} " +
+                   $"OR Convert(IsNull(Cedula, ''), 'System.String') LIKE {like} " +
                    $"OR Direccion LIKE {like} " +
                    $"OR Estado LIKE {like} " +
                    $"OR Convert(FechaNacimiento, 'System.String') LIKE {like}";
@@ -54,10 +55,16 @@ namespace UI.Helpers
                    $"OR Plan LIKE {like} " +
                    $"OR Estado LIKE {like} " +
                    $"OR AporteInicial LIKE {like} " +
+                   $"OR OrigenPrecio LIKE {like} " +
+                   $"OR FrecuenciaPrestamo LIKE {like} " +
+                   $"OR MoraPrestamo LIKE {like} " +
                    $"OR Convert(MontoTotal, 'System.String') LIKE {like} " +
                    $"OR Convert(MontoPagado, 'System.String') LIKE {like} " +
                    $"OR Convert(Saldo, 'System.String') LIKE {like} " +
+                   $"OR Convert(CuotaBase, 'System.String') LIKE {like} " +
                    $"OR Convert(FechaVencimiento, 'System.String') LIKE {like} " +
+                   $"OR Convert(ProximaCuotaFecha, 'System.String') LIKE {like} " +
+                   $"OR FaltaCuotaTexto LIKE {like} " +
                    $"OR Convert(FechaInicioMembresia, 'System.String') LIKE {like} " +
                    $"OR Convert(FechaFinMembresia, 'System.String') LIKE {like}";
         }
@@ -281,8 +288,16 @@ namespace UI.Helpers
                     $"OR TipoOperacion LIKE {like} " +
                     $"OR FormaPago LIKE {like} " +
                     $"OR Usuario LIKE {like} " +
-                    $"OR Convert(Total, 'System.String') LIKE {like} " +
+                    $"OR FrecuenciaPrestamo LIKE {like} " +
+                    $"OR MoraPrestamo LIKE {like} " +
+                    $"OR FaltaCuotaTexto LIKE {like} " +
+                    $"OR Convert(NumeroPlazos, 'System.String') LIKE {like} " +
+                    $"OR Convert(ProximaCuotaNumero, 'System.String') LIKE {like} " +
+                    $"OR Convert(DeudaId, 'System.String') LIKE {like} " +
+                    $"OR Convert(PrecioTotal, 'System.String') LIKE {like} " +
+                    $"OR Convert(PrecioProducto, 'System.String') LIKE {like} " +
                     $"OR Convert(MontoPagado, 'System.String') LIKE {like} " +
+                    $"OR Convert(PagoInicial, 'System.String') LIKE {like} " +
                     $"OR Convert(Saldo, 'System.String') LIKE {like} " +
                     $"OR Convert(Fecha, 'System.String') LIKE {like}" +
                     ")");

@@ -26,6 +26,7 @@ namespace UI.DISEÑO.CHAT
         private int _ultimoConteoMensajes;
         private long _ultimoMaxIdMensajes;
         private int _ultimoNoLeidosConocido = -1;
+        private int _ultimoMaxIdEntradaConocido = -1;
         private string? _rutaPdfPendiente;
         private bool _suprimirSeleccion;
         private int _cargaMensajesToken;
@@ -123,8 +124,10 @@ namespace UI.DISEÑO.CHAT
             if (_clienteInicialId is > 0)
                 SeleccionarCliente(_clienteInicialId.Value);
 
-            _ultimoNoLeidosConocido = _chatBll.ContarNoLeidosTotal();
-            timerRefresh.Start();
+            SincronizarHuellaChat();
+            // Sin polling de UI: ChatNotificationHost avisa mensajes entrantes;
+            // envío/búsqueda/foco refrescan solo cuando hay acción o cambio real.
+            timerRefresh.Stop();
         }
 
         private void FrmChat_FormClosed(object sender, FormClosedEventArgs e)
@@ -163,21 +166,68 @@ namespace UI.DISEÑO.CHAT
             if (ThemeHost.IsDesignTime())
                 return;
 
-            RefrescarVista();
+            // Al volver al form: UI solo si hay cambio real (no rebuild cada focus).
+            RefrescarVista(forzar: false);
         }
 
-        private void RefrescarVista()
+        /// <summary>
+        /// Recarga lista/mensajes. Con forzar=false solo si cambió huella (no leídos / max entrada / hilo abierto).
+        /// </summary>
+        private void RefrescarVista(bool forzar = false)
         {
-            _ultimoNoLeidosConocido = _chatBll.ContarNoLeidosTotal();
+            int noLeidos;
+            int maxEntrada;
+            try
+            {
+                noLeidos = _chatBll.ContarNoLeidosTotal();
+                maxEntrada = _chatBll.ObtenerMaxIdMensajeEntrada();
+            }
+            catch
+            {
+                return;
+            }
 
-            ActualizarContadorNoLeidos();
-            CargarConversaciones(mantenerSeleccion: true);
+            bool hayCambio = forzar
+                || noLeidos != _ultimoNoLeidosConocido
+                || maxEntrada != _ultimoMaxIdEntradaConocido;
 
             if (_clienteSeleccionadoId is int cid && cid > 0)
             {
-                int maxId = _chatBll.ObtenerMaxIdMensajeChat(cid);
-                if (maxId != _ultimoMaxIdMensajes)
-                    _ = CargarMensajesAsync(cid);
+                try
+                {
+                    int maxId = _chatBll.ObtenerMaxIdMensajeChat(cid);
+                    if (maxId != _ultimoMaxIdMensajes)
+                    {
+                        hayCambio = true;
+                        _ = CargarMensajesAsync(cid);
+                    }
+                }
+                catch
+                {
+                    /* ignore lectura puntual */
+                }
+            }
+
+            if (!hayCambio)
+                return;
+
+            _ultimoNoLeidosConocido = noLeidos;
+            _ultimoMaxIdEntradaConocido = maxEntrada;
+            ActualizarContadorNoLeidos();
+            CargarConversaciones(mantenerSeleccion: true);
+        }
+
+        private void SincronizarHuellaChat()
+        {
+            try
+            {
+                _ultimoNoLeidosConocido = _chatBll.ContarNoLeidosTotal();
+                _ultimoMaxIdEntradaConocido = _chatBll.ObtenerMaxIdMensajeEntrada();
+            }
+            catch
+            {
+                _ultimoNoLeidosConocido = -1;
+                _ultimoMaxIdEntradaConocido = -1;
             }
         }
 
@@ -188,8 +238,8 @@ namespace UI.DISEÑO.CHAT
 
             void aplicar()
             {
-                ActualizarContadorNoLeidos();
-                CargarConversaciones(mantenerSeleccion: true);
+                // Tiempo real por evento (mensaje entrante), no por timer de UI.
+                RefrescarVista(forzar: true);
 
                 if (_clienteSeleccionadoId == clienteId)
                     _ = CargarMensajesAsync(clienteId);
@@ -495,6 +545,7 @@ namespace UI.DISEÑO.CHAT
             _chatBll.MarcarConversacionLeida(conv.ClienteId);
             MarcarConversacionLeidaEnLista(conv.ClienteId);
             ActualizarContadorNoLeidos();
+            SincronizarHuellaChat();
             _ = CargarMensajesAsync(conv.ClienteId);
         }
 
@@ -786,6 +837,7 @@ namespace UI.DISEÑO.CHAT
                     LimpiarAdjuntoPdf();
                     CargarMensajes(_clienteSeleccionadoId.Value);
                     CargarConversaciones(mantenerSeleccion: true);
+                    SincronizarHuellaChat();
                 }
                 else
                 {
@@ -856,6 +908,7 @@ namespace UI.DISEÑO.CHAT
                     LimpiarAdjuntoPdf();
                     CargarMensajes(_clienteSeleccionadoId.Value);
                     CargarConversaciones(mantenerSeleccion: true);
+                    SincronizarHuellaChat();
                 }
                 else
                 {
@@ -889,7 +942,8 @@ namespace UI.DISEÑO.CHAT
 
         private void timerRefresh_Tick(object sender, EventArgs e)
         {
-            RefrescarVista();
+            // Desactivado a propósito: la UI se actualiza por ChatNotificationHost,
+            // envío local, búsqueda y Activated (solo si hay cambio).
         }
 
         private void lstConversaciones_DrawItem(object sender, DrawItemEventArgs e)

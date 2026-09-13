@@ -242,34 +242,174 @@ namespace UI.DISEÑO
 
         private void CargarDetalleVentaProducto(int ventaId, DataGridViewRow? filaVenta = null)
         {
-            dgvDetalleProductos.DataSource = ventasBLL.ListarDetalleVenta(ventaId);
-            dgvDetalleProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvDetalleProductos.ReadOnly = true;
-            dgvDetalleProductos.RowHeadersVisible = false;
+            DataTable detalle = ventasBLL.ListarDetalleVenta(ventaId);
 
-            decimal totalVenta = 0m;
-            decimal saldoVenta = 0m;
-            decimal pagoInicial = 0m;
+            decimal interesTotal = 0m;
+            DataRowView? fila = filaVenta?.DataBoundItem as DataRowView
+                ?? dgvVentasProductos.CurrentRow?.DataBoundItem as DataRowView;
 
-            if (filaVenta?.DataBoundItem is DataRowView fila)
+            if (fila?.Row.Table.Columns.Contains("InteresTotal") == true
+                && fila["InteresTotal"] != DBNull.Value)
             {
-                totalVenta = fila["Total"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["Total"]);
-                saldoVenta = fila["Saldo"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["Saldo"]);
-                pagoInicial = fila["MontoPagado"] == DBNull.Value ? 0m : Convert.ToDecimal(fila["MontoPagado"]);
+                interesTotal = Convert.ToDecimal(fila["InteresTotal"]);
             }
-            else if (dgvVentasProductos.CurrentRow?.DataBoundItem is DataRowView filaActual)
-            {
-                totalVenta = filaActual["Total"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["Total"]);
-                saldoVenta = filaActual["Saldo"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["Saldo"]);
-                pagoInicial = filaActual["MontoPagado"] == DBNull.Value ? 0m : Convert.ToDecimal(filaActual["MontoPagado"]);
-            }
+
+            AplicarInteresProporcionalDetalle(detalle, interesTotal);
+
+            dgvDetalleProductos.DataSource = detalle;
+            ConfigurarColumnasDetalleProductos();
+            ActualizarTotalDetalleProductos(detalle);
 
             if (label3 != null)
+                label3.Text = "DETALLE DE PRODUCTOS";
+        }
+
+        private void ActualizarTotalDetalleProductos(DataTable? detalle)
+        {
+            if (lblTotalDetalleProductos == null || lblTotalDetalleProductos.IsDisposed)
+                return;
+
+            decimal total = 0m;
+            if (detalle != null && detalle.Columns.Contains("PrecioTotal"))
             {
-                label3.Text = saldoVenta > 0
-                    ? $"DETALLE · FINANCIADO · Precio Total RD$ {totalVenta:N2} · Pago Inicial RD$ {pagoInicial:N2} · Saldo Pendiente RD$ {saldoVenta:N2}"
-                    : "DETALLE DE PRODUCTOS";
+                foreach (DataRow row in detalle.Rows)
+                {
+                    if (row["PrecioTotal"] != DBNull.Value && row["PrecioTotal"] != null)
+                        total += Convert.ToDecimal(row["PrecioTotal"]);
+                }
             }
+            else if (detalle != null && detalle.Columns.Contains("Subtotal"))
+            {
+                foreach (DataRow row in detalle.Rows)
+                {
+                    if (row["Subtotal"] != DBNull.Value && row["Subtotal"] != null)
+                        total += Convert.ToDecimal(row["Subtotal"]);
+                }
+            }
+
+            lblTotalDetalleProductos.Text = $"TOTAL: RD$ {total:N2}";
+        }
+
+        private void LimpiarDetalleProductosUi()
+        {
+            dgvDetalleProductos.DataSource = null;
+            ActualizarTotalDetalleProductos(null);
+            if (label3 != null)
+                label3.Text = "DETALLE DE PRODUCTOS";
+        }
+
+        /// <summary>
+        /// Reparte el interés fijo del préstamo entre líneas (proporcional al subtotal),
+        /// para que Precio Total de detalle = producto + interés (misma regla del historial).
+        /// </summary>
+        private static void AplicarInteresProporcionalDetalle(DataTable detalle, decimal interesTotal)
+        {
+            if (detalle == null)
+                return;
+
+            if (!detalle.Columns.Contains("Interes"))
+                detalle.Columns.Add("Interes", typeof(decimal));
+            if (!detalle.Columns.Contains("PrecioTotal"))
+                detalle.Columns.Add("PrecioTotal", typeof(decimal));
+
+            interesTotal = decimal.Round(Math.Max(0m, interesTotal), 2);
+
+            decimal sumaSubtotales = 0m;
+            foreach (DataRow row in detalle.Rows)
+            {
+                if (row["Subtotal"] != DBNull.Value)
+                    sumaSubtotales += Convert.ToDecimal(row["Subtotal"]);
+            }
+
+            decimal interesAsignado = 0m;
+            for (int i = 0; i < detalle.Rows.Count; i++)
+            {
+                DataRow row = detalle.Rows[i];
+                decimal subtotal = row["Subtotal"] == DBNull.Value ? 0m : Convert.ToDecimal(row["Subtotal"]);
+                decimal interesLinea;
+
+                if (interesTotal <= 0m || sumaSubtotales <= 0m)
+                {
+                    interesLinea = 0m;
+                }
+                else if (i == detalle.Rows.Count - 1)
+                {
+                    interesLinea = decimal.Round(interesTotal - interesAsignado, 2);
+                }
+                else
+                {
+                    interesLinea = decimal.Round(interesTotal * (subtotal / sumaSubtotales), 2);
+                    interesAsignado += interesLinea;
+                }
+
+                row["Interes"] = interesLinea;
+                row["PrecioTotal"] = decimal.Round(subtotal + interesLinea, 2);
+            }
+        }
+
+        private void ConfigurarColumnasDetalleProductos()
+        {
+            if (dgvDetalleProductos.Columns.Count == 0)
+                return;
+
+            DataGridViewHelper.RunColumnLayout(dgvDetalleProductos, () =>
+            {
+                DataGridViewHelper.ConfigureColumn(dgvDetalleProductos, "Producto", col =>
+                {
+                    col.HeaderText = "Producto";
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvDetalleProductos, "Cantidad", col =>
+                {
+                    col.HeaderText = "Cant.";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                    DataGridViewHelper.SetColumnWidth(col, 70);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvDetalleProductos, "Precio", col =>
+                {
+                    col.HeaderText = "Precio";
+                    col.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvDetalleProductos, "Subtotal", col =>
+                {
+                    col.HeaderText = "Subtotal";
+                    col.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvDetalleProductos, "Interes", col =>
+                {
+                    col.HeaderText = "Interés";
+                    col.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    DataGridViewHelper.SetColumnWidth(col, 90);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvDetalleProductos, "PrecioTotal", col =>
+                {
+                    col.HeaderText = "Precio Total";
+                    col.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    col.DefaultCellStyle.Font = new Font(dgvDetalleProductos.Font, FontStyle.Bold);
+                });
+
+                DataGridViewHelper.SetDisplayIndex(dgvDetalleProductos, "Producto", 0);
+                DataGridViewHelper.SetDisplayIndex(dgvDetalleProductos, "Cantidad", 1);
+                DataGridViewHelper.SetDisplayIndex(dgvDetalleProductos, "Precio", 2);
+                DataGridViewHelper.SetDisplayIndex(dgvDetalleProductos, "Subtotal", 3);
+                DataGridViewHelper.SetDisplayIndex(dgvDetalleProductos, "Interes", 4);
+                DataGridViewHelper.SetDisplayIndex(dgvDetalleProductos, "PrecioTotal", 5);
+            }, restoreFill: true);
+
+            dgvDetalleProductos.ReadOnly = true;
+            dgvDetalleProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvDetalleProductos.MultiSelect = false;
+            dgvDetalleProductos.RowHeadersVisible = false;
+            dgvDetalleProductos.AllowUserToAddRows = false;
+            dgvDetalleProductos.AllowUserToDeleteRows = false;
         }
 
         private void FrmHistorialVentas_Load(object sender, EventArgs e)
@@ -432,8 +572,21 @@ namespace UI.DISEÑO
         private void CargarVentas()
         {
             string filtroActual = txtBuscarProductos?.Text?.Trim() ?? string.Empty;
+            int? ventaIdSeleccionada = null;
+            if (dgvVentasProductos.CurrentRow?.Cells["Id"]?.Value != null
+                && dgvVentasProductos.CurrentRow.Cells["Id"].Value != DBNull.Value)
+            {
+                ventaIdSeleccionada = Convert.ToInt32(dgvVentasProductos.CurrentRow.Cells["Id"].Value);
+            }
 
-            _bsVentasProductos.DataSource = ventasBLL.ListarVentas();
+            DataTable dt = ventasBLL.ListarVentas();
+            if (!dt.Columns.Contains("FaltaCuotaTexto"))
+                dt.Columns.Add("FaltaCuotaTexto", typeof(string));
+
+            foreach (DataRow row in dt.Rows)
+                row["FaltaCuotaTexto"] = ConstruirTextoFaltaCuotaVenta(row);
+
+            _bsVentasProductos.DataSource = dt;
             dgvVentasProductos.DataSource = _bsVentasProductos;
 
             ConfigurarColumnasVentasProductos();
@@ -442,8 +595,75 @@ namespace UI.DISEÑO
                 txtBuscarProductos.Text = filtroActual;
 
             AplicarFiltroBusquedaProductos();
-            dgvVentasProductos.ClearSelection();
-            dgvDetalleProductos.DataSource = null;
+
+            if (ventaIdSeleccionada.HasValue
+                && RestaurarSeleccionVentaProducto(ventaIdSeleccionada.Value))
+            {
+                // Selección y detalle restaurados tras refresh (pago/deuda).
+            }
+            else
+            {
+                dgvVentasProductos.ClearSelection();
+                LimpiarDetalleProductosUi();
+            }
+        }
+
+        /// <summary>Restaura fila tras refresh sin limpiar el filtro de búsqueda.</summary>
+        private bool RestaurarSeleccionVentaProducto(int ventaId)
+        {
+            if (!dgvVentasProductos.Columns.Contains("Id"))
+                return false;
+
+            foreach (DataGridViewRow row in dgvVentasProductos.Rows)
+            {
+                if (row.IsNewRow)
+                    continue;
+
+                var valor = row.Cells["Id"].Value;
+                if (valor == null || valor == DBNull.Value)
+                    continue;
+
+                if (Convert.ToInt32(valor) != ventaId)
+                    continue;
+
+                dgvVentasProductos.ClearSelection();
+                row.Selected = true;
+
+                var celdaVisible = ObtenerPrimeraCeldaVisible(row);
+                if (celdaVisible != null)
+                    dgvVentasProductos.CurrentCell = celdaVisible;
+
+                CargarDetalleVentaProducto(ventaId, row);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Misma regla visual que Gestión de Deudas (abonos vs cronograma).</summary>
+        private static string ConstruirTextoFaltaCuotaVenta(DataRow row)
+        {
+            if (row.Table.Columns.Contains("FaltaEstaCuota")
+                && row["FaltaEstaCuota"] != DBNull.Value
+                && row["FaltaEstaCuota"] != null)
+            {
+                decimal falta = Convert.ToDecimal(row["FaltaEstaCuota"]);
+                if (falta > 0m)
+                    return $"Falta RD$ {falta:N2} de esta cuota";
+            }
+
+            if ((!row.Table.Columns.Contains("PrestamoId")
+                 || row["PrestamoId"] == DBNull.Value
+                 || row["PrestamoId"] == null)
+                && row.Table.Columns.Contains("Saldo")
+                && row["Saldo"] != DBNull.Value)
+            {
+                decimal saldo = Convert.ToDecimal(row["Saldo"]);
+                if (saldo > 0m)
+                    return $"Falta RD$ {saldo:N2}";
+            }
+
+            return string.Empty;
         }
 
         private void txtBuscarProductos_TextChanged(object? sender, EventArgs e)
@@ -472,7 +692,7 @@ namespace UI.DISEÑO
                 }
                 else if (_bsVentasProductos.Count == 0)
                 {
-                    dgvDetalleProductos.DataSource = null;
+                    LimpiarDetalleProductosUi();
                 }
             }
             catch (Exception ex)
@@ -487,74 +707,174 @@ namespace UI.DISEÑO
             if (dgvVentasProductos.Columns.Count == 0)
                 return;
 
-            DataGridViewHelper.HideColumn(dgvVentasProductos, "ClienteId");
-            DataGridViewHelper.HideColumn(dgvVentasProductos, "Telefono");
-            DataGridViewHelper.HideColumn(dgvVentasProductos, "MetodoPago");
-
-            if (dgvVentasProductos.Columns["TipoOperacion"] is DataGridViewColumn colTipo)
+            // Anchos fijos + AutoSize None → scroll horizontal para ver todos los headers.
+            DataGridViewHelper.RunColumnLayout(dgvVentasProductos, () =>
             {
-                colTipo.HeaderText = "Operación";
-                colTipo.DisplayIndex = 1;
-            }
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "Saldo");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "MontoPagado");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "PagoInicialFinanciamiento");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "PrecioProducto");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "InteresTotal");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "TotalConInteres");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "CuotaBase");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "ProximaCuotaNumero");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "ProximaCuotaFecha");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "FaltaCuotaTexto");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "ProximaCuotaMonto");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "FaltaEstaCuota");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "DeudaId");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "PrestamoId");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "ClienteId");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "Telefono");
+                DataGridViewHelper.HideColumn(dgvVentasProductos, "MetodoPago");
 
-            if (dgvVentasProductos.Columns["FormaPago"] is DataGridViewColumn colForma)
-            {
-                colForma.HeaderText = "Forma de pago";
-                colForma.DisplayIndex = 8;
-            }
-
-            if (dgvVentasProductos.Columns["Productos"] is DataGridViewColumn colProd)
-            {
-                colProd.HeaderText = "Productos";
-                colProd.DisplayIndex = 2;
-            }
-
-            if (dgvVentasProductos.Columns["Fecha"] is DataGridViewColumn colFecha)
-            {
-                colFecha.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
-                colFecha.HeaderText = "Fecha";
-            }
-
-            foreach (var nombre in new[] { "Total", "MontoPagado", "Saldo" })
-            {
-                if (dgvVentasProductos.Columns[nombre] is DataGridViewColumn colMonto)
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "Id", col =>
                 {
-                    colMonto.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
-                    colMonto.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                }
-            }
+                    DataGridViewHelper.SetColumnWidth(col, 55);
+                });
 
-            if (dgvVentasProductos.Columns["Total"] != null)
-                dgvVentasProductos.Columns["Total"]!.HeaderText = "Precio Total";
-            if (dgvVentasProductos.Columns["MontoPagado"] != null)
-                dgvVentasProductos.Columns["MontoPagado"]!.HeaderText = "Pago Inicial / Pagado";
-            if (dgvVentasProductos.Columns["Saldo"] != null)
-                dgvVentasProductos.Columns["Saldo"]!.HeaderText = "Saldo Pendiente";
-            if (dgvVentasProductos.Columns["Usuario"] != null)
-                dgvVentasProductos.Columns["Usuario"]!.HeaderText = "Atendió";
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "TipoOperacion", col =>
+                {
+                    col.HeaderText = "Operación";
+                    DataGridViewHelper.SetColumnWidth(col, 100);
+                });
 
-            dgvVentasProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "Cliente", col =>
+                {
+                    DataGridViewHelper.SetColumnWidth(col, 160);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "Productos", col =>
+                {
+                    col.HeaderText = "Productos";
+                    DataGridViewHelper.SetColumnWidth(col, 220);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "FrecuenciaPrestamo", col =>
+                {
+                    col.HeaderText = "Frecuencia";
+                    DataGridViewHelper.SetColumnWidth(col, 95);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "NumeroPlazos", col =>
+                {
+                    col.HeaderText = "Plazos";
+                    DataGridViewHelper.SetColumnWidth(col, 60);
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "InteresPorcentaje", col =>
+                {
+                    col.HeaderText = "Interés %";
+                    col.DefaultCellStyle.Format = "N2";
+                    DataGridViewHelper.SetColumnWidth(col, 75);
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "MoraPrestamo", col =>
+                {
+                    col.HeaderText = "Mora";
+                    DataGridViewHelper.SetColumnWidth(col, 55);
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "Fecha", col =>
+                {
+                    col.DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
+                    col.HeaderText = "Fecha";
+                    DataGridViewHelper.SetColumnWidth(col, 130);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "PrecioTotal", col =>
+                {
+                    col.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    col.HeaderText = "Precio Total";
+                    DataGridViewHelper.SetColumnWidth(col, 110);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "PagoInicial", col =>
+                {
+                    col.DefaultCellStyle.Format = MonedaHelper.FormatoGridRd;
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                    col.HeaderText = "Pago Inicial";
+                    DataGridViewHelper.SetColumnWidth(col, 120);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "FormaPago", col =>
+                {
+                    col.HeaderText = "Forma de pago";
+                    DataGridViewHelper.SetColumnWidth(col, 220);
+                });
+
+                DataGridViewHelper.ConfigureColumn(dgvVentasProductos, "Usuario", col =>
+                {
+                    col.HeaderText = "Atendió";
+                    DataGridViewHelper.SetColumnWidth(col, 110);
+                });
+
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "Id", 0);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "TipoOperacion", 1);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "Cliente", 2);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "Productos", 3);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "FrecuenciaPrestamo", 4);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "NumeroPlazos", 5);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "InteresPorcentaje", 6);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "MoraPrestamo", 7);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "Fecha", 8);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "PrecioTotal", 9);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "PagoInicial", 10);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "FormaPago", 11);
+                DataGridViewHelper.SetDisplayIndex(dgvVentasProductos, "Usuario", 12);
+            }, restoreFill: false);
+
+            dgvVentasProductos.ScrollBars = ScrollBars.Both;
             dgvVentasProductos.ReadOnly = true;
             dgvVentasProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvVentasProductos.MultiSelect = false;
             dgvVentasProductos.RowHeadersVisible = false;
+            dgvVentasProductos.AllowUserToAddRows = false;
+            dgvVentasProductos.AllowUserToDeleteRows = false;
             dgvVentasProductos.CellFormatting -= DgvVentasProductos_CellFormatting;
             dgvVentasProductos.CellFormatting += DgvVentasProductos_CellFormatting;
         }
 
         private void DgvVentasProductos_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (e.RowIndex < 0 || dgvVentasProductos.Columns[e.ColumnIndex].Name != "TipoOperacion")
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
 
-            if (dgvVentasProductos.Rows[e.RowIndex].DataBoundItem is not DataRowView fila)
-                return;
+            string nombreColumna = dgvVentasProductos.Columns[e.ColumnIndex].Name;
 
-            string tipo = fila["TipoOperacion"]?.ToString() ?? string.Empty;
-            if (!string.Equals(tipo, "FINANCIADO", StringComparison.OrdinalIgnoreCase))
-                return;
+            if (nombreColumna == "TipoOperacion"
+                && dgvVentasProductos.Rows[e.RowIndex].DataBoundItem is DataRowView filaTipo)
+            {
+                string tipo = filaTipo["TipoOperacion"]?.ToString() ?? string.Empty;
+                if (string.Equals(tipo, "FINANCIADO", StringComparison.OrdinalIgnoreCase))
+                {
+                    e.CellStyle.ForeColor = Color.DarkOrange;
+                    e.CellStyle.Font = new Font(dgvVentasProductos.Font, FontStyle.Bold);
+                }
+            }
 
-            e.CellStyle.ForeColor = Color.DarkOrange;
-            e.CellStyle.Font = new Font(dgvVentasProductos.Font, FontStyle.Bold);
+            if (nombreColumna == "FrecuenciaPrestamo" && e.Value != null
+                && !string.IsNullOrWhiteSpace(e.Value.ToString()))
+            {
+                e.CellStyle.ForeColor = Color.FromArgb(0x0D, 0x47, 0xA1);
+                e.CellStyle.Font = new Font(dgvVentasProductos.Font, FontStyle.Bold);
+            }
+
+            if (nombreColumna == "MoraPrestamo" && e.Value != null)
+            {
+                string mora = e.Value.ToString() ?? string.Empty;
+                e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                if (string.Equals(mora, "Sí", StringComparison.OrdinalIgnoreCase))
+                {
+                    e.CellStyle.ForeColor = Color.DarkRed;
+                    e.CellStyle.Font = new Font(dgvVentasProductos.Font, FontStyle.Bold);
+                }
+            }
+
         }
 
         private void dgvVentasProductos_SelectionChanged(object sender, EventArgs e)
@@ -562,9 +882,7 @@ namespace UI.DISEÑO
             var val = dgvVentasProductos.CurrentRow?.Cells["Id"]?.Value;
             if (val == null || val == DBNull.Value)
             {
-                dgvDetalleProductos.DataSource = null;
-                if (label3 != null)
-                    label3.Text = "DETALLE DE PRODUCTOS";
+                LimpiarDetalleProductosUi();
                 return;
             }
 

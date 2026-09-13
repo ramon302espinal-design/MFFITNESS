@@ -3,6 +3,7 @@ using DL;
 using BLL.Models;
 using BLL.Services;
 using System;
+using System.IO;
 using CORE;
 
 namespace BLL
@@ -768,7 +769,8 @@ namespace BLL
             MovimientoFinancieroNotifier.MembresiaFinanciada(result.CajaMovimientoId, result.DeudaId);
 
             EnviarWhatsAppEnBackground(() =>
-                EnviarWhatsAppFinanciamiento(clienteId, planId, pagoInicial, fechaVencimientoDeuda, result));
+                EnviarWhatsAppFinanciamiento(
+                    clienteId, planId, pagoInicial, fechaVencimientoDeuda, metodoPago, result));
 
             return result;
         }
@@ -870,39 +872,145 @@ namespace BLL
             int planId,
             decimal pagoInicial,
             DateTime? fechaVencimientoDeuda,
+            string metodoPago,
             MembresiaOperacionResult result)
         {
             var plan = planDAL.ObtenerPlan(planId);
             if (plan == null)
                 return;
 
-            decimal saldo = plan.Precio - pagoInicial;
+            decimal saldo = Math.Round(plan.Precio - pagoInicial, 2, MidpointRounding.AwayFromZero);
             DateTime fin = result.FechaFinMembresia;
+            DateTime fechaPago = result.FechaPago != default ? result.FechaPago : DateTime.Now;
+            string metodo = string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago.Trim();
+            string nombrePlan = result.PlanNombre ?? plan.Nombre ?? "Membresia";
 
-            if (saldo > 0)
+            // Sin saldo: factura pagada completa (mismo flujo que cobro al contado).
+            if (saldo <= 0)
             {
+                if (pagoInicial > 0 && result.PagoId > 0)
+                {
+                    EnviarWhatsAppTrasPagoMembresia(
+                        clienteId,
+                        planId,
+                        pagoInicial,
+                        fechaPago,
+                        fin,
+                        metodo,
+                        result.PagoId,
+                        nombrePlanOverride: nombrePlan);
+                }
+                return;
+            }
+
+            // Clave PDF: PagoId si hubo abono; si no (pago inicial 0), MembresiaId.
+            int facturaId = result.PagoId > 0
+                ? result.PagoId
+                : (result.MembresiaId > 0 ? result.MembresiaId : 0);
+
+            DateTime limitePago = fechaVencimientoDeuda?.Date ?? fin.Date;
+            string nota =
+                $"Membresía financiada. Pago inicial: RD${pagoInicial:N2}. " +
+                $"Saldo pendiente: RD${saldo:N2}. " +
+                $"Límite de pago: {limitePago:dd/MM/yyyy}. " +
+                $"Vence membresía: {fin:dd/MM/yyyy}.";
+
+            bool pdfEnviado = false;
+            string? detalleFactura = null;
+
+            if (facturaId > 0)
+            {
+                try
+                {
+                    // Generar SIEMPRE el PDF financiado antes de publicar/enviar.
+                    string? rutaPdf = Facturas.FacturaMembresiaPdfGenerator.GenerarDesdePago(
+                        clienteId,
+                        nombrePlan,
+                        pagoInicial,
+                        fin,
+                        metodo,
+                        facturaId,
+                        notaExtra: nota,
+                        precioLista: plan.Precio,
+                        esFinanciada: true,
+                        saldoPendiente: saldo);
+
+                    if (string.IsNullOrWhiteSpace(rutaPdf) || !File.Exists(rutaPdf))
+                    {
+                        detalleFactura = "No se generó el PDF local de la factura financiada.";
+                        System.Diagnostics.Debug.WriteLine($"[WA financiada] {detalleFactura}");
+                    }
+                    else
+                    {
+                        string numeroRecibo = $"MF-{facturaId}";
+                        detalleFactura = mensajeBLL.EnviarFacturaMembresia(
+                            clienteId,
+                            nombrePlan,
+                            pagoInicial,
+                            fechaPago,
+                            fin,
+                            numeroRecibo,
+                            metodo,
+                            facturaId,
+                            esFinanciada: true,
+                            precioLista: plan.Precio,
+                            saldoPendiente: saldo,
+                            notaExtra: nota);
+
+                        // Twilio OK usa "PDF adjunto enviado…", no "PDF enviado".
+                        pdfEnviado = EsDetalleFacturaPdfEnviada(detalleFactura);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    detalleFactura = ex.Message;
+                    System.Diagnostics.Debug.WriteLine(
+                        $"WhatsApp factura financiada: {ex.Message}");
+                    try
+                    {
+                        string log = Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                            "MFFITNESS",
+                            "whatsapp-last-error.txt");
+                        Directory.CreateDirectory(Path.GetDirectoryName(log)!);
+                        File.WriteAllText(
+                            log,
+                            $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\nFactura financiada cliente={clienteId} facturaId={facturaId}\n{ex}");
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                }
+            }
+            else
+            {
+                detalleFactura = "Sin PagoId ni MembresiaId para nombrar la factura PDF.";
+            }
+
+            // Respaldo: plantilla FINANCIAMIENTO (texto) solo si no se adjuntó el PDF.
+            if (!pdfEnviado)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[WA financiada] PDF no adjunto → FINANCIAMIENTO texto. Detalle: {detalleFactura}");
                 mensajeBLL.EnviarMensajeFinanciamiento(
                     clienteId,
                     plan.Nombre ?? string.Empty,
                     plan.Precio,
                     pagoInicial,
                     saldo,
-                    fechaVencimientoDeuda ?? fin);
-                return;
+                    limitePago);
             }
+        }
 
-            if (pagoInicial > 0 && result.PagoId > 0)
-            {
-                EnviarWhatsAppTrasPagoMembresia(
-                    clienteId,
-                    planId,
-                    pagoInicial,
-                    result.FechaPago != default ? result.FechaPago : DateTime.Now,
-                    fin,
-                    "Efectivo",
-                    result.PagoId,
-                    nombrePlanOverride: result.PlanNombre ?? plan.Nombre);
-            }
+        /// <summary>Twilio responde "PDF adjunto enviado…"; el fallback genérico dice "PDF enviado".</summary>
+        private static bool EsDetalleFacturaPdfEnviada(string? detalle)
+        {
+            if (string.IsNullOrWhiteSpace(detalle))
+                return false;
+
+            return detalle.IndexOf("PDF adjunto", StringComparison.OrdinalIgnoreCase) >= 0
+                   || detalle.IndexOf("PDF enviado", StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

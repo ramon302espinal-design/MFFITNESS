@@ -21,6 +21,11 @@ namespace UI.DISEÑO
             _cmbProductoComboConfigurado = true;
             cmbProducto.DropDownStyle = ComboBoxStyle.DropDown;
             cmbProducto.AutoCompleteMode = AutoCompleteMode.None;
+            // Confirmación real (click/Enter), no cambios por filtro BindingSource.
+            cmbProducto.SelectionChangeCommitted -= cmbProducto_SelectionChangeCommitted;
+            cmbProducto.SelectionChangeCommitted += cmbProducto_SelectionChangeCommitted;
+            cmbProducto.Enter -= cmbProducto_Enter;
+            cmbProducto.Enter += cmbProducto_Enter;
         }
 
         private void CargarProductosCombo()
@@ -99,10 +104,144 @@ namespace UI.DISEÑO
             catch { /* ignore */ }
         }
 
+        /// <summary>
+        /// Quita el filtro sin perder el Id clicado (SelectedIndex se recalcula al quitar Filter).
+        /// </summary>
+        private void PreservarProductoTrasQuitarFiltro(int? productoId)
+        {
+            _cmbProductoFiltrando = true;
+            try
+            {
+                RestablecerFiltroComboProducto();
+
+                if (productoId is > 0)
+                {
+                    cmbProducto.SelectedValue = productoId.Value;
+                    if (cmbProducto.SelectedItem is DataRowView row)
+                    {
+                        string nombre = row["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+                        if (!string.IsNullOrEmpty(nombre))
+                            cmbProducto.Text = nombre;
+                    }
+                }
+                else
+                {
+                    cmbProducto.SelectedIndex = -1;
+                    cmbProducto.Text = PlaceholderComboProducto;
+                }
+            }
+            catch
+            {
+                cmbProducto.SelectedIndex = -1;
+                cmbProducto.Text = PlaceholderComboProducto;
+            }
+            finally
+            {
+                _cmbProductoFiltrando = false;
+            }
+        }
+
+        private bool TryLeerProductoDelCombo(out int productoId, out string nombre)
+        {
+            productoId = 0;
+            nombre = string.Empty;
+
+            if (cmbProducto?.SelectedItem is DataRowView row)
+            {
+                if (row["Id"] == null || row["Id"] == DBNull.Value)
+                    return false;
+
+                productoId = Convert.ToInt32(row["Id"]);
+                nombre = row["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+                return productoId > 0;
+            }
+
+            return false;
+        }
+
+        /// <summary>Resuelve el producto resaltado/clicado sin asumir índice 0 del filtro.</summary>
+        private bool TryResolverProductoComboPreciso(out int productoId, out string nombre)
+        {
+            if (TryLeerProductoDelCombo(out productoId, out nombre))
+                return true;
+
+            string texto = (cmbProducto.Text ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(texto)
+                || string.Equals(texto, PlaceholderComboProducto, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (_bsProductosCombo.DataSource is not DataTable)
+                return false;
+
+            for (int i = 0; i < _bsProductosCombo.Count; i++)
+            {
+                if (_bsProductosCombo[i] is not DataRowView drv)
+                    continue;
+
+                string n = drv["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+                if (!string.Equals(n, texto, StringComparison.CurrentCultureIgnoreCase))
+                    continue;
+
+                if (drv["Id"] == null || drv["Id"] == DBNull.Value)
+                    continue;
+
+                productoId = Convert.ToInt32(drv["Id"]);
+                nombre = n;
+                if (productoId <= 0)
+                    continue;
+
+                _cmbProductoFiltrando = true;
+                try { cmbProducto.SelectedIndex = i; }
+                finally { _cmbProductoFiltrando = false; }
+                return true;
+            }
+
+            // Un solo match en la vista filtrada → tomar ese.
+            if (_bsProductosCombo.Count == 1 && _bsProductosCombo[0] is DataRowView unico)
+            {
+                if (unico["Id"] != null && unico["Id"] != DBNull.Value)
+                {
+                    productoId = Convert.ToInt32(unico["Id"]);
+                    nombre = unico["Nombre"]?.ToString()?.Trim() ?? string.Empty;
+                    if (productoId > 0)
+                    {
+                        _cmbProductoFiltrando = true;
+                        try { cmbProducto.SelectedIndex = 0; }
+                        finally { _cmbProductoFiltrando = false; }
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void cmbProducto_Enter(object? sender, EventArgs e)
+        {
+            if (_cmbProductoFiltrando)
+                return;
+
+            _cmbProductoFiltrando = true;
+            try
+            {
+                if (cmbProducto.SelectedIndex < 0
+                    || string.Equals(cmbProducto.Text, PlaceholderComboProducto, StringComparison.OrdinalIgnoreCase))
+                {
+                    cmbProducto.Text = string.Empty;
+                }
+
+                cmbProducto.SelectionStart = cmbProducto.Text.Length;
+                cmbProducto.SelectionLength = 0;
+            }
+            finally
+            {
+                _cmbProductoFiltrando = false;
+            }
+        }
+
         private void cmbProducto_DropDown(object? sender, EventArgs e)
         {
-            RestablecerFiltroComboProducto();
-
+            // No limpiar filtro: TextUpdate ya filtró; quitarlo haría que el click apunte a otro Id.
             _cmbProductoFiltrando = true;
             try
             {
@@ -127,12 +266,16 @@ namespace UI.DISEÑO
                 return;
 
             string texto = cmbProducto.Text ?? string.Empty;
-            AplicarFiltroComboProducto(texto);
 
+            // El filtro dispara SelectedIndexChanged: silenciar o pinta stock del 1.er match al tipear.
             _cmbProductoFiltrando = true;
             try
             {
-                cmbProducto.DroppedDown = true;
+                AplicarFiltroComboProducto(texto);
+                if (!cmbProducto.DroppedDown)
+                    cmbProducto.DroppedDown = true;
+
+                cmbProducto.SelectedIndex = -1;
                 cmbProducto.Text = texto;
                 cmbProducto.SelectionStart = texto.Length;
                 cmbProducto.SelectionLength = 0;
@@ -151,29 +294,41 @@ namespace UI.DISEÑO
             e.Handled = true;
             e.SuppressKeyPress = true;
 
-            if (cmbProducto.SelectedIndex < 0 && _bsProductosCombo.Count > 0)
-                cmbProducto.SelectedIndex = 0;
+            if (!TryResolverProductoComboPreciso(out int productoId, out _))
+                return;
 
-            RestablecerFiltroComboProducto();
+            PreservarProductoTrasQuitarFiltro(productoId);
             cmbProducto.DroppedDown = false;
+            ActualizarStockLabelDesdeCombo();
         }
 
         private void cmbProducto_DropDownClosed(object? sender, EventArgs e)
         {
-            RestablecerFiltroComboProducto();
+            int? id = null;
+            if (TryLeerProductoDelCombo(out int productoId, out _))
+                id = productoId;
 
-            if (cmbProducto.SelectedIndex >= 0)
+            PreservarProductoTrasQuitarFiltro(id);
+            if (id.HasValue)
+                ActualizarStockLabelDesdeCombo();
+        }
+
+        private void cmbProducto_SelectionChangeCommitted(object? sender, EventArgs e)
+        {
+            if (_cmbProductoFiltrando)
                 return;
 
-            _cmbProductoFiltrando = true;
-            try
-            {
-                cmbProducto.Text = PlaceholderComboProducto;
-            }
-            finally
-            {
-                _cmbProductoFiltrando = false;
-            }
+            if (!TryResolverProductoComboPreciso(out int productoId, out _))
+                return;
+
+            PreservarProductoTrasQuitarFiltro(productoId);
+            ActualizarStockLabelDesdeCombo();
+        }
+
+        private void ActualizarStockLabelDesdeCombo()
+        {
+            if (cmbProducto.SelectedItem is DataRowView fila)
+                lblStockActual.Text = fila["StockActual"]?.ToString() ?? "0";
         }
 
         private void SeleccionarProductoEnCombo(int productoId)

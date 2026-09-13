@@ -150,31 +150,135 @@ namespace BLL
             if (monto > saldoAnterior)
                 throw new Exception($"El monto del pago (RD${monto:N2}) no puede ser mayor al saldo pendiente (RD${saldoAnterior:N2}).");
 
+            // Snapshot pre-pago para comprobante WhatsApp (cuota completa vs parcial).
+            DataRow? deudaPre = ObtenerFilaDeudaActiva(deudaId);
+            bool tienePrestamo = deudaPre != null
+                && deudaPre.Table.Columns.Contains("PrestamoId")
+                && deudaPre["PrestamoId"] != DBNull.Value
+                && deudaPre["PrestamoId"] != null;
+            string conceptoPre = deudaPre?["Concepto"]?.ToString() ?? "Financiamiento";
+            int? cuotaNum = LeerIntNullable(deudaPre, "ProximaCuotaNumero");
+            DateTime? cuotaFecha = LeerDateNullable(deudaPre, "ProximaCuotaFecha");
+            decimal? faltaAntes = LeerDecimalPositivoNullable(deudaPre, "FaltaEstaCuota");
+
             int pagoId = dal.RegistrarPagoCompleto(deudaId, monto, metodoPago, usuario, cajaId);
 
-            decimal saldoNuevo = saldoAnterior - monto;
+            decimal saldoNuevo = Math.Max(0m, saldoAnterior - monto);
+            bool liquidada = saldoNuevo <= 0m;
+
+            bool esCuotaCompleta = false;
+            bool esAbonoParcial = false;
+            if (tienePrestamo && faltaAntes.HasValue && faltaAntes.Value > 0m)
+            {
+                esCuotaCompleta = monto + 0.009m >= faltaAntes.Value;
+                esAbonoParcial = !esCuotaCompleta;
+            }
+
+            int? proxNum = null;
+            DateTime? proxFecha = null;
+            decimal? faltaDespues = null;
+            if (!liquidada)
+            {
+                DataRow? deudaPost = ObtenerFilaDeudaActiva(deudaId);
+                if (deudaPost != null)
+                {
+                    proxNum = LeerIntNullable(deudaPost, "ProximaCuotaNumero");
+                    proxFecha = LeerDateNullable(deudaPost, "ProximaCuotaFecha");
+                    faltaDespues = LeerDecimalPositivoNullable(deudaPost, "FaltaEstaCuota");
+                    if (deudaPost.Table.Columns.Contains("Saldo") && deudaPost["Saldo"] != DBNull.Value)
+                        saldoNuevo = Convert.ToDecimal(deudaPost["Saldo"]);
+                }
+            }
+
             int clienteIdCapture = clienteId;
             int deudaIdCapture = deudaId;
+            string conceptoCapture = conceptoPre;
+            string metodoCapture = metodoPago ?? string.Empty;
             decimal montoCapture = monto;
-            decimal saldoAnteriorCapture = saldoAnterior;
+            decimal saldoAntCapture = saldoAnterior;
+            decimal saldoNuevoCapture = saldoNuevo;
+            bool completaCapture = esCuotaCompleta;
+            bool parcialCapture = esAbonoParcial;
+            bool liquidadaCapture = liquidada;
+            int? cuotaNumCapture = cuotaNum;
+            DateTime? cuotaFechaCapture = cuotaFecha;
+            decimal? faltaAntesCapture = faltaAntes;
+            decimal? faltaDespuesCapture = faltaDespues;
+            int? proxNumCapture = proxNum;
+            DateTime? proxFechaCapture = proxFecha;
 
             System.Threading.Tasks.Task.Run(() =>
             {
                 try
                 {
-                    if (saldoNuevo <= 0)
-                        EnviarNotificacionDeudaPagadaCompleta(clienteIdCapture, saldoAnteriorCapture, deudaIdCapture);
-                    else
-                        EnviarNotificacionPagoRecibido(clienteIdCapture, montoCapture, saldoNuevo, deudaIdCapture);
+                    mensajeBLL.EnviarComprobanteAbonoDeudaWhatsApp(
+                        clienteIdCapture,
+                        deudaIdCapture,
+                        conceptoCapture,
+                        montoCapture,
+                        metodoCapture,
+                        saldoAntCapture,
+                        saldoNuevoCapture,
+                        completaCapture,
+                        parcialCapture,
+                        liquidadaCapture,
+                        cuotaNumCapture,
+                        cuotaFechaCapture,
+                        faltaAntesCapture,
+                        faltaDespuesCapture,
+                        proxNumCapture,
+                        proxFechaCapture);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error WhatsApp pago deuda (bg): {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Error WhatsApp comprobante abono (bg): {ex.Message}");
                 }
             });
 
             MovimientoFinancieroNotifier.PagoDeuda();
             return pagoId;
+        }
+
+        private DataRow? ObtenerFilaDeudaActiva(int deudaId)
+        {
+            try
+            {
+                new PrestamoCuotasDAL().EnsureSchema();
+                DataTable dt = dal.ObtenerDeudas(soloActivas: false);
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (Convert.ToInt32(row["Id"]) == deudaId)
+                        return row;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ObtenerFilaDeudaActiva: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private static int? LeerIntNullable(DataRow? row, string columna)
+        {
+            if (row == null || !row.Table.Columns.Contains(columna) || row[columna] == DBNull.Value)
+                return null;
+            return Convert.ToInt32(row[columna]);
+        }
+
+        private static DateTime? LeerDateNullable(DataRow? row, string columna)
+        {
+            if (row == null || !row.Table.Columns.Contains(columna) || row[columna] == DBNull.Value)
+                return null;
+            return Convert.ToDateTime(row[columna]).Date;
+        }
+
+        private static decimal? LeerDecimalPositivoNullable(DataRow? row, string columna)
+        {
+            if (row == null || !row.Table.Columns.Contains(columna) || row[columna] == DBNull.Value)
+                return null;
+            decimal v = Convert.ToDecimal(row[columna]);
+            return v > 0m ? v : null;
         }
 
         public void AnularDeuda(int deudaId, string usuario)
@@ -192,6 +296,8 @@ namespace BLL
         /// <returns>DataTable con todas las deudas y sus datos</returns>
         public DataTable ObtenerDeudas(bool incluirHistorial = false)
         {
+            // Idempotente: garantiza tablas de plazos en DEV/PROD antes del JOIN de lectura.
+            new PrestamoCuotasDAL().EnsureSchema();
             var dt = dal.ObtenerDeudas(soloActivas: !incluirHistorial);
             FinanciamientoSSOT.EnriquecerGridDeudas(dt);
             EnriquecerFechasPlanMembresia(dt);

@@ -270,6 +270,12 @@
 		<Compile Update="DISEÑO\DEUDAS\FrmModuloDeudas.CrearDeuda.cs">
 			<DependentUpon>FrmModuloDeudas.cs</DependentUpon>
 		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmModuloDeudas.ComboBusquedaProducto.cs">
+			<DependentUpon>FrmModuloDeudas.cs</DependentUpon>
+		</Compile>
+		<Compile Update="DISEÑO\DEUDAS\FrmModuloDeudas.InteresesPlazos.cs">
+			<DependentUpon>FrmModuloDeudas.cs</DependentUpon>
+		</Compile>
 		<Compile Update="DISEÑO\DEUDAS\FrmPagarDeudas.cs">
 			<SubType>Form</SubType>
 		</Compile>

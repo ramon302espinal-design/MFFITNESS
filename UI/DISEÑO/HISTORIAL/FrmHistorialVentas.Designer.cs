@@ -37,6 +37,7 @@ namespace UI.DISEÑO
             txtBuscarProductos = new TextBox();
             label5 = new Label();
             dgvDetalleProductos = new DataGridView();
+            lblTotalDetalleProductos = new Label();
             label3 = new Label();
             dgvVentasProductos = new DataGridView();
             label2 = new Label();
@@ -257,6 +258,7 @@ namespace UI.DISEÑO
             tabProductos.BackColor = Color.White;
             tabProductos.Controls.Add(txtBuscarProductos);
             tabProductos.Controls.Add(label5);
+            tabProductos.Controls.Add(lblTotalDetalleProductos);
             tabProductos.Controls.Add(dgvDetalleProductos);
             tabProductos.Controls.Add(label3);
             tabProductos.Controls.Add(dgvVentasProductos);
@@ -296,8 +298,19 @@ namespace UI.DISEÑO
             dgvDetalleProductos.Location = new Point(900, 96);
             dgvDetalleProductos.Name = "dgvDetalleProductos";
             dgvDetalleProductos.RowHeadersWidth = 51;
-            dgvDetalleProductos.Size = new Size(516, 454);
+            dgvDetalleProductos.Size = new Size(516, 420);
             dgvDetalleProductos.TabIndex = 3;
+            // 
+            // lblTotalDetalleProductos
+            // 
+            lblTotalDetalleProductos.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            lblTotalDetalleProductos.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblTotalDetalleProductos.Location = new Point(1100, 526);
+            lblTotalDetalleProductos.Name = "lblTotalDetalleProductos";
+            lblTotalDetalleProductos.Size = new Size(316, 28);
+            lblTotalDetalleProductos.TabIndex = 6;
+            lblTotalDetalleProductos.Text = "TOTAL: RD$ 0.00";
+            lblTotalDetalleProductos.TextAlign = ContentAlignment.MiddleRight;
             // 
             // label3
             // 
@@ -312,10 +325,12 @@ namespace UI.DISEÑO
             // dgvVentasProductos
             // 
             dgvVentasProductos.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            dgvVentasProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
             dgvVentasProductos.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvVentasProductos.Location = new Point(20, 96);
             dgvVentasProductos.Name = "dgvVentasProductos";
             dgvVentasProductos.RowHeadersWidth = 51;
+            dgvVentasProductos.ScrollBars = ScrollBars.Both;
             dgvVentasProductos.Size = new Size(860, 454);
             dgvVentasProductos.TabIndex = 1;
             dgvVentasProductos.SelectionChanged += dgvVentasProductos_SelectionChanged;
@@ -372,6 +387,7 @@ namespace UI.DISEÑO
         private TabPage tabProductos;
         private DataGridView dgvHistorial;
         private DataGridView dgvDetalleProductos;
+        private Label lblTotalDetalleProductos;
         private DataGridView dgvVentasProductos;
         private Label label3;
         private Label label2;

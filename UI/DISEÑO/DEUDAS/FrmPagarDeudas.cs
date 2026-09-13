@@ -12,6 +12,8 @@ namespace UI
         private decimal saldo;
         private string estado = "";
         private DateTime? ultimoPago;
+        private string? resumenPrestamo;
+        private decimal? cuotaSugerida;
 
         public decimal Monto { get; private set; }
         public string Metodo { get; private set; } = "";
@@ -24,12 +26,25 @@ namespace UI
         }
 
         public FrmPagarDeudas(string nombre, decimal saldoActual, string estadoActual, DateTime? ultimoPagoFecha)
+            : this(nombre, saldoActual, estadoActual, ultimoPagoFecha, null, null)
+        {
+        }
+
+        public FrmPagarDeudas(
+            string nombre,
+            decimal saldoActual,
+            string estadoActual,
+            DateTime? ultimoPagoFecha,
+            string? resumenPrestamoTexto,
+            decimal? cuotaSugeridaMonto)
             : this()
         {
             nombreCliente = nombre;
             saldo = saldoActual;
             estado = estadoActual;
             ultimoPago = ultimoPagoFecha;
+            resumenPrestamo = resumenPrestamoTexto;
+            cuotaSugerida = cuotaSugeridaMonto;
 
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
@@ -57,11 +72,31 @@ namespace UI
                 ? ultimoPago.Value.ToString("dd/MM/yyyy")
                 : "Sin pagos");
 
+            if (!string.IsNullOrWhiteSpace(resumenPrestamo))
+            {
+                lblResumenPrestamo.Visible = true;
+                lblResumenPrestamo.Text = resumenPrestamo;
+            }
+            else
+            {
+                lblResumenPrestamo.Visible = false;
+                lblResumenPrestamo.Text = string.Empty;
+            }
+
+            if (cuotaSugerida.HasValue
+                && cuotaSugerida.Value > 0m
+                && cuotaSugerida.Value <= saldo)
+            {
+                txtMonto.Text = cuotaSugerida.Value.ToString("N2");
+            }
+
             cmbMetodo.Items.Clear();
             cmbMetodo.Items.AddRange(new string[] { "EFECTIVO", "TRANSFERENCIA" });
             cmbMetodo.SelectedIndex = 0;
 
             txtMonto.Focus();
+            if (!string.IsNullOrEmpty(txtMonto.Text))
+                txtMonto.SelectAll();
         }
 
         private void btnConfirmar_Click(object sender, EventArgs e)

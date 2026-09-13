@@ -72,11 +72,33 @@ namespace UI.DISEÑO
             CargarClientes();
             LimpiarFormularioEdicion();
 
+            AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiado;
+            AppEventos.OnClienteCatalogoCambiado += OnClienteCatalogoCambiado;
+
             if (_clienteIdPreseleccionado.HasValue)
             {
                 tabControlClientes.SelectedTab = tabMiembros;
                 SeleccionarClientePorId(_clienteIdPreseleccionado.Value);
             }
+        }
+
+        private void OnClienteCatalogoCambiado()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(OnClienteCatalogoCambiado));
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
+            CargarClientes(idSeleccionado > 0 ? idSeleccionado : null);
         }
 
         private void tabControlClientes_SelectedIndexChanged(object? sender, EventArgs e)
@@ -129,6 +151,18 @@ namespace UI.DISEÑO
         {
             if (dgvClientes.Columns.Contains("Sexo"))
                 dgvClientes.Columns["Sexo"].Visible = false;
+
+            if (dgvClientes.Columns.Contains("Cedula"))
+            {
+                dgvClientes.Columns["Cedula"].HeaderText = "Cédula";
+                dgvClientes.Columns["Cedula"].FillWeight = 90;
+            }
+
+            if (dgvClientes.Columns.Contains("LugarTrabajo"))
+                dgvClientes.Columns["LugarTrabajo"].Visible = false;
+
+            if (dgvClientes.Columns.Contains("DireccionTrabajo"))
+                dgvClientes.Columns["DireccionTrabajo"].Visible = false;
 
             if (dgvClientes.Columns.Contains("Estado"))
             {
@@ -185,6 +219,7 @@ namespace UI.DISEÑO
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiado;
             base.OnFormClosed(e);
         }
 
@@ -198,6 +233,7 @@ namespace UI.DISEÑO
             txtNombre.Clear();
             txtDireccion.Clear();
             txtTelefono.Clear();
+            txtCedula.Clear();
             txtId.Clear();
             txtId.ReadOnly = true;
             txtId.Visible = false;
@@ -251,6 +287,12 @@ namespace UI.DISEÑO
             return true;
         }
 
+        private string? ObtenerCedulaUi()
+        {
+            string cedula = txtCedula.Text?.Trim() ?? "";
+            return string.IsNullOrEmpty(cedula) ? null : cedula;
+        }
+
         private string? ObtenerSexoSeleccionado()
         {
             if (cmbsexo.SelectedItem == null)
@@ -298,6 +340,7 @@ namespace UI.DISEÑO
 
                 var ficha = ConstruirFichaDesdeUi();
                 string? sexo = ObtenerSexoSeleccionado();
+                string? cedula = ObtenerCedulaUi();
 
                 if (_modoEdicion)
                 {
@@ -308,7 +351,8 @@ namespace UI.DISEÑO
                         txtDireccion.Text.Trim(),
                         txtTelefono.Text.Trim(),
                         sexo,
-                        ficha
+                        ficha,
+                        cedula
                     );
 
                     if (!resultEdit.Success)
@@ -332,7 +376,8 @@ namespace UI.DISEÑO
                     txtDireccion.Text.Trim(),
                     txtTelefono.Text.Trim(),
                     sexo,
-                    ficha
+                    ficha,
+                    cedula
                 );
 
                 if (!result.Success)
@@ -487,6 +532,16 @@ namespace UI.DISEÑO
             if (dgvClientes.Columns.Contains("Sexo"))
                 sexo = fila.Cells["Sexo"].Value?.ToString();
 
+            string? cedula = dgvClientes.Columns.Contains("Cedula")
+                ? fila.Cells["Cedula"].Value?.ToString()
+                : null;
+            string? lugarTrabajo = dgvClientes.Columns.Contains("LugarTrabajo")
+                ? fila.Cells["LugarTrabajo"].Value?.ToString()
+                : null;
+            string? direccionTrabajo = dgvClientes.Columns.Contains("DireccionTrabajo")
+                ? fila.Cells["DireccionTrabajo"].Value?.ToString()
+                : null;
+
             DateTime? fechaNac = null;
             if (fila.Cells["FechaNacimiento"].Value != null
                 && fila.Cells["FechaNacimiento"].Value != DBNull.Value)
@@ -508,7 +563,9 @@ namespace UI.DISEÑO
                     MessageBoxIcon.Warning);
             }
 
-            ucFichaResumen.Mostrar(id, nombre, telefono, direccion, fechaNac, sexo, ficha);
+            ucFichaResumen.Mostrar(
+                id, nombre, telefono, direccion, fechaNac, sexo, ficha,
+                cedula, lugarTrabajo, direccionTrabajo);
         }
 
         private void EliminarMiembroSeleccionado()
@@ -608,6 +665,9 @@ namespace UI.DISEÑO
             txtNombre.Text = fila.Cells["Nombre"].Value?.ToString() ?? "";
             txtTelefono.Text = fila.Cells["Telefono"].Value?.ToString() ?? "";
             txtDireccion.Text = fila.Cells["Direccion"].Value?.ToString() ?? "";
+            txtCedula.Text = dgvClientes.Columns.Contains("Cedula")
+                ? fila.Cells["Cedula"].Value?.ToString() ?? ""
+                : "";
 
             if (fila.Cells["FechaNacimiento"].Value != null
                 && fila.Cells["FechaNacimiento"].Value != DBNull.Value)

@@ -18,6 +18,7 @@ namespace UI
         private readonly BindingSource _bsDeudas = new BindingSource();
         private int? _clienteIdPreseleccionado;
         private bool _seleccionClientePendiente;
+        private int? _deudaIdAResaltar;
         private int? _clienteHistorialId;
         private string _clienteHistorialNombre = string.Empty;
 
@@ -142,7 +143,47 @@ namespace UI
                 }
             }
 
+            if (nombreColumna == "FrecuenciaPrestamo" && e.Value != null
+                && !string.IsNullOrWhiteSpace(e.Value.ToString()))
+            {
+                e.CellStyle.ForeColor = Color.FromArgb(0x0D, 0x47, 0xA1);
+                e.CellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
+            }
+
+            if (nombreColumna == "MoraPrestamo" && e.Value != null)
+            {
+                string mora = e.Value.ToString() ?? string.Empty;
+                e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                if (string.Equals(mora, "Sí", StringComparison.OrdinalIgnoreCase))
+                {
+                    e.CellStyle.ForeColor = Color.DarkRed;
+                    e.CellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
+                }
+            }
+
+            if (nombreColumna == "ProximaCuotaFecha" && e.Value != null && e.Value != DBNull.Value)
+            {
+                DateTime prox = Convert.ToDateTime(e.Value).Date;
+                e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                if (prox < DateTime.Today)
+                {
+                    e.CellStyle.BackColor = Color.FromArgb(255, 220, 220);
+                    e.CellStyle.ForeColor = Color.DarkRed;
+                    e.CellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
+                }
+            }
+
             // 🔥 MONTOS: EL SALDO MANDA. EN DEUDAS PAGADAS LOS IMPORTES SON HISTÓRICOS
+            if (nombreColumna == "FaltaCuotaTexto" && e.Value != null)
+            {
+                string texto = e.Value.ToString() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(texto))
+                {
+                    e.CellStyle.ForeColor = Color.DarkOrange;
+                    e.CellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
+                }
+            }
+
             if (nombreColumna == "Saldo" && e.Value != null && e.Value != DBNull.Value)
             {
                 decimal saldoFila = Convert.ToDecimal(e.Value);
@@ -251,7 +292,8 @@ namespace UI
             dgvDeudas.AllowUserToAddRows = false;
             dgvDeudas.AllowUserToDeleteRows = false;
             dgvDeudas.RowHeadersVisible = false;
-            dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+            dgvDeudas.ScrollBars = ScrollBars.Both;
             dgvDeudas.BorderStyle = BorderStyle.None;
             dgvDeudas.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
             dgvDeudas.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
@@ -325,16 +367,38 @@ namespace UI
                 if (!dt.Columns.Contains("DiasRestantes"))
                     dt.Columns.Add("DiasRestantes", typeof(int));
 
+                if (!dt.Columns.Contains("FaltaCuotaTexto"))
+                    dt.Columns.Add("FaltaCuotaTexto", typeof(string));
+
+                if (dgvDeudas.CurrentRow != null
+                    && dgvDeudas.Columns.Contains("Id")
+                    && dgvDeudas.CurrentRow.Cells["Id"].Value != null
+                    && dgvDeudas.CurrentRow.Cells["Id"].Value != DBNull.Value)
+                {
+                    _deudaIdAResaltar = Convert.ToInt32(dgvDeudas.CurrentRow.Cells["Id"].Value);
+                }
+
                 foreach (DataRow row in dt.Rows)
                 {
-                    if (row["FechaVencimiento"] == DBNull.Value || row["FechaVencimiento"] == null)
+                    DateTime? referenciaVence = null;
+
+                    // Préstamo: vencimiento operativo = próxima cuota del cronograma.
+                    if (dt.Columns.Contains("ProximaCuotaFecha")
+                        && row["ProximaCuotaFecha"] != DBNull.Value
+                        && row["ProximaCuotaFecha"] != null)
                     {
-                        row["DiasRestantes"] = 0;
-                        continue;
+                        referenciaVence = Convert.ToDateTime(row["ProximaCuotaFecha"]).Date;
+                    }
+                    else if (row["FechaVencimiento"] != DBNull.Value && row["FechaVencimiento"] != null)
+                    {
+                        referenciaVence = Convert.ToDateTime(row["FechaVencimiento"]).Date;
                     }
 
-                    DateTime fechaVencimiento = Convert.ToDateTime(row["FechaVencimiento"]);
-                    row["DiasRestantes"] = (fechaVencimiento.Date - DateTime.Now.Date).Days;
+                    row["DiasRestantes"] = referenciaVence.HasValue
+                        ? (referenciaVence.Value - DateTime.Today).Days
+                        : 0;
+
+                    row["FaltaCuotaTexto"] = ConstruirTextoFaltaCuota(row);
                 }
 
                 _bsDeudas.DataSource = dt;
@@ -370,6 +434,35 @@ namespace UI
             _seleccionClientePendiente = true;
             cmbFiltro.SelectedItem = "Activas";
             CargarDeudas();
+        }
+
+        /// <summary>
+        /// Texto visible: "Falta RD$ X de esta cuota" según abonos vs cronograma.
+        /// </summary>
+        private static string ConstruirTextoFaltaCuota(DataRow row)
+        {
+            if (row.Table.Columns.Contains("FaltaEstaCuota")
+                && row["FaltaEstaCuota"] != DBNull.Value
+                && row["FaltaEstaCuota"] != null)
+            {
+                decimal falta = Convert.ToDecimal(row["FaltaEstaCuota"]);
+                if (falta > 0m)
+                    return $"Falta RD$ {falta:N2} de esta cuota";
+            }
+
+            // Sin préstamo: el "falta" es el saldo pendiente de la deuda.
+            if ((!row.Table.Columns.Contains("PrestamoId")
+                 || row["PrestamoId"] == DBNull.Value
+                 || row["PrestamoId"] == null)
+                && row.Table.Columns.Contains("Saldo")
+                && row["Saldo"] != DBNull.Value)
+            {
+                decimal saldo = Convert.ToDecimal(row["Saldo"]);
+                if (saldo > 0m)
+                    return $"Falta RD$ {saldo:N2}";
+            }
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -673,6 +766,7 @@ namespace UI
         {
             if (dgvDeudas.Columns.Count == 0) return;
 
+            // Anchos fijos + scroll horizontal → headers completos legibles.
             DataGridViewHelper.RunColumnLayout(dgvDeudas, () =>
             {
             DataGridViewHelper.HideColumn(dgvDeudas, "Id");
@@ -682,6 +776,24 @@ namespace UI
             DataGridViewHelper.HideColumn(dgvDeudas, "MembresiaId");
             DataGridViewHelper.HideColumn(dgvDeudas, "PlanId");
             DataGridViewHelper.HideColumn(dgvDeudas, "PagoInicialFinanciamiento");
+            DataGridViewHelper.HideColumn(dgvDeudas, "PrestamoId");
+            DataGridViewHelper.HideColumn(dgvDeudas, "ProximaCuotaMonto");
+            DataGridViewHelper.HideColumn(dgvDeudas, "FaltaEstaCuota");
+            DataGridViewHelper.HideColumn(dgvDeudas, "UltimoPagoFecha");
+            DataGridViewHelper.HideColumn(dgvDeudas, "InteresTotal");
+            DataGridViewHelper.HideColumn(dgvDeudas, "TotalConInteres");
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "Nombre", col =>
+            {
+                col.HeaderText = "Cliente";
+                DataGridViewHelper.SetColumnWidth(col, 160);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "Concepto", col =>
+            {
+                col.HeaderText = "Concepto";
+                DataGridViewHelper.SetColumnWidth(col, 220);
+            });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "AporteInicial", col =>
             {
@@ -695,22 +807,85 @@ namespace UI
                 DataGridViewHelper.SetColumnWidth(col, 90);
             });
 
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "FrecuenciaPrestamo", col =>
+            {
+                col.HeaderText = "Frecuencia";
+                DataGridViewHelper.SetColumnWidth(col, 100);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "NumeroPlazos", col =>
+            {
+                col.HeaderText = "Plazos";
+                DataGridViewHelper.SetColumnWidth(col, 70);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "InteresPorcentaje", col =>
+            {
+                col.HeaderText = "Interés %";
+                col.DefaultCellStyle.Format = "N2";
+                DataGridViewHelper.SetColumnWidth(col, 90);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "CuotaBase", col =>
+            {
+                col.HeaderText = "Cuota";
+                col.DefaultCellStyle.Format = "N2";
+                DataGridViewHelper.SetColumnWidth(col, 90);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "ProximaCuotaNumero", col =>
+            {
+                col.HeaderText = "Cuota #";
+                DataGridViewHelper.SetColumnWidth(col, 75);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "ProximaCuotaFecha", col =>
+            {
+                col.HeaderText = "Próx. Cuota";
+                col.DefaultCellStyle.Format = "dd/MM/yyyy";
+                DataGridViewHelper.SetColumnWidth(col, 110);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "FaltaCuotaTexto", col =>
+            {
+                col.HeaderText = "Falta de esta cuota";
+                DataGridViewHelper.SetColumnWidth(col, 180);
+            });
+
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "MoraPrestamo", col =>
+            {
+                col.HeaderText = "Mora";
+                DataGridViewHelper.SetColumnWidth(col, 60);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            });
+
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "PrecioTotal", col =>
             {
                 col.DefaultCellStyle.Format = "N2";
                 col.HeaderText = "Precio Total";
+                DataGridViewHelper.SetColumnWidth(col, 110);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "MontoTotal", col =>
             {
                 col.DefaultCellStyle.Format = "N2";
-                col.HeaderText = "Capital Deuda";
+                // Ledger Deudas.MontoTotal (en préstamo = total con interés fijo).
+                col.HeaderText = "Total Deuda";
+                DataGridViewHelper.SetColumnWidth(col, 110);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "MontoPagado", col =>
             {
                 col.DefaultCellStyle.Format = "N2";
                 col.HeaderText = "Pagado";
+                DataGridViewHelper.SetColumnWidth(col, 100);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "Saldo", col =>
@@ -718,13 +893,15 @@ namespace UI
                 col.DefaultCellStyle.Format = "N2";
                 col.HeaderText = "Saldo Pendiente";
                 col.DefaultCellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
+                DataGridViewHelper.SetColumnWidth(col, 130);
+                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "FechaVencimiento", col =>
             {
                 col.DefaultCellStyle.Format = "dd/MM/yyyy";
                 col.HeaderText = "Fecha Límite Pago";
-                DataGridViewHelper.SetColumnWidth(col, 130);
+                DataGridViewHelper.SetColumnWidth(col, 140);
             });
 
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "FechaInicioMembresia", col =>
@@ -744,7 +921,7 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "Plan", col =>
             {
                 col.HeaderText = "Plan Financiado";
-                DataGridViewHelper.SetColumnWidth(col, 120);
+                DataGridViewHelper.SetColumnWidth(col, 130);
                 col.DefaultCellStyle.Font = new Font(dgvDeudas.Font, FontStyle.Bold);
                 col.DefaultCellStyle.ForeColor = Color.DarkBlue;
             });
@@ -752,27 +929,49 @@ namespace UI
             DataGridViewHelper.ConfigureColumn(dgvDeudas, "DiasRestantes", col =>
             {
                 col.HeaderText = "Estado Vencimiento";
-                col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                DataGridViewHelper.SetColumnWidth(col, 150);
             });
 
+            DataGridViewHelper.ConfigureColumn(dgvDeudas, "Estado", col =>
+            {
+                col.HeaderText = "Estado";
+                DataGridViewHelper.SetColumnWidth(col, 90);
+            });
+
+            // Orden: identidad → origen/plan → plazos préstamo → montos → vencimiento.
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Nombre", 0);
             DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Concepto", 1);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Plan", 2);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "OrigenPrecio", 3);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "AporteInicial", 4);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "PrecioTotal", 5);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoTotal", 6);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoPagado", 7);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Saldo", 8);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaVencimiento", 9);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "DiasRestantes", 10);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Estado", 11);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaInicioMembresia", 12);
-            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaFinMembresia", 13);
-            });
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "OrigenPrecio", 2);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Plan", 3);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FrecuenciaPrestamo", 4);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "NumeroPlazos", 5);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "InteresPorcentaje", 6);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "CuotaBase", 7);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "ProximaCuotaNumero", 8);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "ProximaCuotaFecha", 9);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FaltaCuotaTexto", 10);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MoraPrestamo", 11);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "AporteInicial", 12);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "PrecioTotal", 13);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoTotal", 14);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "MontoPagado", 15);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Saldo", 16);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaVencimiento", 17);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "DiasRestantes", 18);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "Estado", 19);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaInicioMembresia", 20);
+            DataGridViewHelper.SetDisplayIndex(dgvDeudas, "FechaFinMembresia", 21);
+            }, restoreFill: false);
 
+            dgvDeudas.ScrollBars = ScrollBars.Both;
             if (_seleccionClientePendiente)
                 AplicarSeleccionClientePendiente();
+            else if (_deudaIdAResaltar.HasValue)
+            {
+                int deudaId = _deudaIdAResaltar.Value;
+                _deudaIdAResaltar = null;
+                SeleccionarDeuda(deudaId);
+            }
             else
                 dgvDeudas.ClearSelection();
         }
@@ -900,13 +1099,70 @@ namespace UI
                     return;
                 }
 
-                // 🔥 Por ahora sin último pago (lo puedes mejorar luego)
                 DateTime? ultimoPago = null;
+                if (dgvDeudas.Columns.Contains("UltimoPagoFecha")
+                    && row.Cells["UltimoPagoFecha"].Value != null
+                    && row.Cells["UltimoPagoFecha"].Value != DBNull.Value)
+                {
+                    ultimoPago = Convert.ToDateTime(row.Cells["UltimoPagoFecha"].Value);
+                }
 
-                FrmPagarDeudas frm = new FrmPagarDeudas(nombre, saldo, estado, ultimoPago);
+                string? resumenPrestamo = ConstruirResumenPrestamoFila(row);
+                decimal? cuotaSugerida = null;
+                if (dgvDeudas.Columns.Contains("FaltaEstaCuota")
+                    && row.Cells["FaltaEstaCuota"].Value != null
+                    && row.Cells["FaltaEstaCuota"].Value != DBNull.Value)
+                {
+                    decimal falta = Convert.ToDecimal(row.Cells["FaltaEstaCuota"].Value);
+                    if (falta > 0m)
+                        cuotaSugerida = Math.Min(falta, saldo);
+                }
+                else if (dgvDeudas.Columns.Contains("CuotaBase")
+                    && row.Cells["CuotaBase"].Value != null
+                    && row.Cells["CuotaBase"].Value != DBNull.Value)
+                {
+                    decimal cuota = Convert.ToDecimal(row.Cells["CuotaBase"].Value);
+                    if (cuota > 0m)
+                        cuotaSugerida = Math.Min(cuota, saldo);
+                }
+
+                FrmPagarDeudas frm = new FrmPagarDeudas(
+                    nombre, saldo, estado, ultimoPago, resumenPrestamo, cuotaSugerida);
 
                 if (frm.ShowDialog() == DialogResult.OK)
                 {
+                    // Snapshot pre-pago para el comprobante (no altera reglas de cobro).
+                    string concepto = dgvDeudas.Columns.Contains("Concepto")
+                        ? row.Cells["Concepto"].Value?.ToString() ?? "Financiamiento"
+                        : "Financiamiento";
+                    concepto = FinanciamientoVentaHelper.QuitarSufijoVentaIdParaAviso(concepto);
+
+                    bool tienePrestamo = dgvDeudas.Columns.Contains("PrestamoId")
+                        && row.Cells["PrestamoId"].Value != null
+                        && row.Cells["PrestamoId"].Value != DBNull.Value;
+
+                    int? cuotaNumAntes = null;
+                    if (dgvDeudas.Columns.Contains("ProximaCuotaNumero")
+                        && row.Cells["ProximaCuotaNumero"].Value != null
+                        && row.Cells["ProximaCuotaNumero"].Value != DBNull.Value)
+                        cuotaNumAntes = Convert.ToInt32(row.Cells["ProximaCuotaNumero"].Value);
+
+                    DateTime? cuotaFechaAntes = null;
+                    if (dgvDeudas.Columns.Contains("ProximaCuotaFecha")
+                        && row.Cells["ProximaCuotaFecha"].Value != null
+                        && row.Cells["ProximaCuotaFecha"].Value != DBNull.Value)
+                        cuotaFechaAntes = Convert.ToDateTime(row.Cells["ProximaCuotaFecha"].Value).Date;
+
+                    decimal? faltaAntes = null;
+                    if (dgvDeudas.Columns.Contains("FaltaEstaCuota")
+                        && row.Cells["FaltaEstaCuota"].Value != null
+                        && row.Cells["FaltaEstaCuota"].Value != DBNull.Value)
+                    {
+                        decimal f = Convert.ToDecimal(row.Cells["FaltaEstaCuota"].Value);
+                        if (f > 0m)
+                            faltaAntes = f;
+                    }
+
                     var result = DeudaCommandService.RegistrarPago(
                         deudaId, frm.Monto, frm.Metodo, Sesion.Usuario);
 
@@ -917,9 +1173,77 @@ namespace UI
                         return;
                     }
 
-                    MessageBox.Show(result.Message, "Éxito",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    decimal saldoNuevo = Math.Max(0m, saldo - frm.Monto);
+                    bool liquidada = saldoNuevo <= 0m;
 
+                    ReciboPosHelper.TipoComprobanteAbono tipoRecibo;
+                    if (tienePrestamo && faltaAntes.HasValue && faltaAntes.Value > 0m)
+                    {
+                        // Tolerancia de centavos por redondeo de cuotas.
+                        tipoRecibo = frm.Monto + 0.009m >= faltaAntes.Value
+                            ? ReciboPosHelper.TipoComprobanteAbono.CuotaCompleta
+                            : ReciboPosHelper.TipoComprobanteAbono.AbonoParcial;
+                    }
+                    else
+                    {
+                        tipoRecibo = ReciboPosHelper.TipoComprobanteAbono.AbonoDeuda;
+                    }
+
+                    int? proxNum = null;
+                    DateTime? proxFecha = null;
+                    decimal? faltaDespues = null;
+
+                    if (!liquidada)
+                    {
+                        try
+                        {
+                            DataTable? dtPost = deudaBLL.ObtenerDeudas(incluirHistorial: false);
+                            DataRow? post = BuscarFilaDeuda(dtPost, deudaId);
+                            if (post != null)
+                            {
+                                if (post.Table.Columns.Contains("ProximaCuotaNumero")
+                                    && post["ProximaCuotaNumero"] != DBNull.Value)
+                                    proxNum = Convert.ToInt32(post["ProximaCuotaNumero"]);
+                                if (post.Table.Columns.Contains("ProximaCuotaFecha")
+                                    && post["ProximaCuotaFecha"] != DBNull.Value)
+                                    proxFecha = Convert.ToDateTime(post["ProximaCuotaFecha"]).Date;
+                                if (post.Table.Columns.Contains("FaltaEstaCuota")
+                                    && post["FaltaEstaCuota"] != DBNull.Value)
+                                    faltaDespues = Convert.ToDecimal(post["FaltaEstaCuota"]);
+                                if (post.Table.Columns.Contains("Saldo")
+                                    && post["Saldo"] != DBNull.Value)
+                                    saldoNuevo = Convert.ToDecimal(post["Saldo"]);
+                            }
+                        }
+                        catch
+                        {
+                            // El cobro ya quedó; el recibo usa saldos calculados.
+                            if (tipoRecibo == ReciboPosHelper.TipoComprobanteAbono.AbonoParcial
+                                && faltaAntes.HasValue)
+                                faltaDespues = Math.Max(0m, faltaAntes.Value - frm.Monto);
+                        }
+                    }
+
+                    ReciboPosHelper.MostrarAbonoDeuda(
+                        this,
+                        tipoRecibo,
+                        nombre,
+                        deudaId,
+                        concepto,
+                        frm.Monto,
+                        string.IsNullOrWhiteSpace(frm.Metodo) ? "N/D" : frm.Metodo.Trim(),
+                        saldo,
+                        saldoNuevo,
+                        Sesion.Usuario ?? "Usuario",
+                        cuotaNumAntes,
+                        cuotaFechaAntes,
+                        faltaAntes,
+                        faltaDespues,
+                        proxNum,
+                        proxFecha,
+                        liquidada);
+
+                    _deudaIdAResaltar = deudaId;
                     CargarDeudas();
                 }
             }
@@ -927,6 +1251,77 @@ namespace UI
             {
                 MessageBox.Show($"Error al procesar pago: {ex.Message}", "Error");
             }
+        }
+
+        /// <summary>
+        /// Contexto visual para abonar préstamos; no altera monto ni reglas de pago.
+        /// </summary>
+        private static string? ConstruirResumenPrestamoFila(DataGridViewRow row)
+        {
+            if (row?.DataGridView == null)
+                return null;
+
+            var cols = row.DataGridView.Columns;
+            if (!cols.Contains("PrestamoId")
+                || row.Cells["PrestamoId"].Value == null
+                || row.Cells["PrestamoId"].Value == DBNull.Value)
+                return null;
+
+            string freq = cols.Contains("FrecuenciaPrestamo")
+                ? row.Cells["FrecuenciaPrestamo"].Value?.ToString() ?? "-"
+                : "-";
+            string plazos = cols.Contains("NumeroPlazos")
+                ? row.Cells["NumeroPlazos"].Value?.ToString() ?? "-"
+                : "-";
+            string interes = cols.Contains("InteresPorcentaje")
+                && row.Cells["InteresPorcentaje"].Value != null
+                && row.Cells["InteresPorcentaje"].Value != DBNull.Value
+                ? Convert.ToDecimal(row.Cells["InteresPorcentaje"].Value).ToString("N2")
+                : "-";
+            string cuota = cols.Contains("CuotaBase")
+                && row.Cells["CuotaBase"].Value != null
+                && row.Cells["CuotaBase"].Value != DBNull.Value
+                ? Convert.ToDecimal(row.Cells["CuotaBase"].Value).ToString("N2")
+                : "-";
+            string cuotaNum = cols.Contains("ProximaCuotaNumero")
+                ? row.Cells["ProximaCuotaNumero"].Value?.ToString() ?? "-"
+                : "-";
+            string cuotaFecha = cols.Contains("ProximaCuotaFecha")
+                && row.Cells["ProximaCuotaFecha"].Value != null
+                && row.Cells["ProximaCuotaFecha"].Value != DBNull.Value
+                ? Convert.ToDateTime(row.Cells["ProximaCuotaFecha"].Value).ToString("dd/MM/yyyy")
+                : "-";
+            string faltaCuota = cols.Contains("FaltaCuotaTexto")
+                ? row.Cells["FaltaCuotaTexto"].Value?.ToString() ?? string.Empty
+                : string.Empty;
+            string mora = cols.Contains("MoraPrestamo")
+                ? row.Cells["MoraPrestamo"].Value?.ToString() ?? "No"
+                : "No";
+
+            string lineaFalta = string.IsNullOrWhiteSpace(faltaCuota)
+                ? string.Empty
+                : $"\n{faltaCuota}";
+
+            return
+                $"Préstamo {freq} · {plazos} plazo(s) · Interés {interes}%\n" +
+                $"Cuota base: RD$ {cuota} · Próx. cuota #{cuotaNum} ({cuotaFecha}) · Mora: {mora}" +
+                lineaFalta;
+        }
+
+        private static DataRow? BuscarFilaDeuda(DataTable? dt, int deudaId)
+        {
+            if (dt == null || !dt.Columns.Contains("Id"))
+                return null;
+
+            foreach (DataRow r in dt.Rows)
+            {
+                if (r["Id"] == DBNull.Value)
+                    continue;
+                if (Convert.ToInt32(r["Id"]) == deudaId)
+                    return r;
+            }
+
+            return null;
         }
 
         // ===============================

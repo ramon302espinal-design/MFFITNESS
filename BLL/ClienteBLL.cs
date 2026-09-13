@@ -46,9 +46,9 @@ namespace BLL
         }
 
         public int AgregarConId(string nombre, DateTime fechaNacimiento,
-                            string direccion, string telefono, string? sexo = null)
+                            string direccion, string telefono, string? sexo = null, string? cedula = null)
         {
-            return clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono, sexo);
+            return clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono, sexo, cedula);
         }
 
         /// <summary>
@@ -60,7 +60,8 @@ namespace BLL
             string direccion,
             string telefono,
             string? sexo,
-            ClienteFichaSaludDTO ficha)
+            ClienteFichaSaludDTO ficha,
+            string? cedula = null)
         {
             if (ficha == null)
                 throw new ArgumentNullException(nameof(ficha));
@@ -68,7 +69,7 @@ namespace BLL
             if (!ClienteFichaSaludValidator.Validar(ficha, out string errorFicha))
                 throw new Exception(errorFicha);
 
-            int id = clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono, sexo);
+            int id = clienteDAL.InsertarCliente(nombre, fechaNacimiento, direccion, telefono, sexo, cedula);
             try
             {
                 ficha.ClienteId = id;
@@ -83,9 +84,28 @@ namespace BLL
         }
 
         public void Editar(int id, string nombre, DateTime fechaNacimiento,
-                           string direccion, string telefono, string? sexo = null)
+                           string direccion, string telefono, string? sexo = null, string? cedula = null)
         {
-            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono, sexo);
+            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono, sexo, cedula);
+        }
+
+        /// <summary>
+        /// Persiste cédula / lugar de trabajo / dirección laboral (desde deudas u otros).
+        /// </summary>
+        public void ActualizarCedulaYTrabajo(
+            int id,
+            string? cedula,
+            string? lugarTrabajo,
+            string? direccionTrabajo)
+        {
+            if (id <= 0)
+                throw new Exception("Cliente inválido.");
+
+            clienteDAL.ActualizarCedulaYTrabajo(
+                id,
+                string.IsNullOrWhiteSpace(cedula) ? null : cedula.Trim(),
+                string.IsNullOrWhiteSpace(lugarTrabajo) ? null : lugarTrabajo.Trim(),
+                string.IsNullOrWhiteSpace(direccionTrabajo) ? null : direccionTrabajo.Trim());
         }
 
         /// <summary>
@@ -98,7 +118,8 @@ namespace BLL
             string direccion,
             string telefono,
             string? sexo,
-            ClienteFichaSaludDTO ficha)
+            ClienteFichaSaludDTO ficha,
+            string? cedula = null)
         {
             if (id <= 0)
                 throw new Exception("Cliente inválido.");
@@ -108,7 +129,7 @@ namespace BLL
             if (!ClienteFichaSaludValidator.Validar(ficha, out string errorFicha))
                 throw new Exception(errorFicha);
 
-            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono, sexo);
+            clienteDAL.ActualizarCliente(id, nombre, fechaNacimiento, direccion, telefono, sexo, cedula);
             ficha.ClienteId = id;
             fichaDAL.Guardar(ficha);
         }

@@ -36,13 +36,14 @@ namespace UI
             lblUltimoPago = new Label();
             lblSaldo = new Label();
             lblEstado = new Label();
+            lblResumenPrestamo = new Label();
             SuspendLayout();
             // 
             // label1
             // 
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
-            label1.Location = new Point(12, 207);
+            label1.Location = new Point(12, 247);
             label1.Name = "label1";
             label1.Size = new Size(111, 35);
             label1.TabIndex = 0;
@@ -50,7 +51,7 @@ namespace UI
             // 
             // txtMonto
             // 
-            txtMonto.Location = new Point(119, 215);
+            txtMonto.Location = new Point(119, 255);
             txtMonto.Name = "txtMonto";
             txtMonto.Size = new Size(125, 27);
             txtMonto.TabIndex = 1;
@@ -58,7 +59,7 @@ namespace UI
             // cmbMetodo
             // 
             cmbMetodo.FormattingEnabled = true;
-            cmbMetodo.Location = new Point(12, 264);
+            cmbMetodo.Location = new Point(12, 304);
             cmbMetodo.Name = "cmbMetodo";
             cmbMetodo.Size = new Size(151, 28);
             cmbMetodo.TabIndex = 2;
@@ -68,7 +69,7 @@ namespace UI
             btnConfirmar.BackColor = Color.FromArgb(22, 163, 74);
             btnConfirmar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             btnConfirmar.ForeColor = Color.White;
-            btnConfirmar.Location = new Point(169, 263);
+            btnConfirmar.Location = new Point(169, 303);
             btnConfirmar.Name = "btnConfirmar";
             btnConfirmar.Size = new Size(94, 29);
             btnConfirmar.TabIndex = 3;
@@ -89,7 +90,7 @@ namespace UI
             // 
             lblUltimoPago.AutoSize = true;
             lblUltimoPago.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            lblUltimoPago.Location = new Point(24, 153);
+            lblUltimoPago.Location = new Point(12, 133);
             lblUltimoPago.Name = "lblUltimoPago";
             lblUltimoPago.Size = new Size(0, 28);
             lblUltimoPago.TabIndex = 5;
@@ -98,7 +99,7 @@ namespace UI
             // 
             lblSaldo.AutoSize = true;
             lblSaldo.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            lblSaldo.Location = new Point(12, 101);
+            lblSaldo.Location = new Point(12, 91);
             lblSaldo.Name = "lblSaldo";
             lblSaldo.Size = new Size(24, 28);
             lblSaldo.TabIndex = 7;
@@ -113,11 +114,22 @@ namespace UI
             lblEstado.Size = new Size(0, 28);
             lblEstado.TabIndex = 8;
             // 
+            // lblResumenPrestamo
+            // 
+            lblResumenPrestamo.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            lblResumenPrestamo.ForeColor = Color.FromArgb(30, 64, 175);
+            lblResumenPrestamo.Location = new Point(12, 168);
+            lblResumenPrestamo.Name = "lblResumenPrestamo";
+            lblResumenPrestamo.Size = new Size(380, 60);
+            lblResumenPrestamo.TabIndex = 9;
+            lblResumenPrestamo.Visible = false;
+            // 
             // FrmPagarDeudas
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(406, 357);
+            ClientSize = new Size(406, 397);
+            Controls.Add(lblResumenPrestamo);
             Controls.Add(lblEstado);
             Controls.Add(lblSaldo);
             Controls.Add(lblUltimoPago);
@@ -143,5 +155,6 @@ namespace UI
         private Label lblUltimoPago;
         private Label lblSaldo;
         private Label lblEstado;
+        private Label lblResumenPrestamo;
     }
 }

@@ -424,7 +424,9 @@
             // 
             // timerRefresh
             // 
+            // Conservado en el Designer pero NO se inicia: FrmChat refresca por eventos.
             timerRefresh.Interval = 2500;
+            timerRefresh.Enabled = false;
             timerRefresh.Tick += timerRefresh_Tick;
             // 
             // FrmChat

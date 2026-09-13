@@ -64,9 +64,10 @@ namespace UI
             // dgvDeudas
             // 
             dgvDeudas.AllowUserToAddRows = false;
-            dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvDeudas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
             dgvDeudas.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvDeudas.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvDeudas.ScrollBars = ScrollBars.Both;
             dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle2.BackColor = SystemColors.Window;
             dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);

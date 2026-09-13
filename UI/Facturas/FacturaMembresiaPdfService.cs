@@ -41,7 +41,9 @@ namespace UI.Facturas
             decimal? descuentoMonto = null,
             decimal? descuentoPorcentaje = null,
             string? asuntoOferta = null,
-            bool forzarRegenerar = false)
+            bool forzarRegenerar = false,
+            bool esFinanciada = false,
+            decimal? saldoPendiente = null)
         {
             try
             {
@@ -54,7 +56,7 @@ namespace UI.Facturas
                     : DateTime.Now;
 
                 bool pdfDesactualizado = FacturaStorage.FacturaPdfDesactualizada(pagoId, fechaPagoRef);
-                bool debeGenerar = forzarRegenerar || pdfDesactualizado;
+                bool debeGenerar = forzarRegenerar || pdfDesactualizado || esFinanciada;
 
                 string? path = debeGenerar
                     ? null
@@ -73,7 +75,9 @@ namespace UI.Facturas
                         precioLista,
                         descuentoMonto,
                         descuentoPorcentaje,
-                        asuntoOferta);
+                        asuntoOferta,
+                        esFinanciada: esFinanciada,
+                        saldoPendiente: saldoPendiente);
                 }
 
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))

@@ -10,7 +10,8 @@ namespace BLL
 {
     /// <summary>
     /// SSOT de números de financiamiento (producto / membresía) para grids, historial y reportes.
-    /// Saldo pendiente → Deudas.Saldo · Pago inicial → HistorialDeudas · Precio producto → Ventas.Total
+    /// Saldo pendiente → Deudas.Saldo · Pago inicial → HistorialDeudas ·
+    /// Precio Total → Ventas.Total (+ InteresTotal del préstamo si aplica).
     /// </summary>
     public static class FinanciamientoSSOT
     {
@@ -38,7 +39,9 @@ namespace BLL
             decimal pagoInicial,
             bool esMembresia,
             decimal? ventaTotal = null,
-            string? textoParseo = null)
+            string? textoParseo = null,
+            decimal? totalConInteres = null,
+            decimal? interesTotal = null)
         {
             pagoInicial = decimal.Round(Math.Max(0m, pagoInicial), 2);
             capitalDeuda = decimal.Round(Math.Max(0m, capitalDeuda), 2);
@@ -56,7 +59,9 @@ namespace BLL
                 capitalDeuda,
                 pagoInicial,
                 ventaTotal,
-                parseo);
+                parseo,
+                totalConInteres,
+                interesTotal);
 
             string origen = esProducto ? Origen.Producto
                 : esMembresia ? Origen.Membresia
@@ -135,13 +140,32 @@ namespace BLL
                     ? total
                     : null;
 
+                decimal? totalConInteres = null;
+                decimal? interesTotal = null;
+                if (row.Table.Columns.Contains("TotalConInteres")
+                    && row["TotalConInteres"] != DBNull.Value
+                    && Convert.ToDecimal(row["TotalConInteres"]) > 0m)
+                {
+                    totalConInteres = Convert.ToDecimal(row["TotalConInteres"]);
+                }
+
+                if (row.Table.Columns.Contains("InteresTotal")
+                    && row["InteresTotal"] != DBNull.Value
+                    && Convert.ToDecimal(row["InteresTotal"]) > 0m)
+                {
+                    interesTotal = Convert.ToDecimal(row["InteresTotal"]);
+                }
+
                 Resumen resumen = ResolverDeuda(
                     concepto,
                     capitalDeuda,
                     saldoPendiente,
                     pagoInicial,
                     esMembresia,
-                    ventaTotal);
+                    ventaTotal,
+                    null,
+                    totalConInteres,
+                    interesTotal);
 
                 row["AporteInicial"] = FormatearAporteInicial(resumen.PagoInicial, resumen.EsFinanciado);
                 row["PrecioTotal"] = resumen.EsFinanciado ? resumen.PrecioTotal : capitalDeuda;
@@ -220,6 +244,8 @@ namespace BLL
                     ? vt
                     : null;
 
+                LeerInteresPrestamo(ctx, out decimal? totalConInteres, out decimal? interesTotal);
+
                 Resumen resumen = ResolverDeuda(
                     concepto,
                     capitalDeuda,
@@ -227,7 +253,9 @@ namespace BLL
                     pagoInicial,
                     esMembresia,
                     ventaTotal,
-                    descripcion);
+                    descripcion,
+                    totalConInteres,
+                    interesTotal);
 
                 if (resumen.EsFinanciado)
                     precioPorDeuda[deudaId] = resumen;
@@ -257,6 +285,8 @@ namespace BLL
                     ? vt
                     : null;
 
+                LeerInteresPrestamo(ctx, out decimal? totalConInteres, out decimal? interesTotal);
+
                 Resumen resumen = ResolverDeuda(
                     concepto,
                     capitalDeuda,
@@ -264,7 +294,9 @@ namespace BLL
                     pagoInicial,
                     esMembresia,
                     ventaTotal,
-                    concepto);
+                    concepto,
+                    totalConInteres,
+                    interesTotal);
 
                 if (resumen.EsFinanciado)
                     precioPorDeuda[deudaId] = resumen;
@@ -365,22 +397,64 @@ namespace BLL
             row["AporteInicial"] = "-";
         }
 
+        private static void LeerInteresPrestamo(
+            DataRow? ctx,
+            out decimal? totalConInteres,
+            out decimal? interesTotal)
+        {
+            totalConInteres = null;
+            interesTotal = null;
+            if (ctx == null)
+                return;
+
+            if (ctx.Table.Columns.Contains("TotalConInteres")
+                && ctx["TotalConInteres"] != DBNull.Value
+                && Convert.ToDecimal(ctx["TotalConInteres"]) > 0m)
+            {
+                totalConInteres = Convert.ToDecimal(ctx["TotalConInteres"]);
+            }
+
+            if (ctx.Table.Columns.Contains("InteresTotal")
+                && ctx["InteresTotal"] != DBNull.Value
+                && Convert.ToDecimal(ctx["InteresTotal"]) > 0m)
+            {
+                interesTotal = Convert.ToDecimal(ctx["InteresTotal"]);
+            }
+        }
+
         private static decimal ResolverPrecioTotal(
             bool esFinanciado,
             decimal capitalDeuda,
             decimal pagoInicial,
             decimal? ventaTotal,
-            string? textoParseo)
+            string? textoParseo,
+            decimal? totalConInteres = null,
+            decimal? interesTotal = null)
         {
             if (!esFinanciado)
                 return capitalDeuda;
 
+            // Con plazos: Precio Total = producto + interés
+            // = pagoInicial + TotalConInteres (capital financiado + interés fijo).
+            if (totalConInteres.HasValue && totalConInteres.Value > 0m)
+                return decimal.Round(pagoInicial + totalConInteres.Value, 2);
+
             if (ventaTotal.HasValue && ventaTotal.Value > 0m)
+            {
+                if (interesTotal.HasValue && interesTotal.Value > 0m)
+                    return decimal.Round(ventaTotal.Value + interesTotal.Value, 2);
+
                 return decimal.Round(ventaTotal.Value, 2);
+            }
 
             decimal? parseado = TryParsePrecioTotalDescripcion(textoParseo);
             if (parseado.HasValue && parseado.Value > 0m)
+            {
+                if (interesTotal.HasValue && interesTotal.Value > 0m)
+                    return decimal.Round(parseado.Value + interesTotal.Value, 2);
+
                 return parseado.Value;
+            }
 
             return decimal.Round(capitalDeuda + pagoInicial, 2);
         }

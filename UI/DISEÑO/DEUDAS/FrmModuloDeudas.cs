@@ -224,12 +224,34 @@ namespace UI
         {
             AppEventos.OnPagoRegistrado += OnMovimientoFinancieroModulo;
             AppEventos.OnDeudaModificada += OnMovimientoFinancieroModulo;
+            AppEventos.OnClienteCatalogoCambiado += OnClienteCatalogoCambiadoModulo;
         }
 
         private void DesuscribirEventosModulo()
         {
             AppEventos.OnPagoRegistrado -= OnMovimientoFinancieroModulo;
             AppEventos.OnDeudaModificada -= OnMovimientoFinancieroModulo;
+            AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiadoModulo;
+        }
+
+        private void OnClienteCatalogoCambiadoModulo()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(OnClienteCatalogoCambiadoModulo));
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
+            if (_crearDeudaInicializado && !_omitirRefreshCatalogoPorGuardadoLocal)
+                CargarClientesPreservandoSeleccion();
         }
 
         private void OnMovimientoFinancieroModulo()
@@ -414,6 +436,11 @@ namespace UI
             CerrarFormularioHijo(ref historialForm);
 
             base.OnFormClosing(e);
+        }
+
+        private void tabCrear_Click(object sender, EventArgs e)
+        {
+
         }
 
         private static void CerrarFormularioHijo<T>(ref T? form) where T : Form

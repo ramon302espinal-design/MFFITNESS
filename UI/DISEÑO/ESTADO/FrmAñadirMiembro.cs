@@ -47,11 +47,60 @@ namespace UI.DISEÑO.ESTADO
                 CargarPlanes();
                 CargarMiembros();
                 ActualizarVistaVencimiento();
+
+                AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiado;
+                AppEventos.OnClienteCatalogoCambiado += OnClienteCatalogoCambiado;
+                FormClosed -= FrmAñadirMiembro_FormClosed;
+                FormClosed += FrmAñadirMiembro_FormClosed;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(this, "Error al cargar datos: " + ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void FrmAñadirMiembro_FormClosed(object? sender, FormClosedEventArgs e)
+        {
+            AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiado;
+        }
+
+        private void OnClienteCatalogoCambiado()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(OnClienteCatalogoCambiado));
+                }
+                catch (ObjectDisposedException) { }
+                return;
+            }
+
+            try
+            {
+                int? sel = null;
+                if (cmbMiembro.SelectedValue != null
+                    && cmbMiembro.SelectedValue != DBNull.Value
+                    && int.TryParse(cmbMiembro.SelectedValue.ToString(), out int id)
+                    && id > 0)
+                    sel = id;
+
+                CargarMiembros();
+
+                if (sel.HasValue)
+                {
+                    try { cmbMiembro.SelectedValue = sel.Value; }
+                    catch { /* ya no está en no-activos */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AñadirMiembro] refresh catálogo: {ex.Message}");
             }
         }
 

@@ -23,6 +23,8 @@ namespace BLL
         // ===============================
         public DataTable ListarVentas()
         {
+            // Idempotente: tablas de plazos (DEV/PROD) antes del JOIN de solo lectura.
+            new PrestamoCuotasDAL().EnsureSchema();
             return ventasDAL.ObtenerVentas();
         }
 
@@ -43,7 +45,8 @@ namespace BLL
             string usuario,
             DataTable carrito,
             DateTime? fechaVencimientoDeuda = null,
-            string? conceptoDeuda = null)
+            string? conceptoDeuda = null,
+            bool omitirNotificacionDeuda = false)
         {
             if (carrito.Rows.Count == 0)
                 throw new Exception("El carrito está vacío.");
@@ -144,7 +147,7 @@ namespace BLL
                     pagoInicialHist);
             });
 
-            if (result.DeudaId > 0 && conceptoDeudaFinal != null)
+            if (result.DeudaId > 0 && conceptoDeudaFinal != null && !omitirNotificacionDeuda)
             {
                 deudaBLL.NotificarDeudaCreadaPostCommit(
                     clienteDeuda, conceptoDeudaFinal, saldo, fechaVencimiento, result.DeudaId, montoPagado > 0);

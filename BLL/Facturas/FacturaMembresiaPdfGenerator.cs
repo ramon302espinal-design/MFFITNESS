@@ -69,7 +69,9 @@ namespace BLL.Facturas
             decimal? precioLista = null,
             decimal? descuentoMonto = null,
             decimal? descuentoPorcentaje = null,
-            string? asuntoOferta = null)
+            string? asuntoOferta = null,
+            bool esFinanciada = false,
+            decimal? saldoPendiente = null)
         {
             try
             {
@@ -81,12 +83,20 @@ namespace BLL.Facturas
                 decimal lista = precioLista.HasValue && precioLista.Value > 0
                     ? Math.Round(precioLista.Value, 2, MidpointRounding.AwayFromZero)
                     : Math.Round(montoPagado, 2, MidpointRounding.AwayFromZero);
+                decimal abono = Math.Round(montoPagado, 2, MidpointRounding.AwayFromZero);
                 decimal desc = Math.Round(descuentoMonto ?? 0m, 2, MidpointRounding.AwayFromZero);
                 if (desc < 0) desc = 0;
                 if (desc > lista) desc = lista;
                 decimal pct = descuentoPorcentaje ?? 0m;
                 if (pct <= 0 && lista > 0 && desc > 0)
                     pct = Math.Round(desc * 100m / lista, 2, MidpointRounding.AwayFromZero);
+
+                decimal saldo = saldoPendiente.HasValue && saldoPendiente.Value >= 0
+                    ? Math.Round(saldoPendiente.Value, 2, MidpointRounding.AwayFromZero)
+                    : Math.Max(0m, Math.Round(lista - abono - desc, 2, MidpointRounding.AwayFromZero));
+
+                // Solo saldo real: no marcar "financiada" un pago completo / oferta.
+                bool financiada = esFinanciada && saldo > 0 && desc <= 0;
 
                 int numero = pagoId > 0 ? pagoId : clienteId;
                 var data = new FacturaMembresiaData
@@ -95,7 +105,7 @@ namespace BLL.Facturas
                     ClienteNombre = nombre,
                     ClienteTelefono = telefono,
                     NombrePlan = nombrePlan,
-                    MontoPagado = Math.Round(montoPagado, 2, MidpointRounding.AwayFromZero),
+                    MontoPagado = abono,
                     PrecioUnitario = lista,
                     DescuentoMonto = desc,
                     DescuentoPorcentaje = pct,
@@ -104,7 +114,9 @@ namespace BLL.Facturas
                     FechaVencimientoMembresia = fechaVencimiento,
                     MetodoPago = string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago,
                     NumeroFactura = numero,
-                    NotaImportanteExtra = notaExtra
+                    NotaImportanteExtra = notaExtra,
+                    EsFinanciada = financiada,
+                    SaldoPendiente = financiada ? saldo : 0m
                 };
 
                 return GenerarYGuardar(data);
@@ -160,10 +172,16 @@ namespace BLL.Facturas
 
             bool tieneOferta = _data.DescuentoMonto > 0
                 || !string.IsNullOrWhiteSpace(_data.AsuntoOferta);
+            bool esFinanciada = _data.EsFinanciada && !tieneOferta;
             bool tieneAbono = !tieneOferta
                 && _data.PrecioUnitario > 0
                 && _data.MontoPagado > 0
                 && _data.MontoPagado < _data.PrecioUnitario;
+            decimal saldoPendiente = esFinanciada
+                ? (_data.SaldoPendiente > 0
+                    ? _data.SaldoPendiente
+                    : Math.Max(0m, _data.PrecioUnitario - _data.MontoPagado))
+                : 0m;
 
             container.Page(page =>
             {
@@ -188,20 +206,34 @@ namespace BLL.Facturas
                             });
                         });
 
-                        row.ConstantItem(88).AlignCenter().AlignMiddle().Element(logo =>
+                        row.ConstantItem(96).AlignCenter().AlignMiddle().Element(logo =>
                         {
                             if (_logoPath != null)
-                                logo.Width(82).Height(82).Image(_logoPath).FitArea();
+                            {
+                                // 512px fuente → ~96pt en PDF (alta densidad, sin blur).
+                                logo.Width(90).Height(90).Image(_logoPath).FitArea();
+                            }
                             else
-                                logo.Width(82).Height(82).Background(Colors.Black).AlignCenter().AlignMiddle()
+                            {
+                                logo.Width(90).Height(90).Background(Colors.Black).AlignCenter().AlignMiddle()
                                     .Text("MF").FontColor(Colors.White).Bold().FontSize(22);
+                            }
                         });
 
                         row.RelativeItem(2).AlignRight().Column(doc =>
                         {
                             doc.Item().AlignRight().Text("FACTURA").FontSize(24).Bold();
                             doc.Item().PaddingTop(4).AlignRight().Text($"N #{fac}").FontSize(12).SemiBold();
-                            doc.Item().PaddingTop(2).AlignRight().Text("PAGADO").FontSize(14).Bold().FontColor(Green);
+                            if (esFinanciada)
+                            {
+                                doc.Item().PaddingTop(2).AlignRight()
+                                    .Text("FINANCIADA").FontSize(14).Bold().FontColor(PinRed);
+                            }
+                            else
+                            {
+                                doc.Item().PaddingTop(2).AlignRight()
+                                    .Text("PAGADO").FontSize(14).Bold().FontColor(Green);
+                            }
                         });
                     });
 
@@ -291,8 +323,22 @@ namespace BLL.Facturas
 
                         row.RelativeItem().AlignRight().Column(total =>
                         {
-                            total.Item().AlignRight().Text("TOTAL PAGADO").Bold().FontSize(16);
-                            total.Item().PaddingTop(6).AlignRight().Text(monto).Bold().FontSize(18);
+                            if (esFinanciada)
+                            {
+                                total.Item().AlignRight().Text("TOTAL PLAN").Bold().FontSize(16);
+                                total.Item().PaddingTop(6).AlignRight().Text(precioLista).Bold().FontSize(18);
+                                if (saldoPendiente > 0)
+                                {
+                                    total.Item().PaddingTop(4).AlignRight()
+                                        .Text($"Saldo: {FormatearMonto(saldoPendiente)}")
+                                        .FontSize(11).Bold().FontColor(PinRed);
+                                }
+                            }
+                            else
+                            {
+                                total.Item().AlignRight().Text("TOTAL PAGADO").Bold().FontSize(16);
+                                total.Item().PaddingTop(6).AlignRight().Text(monto).Bold().FontSize(18);
+                            }
                         });
                     });
 
@@ -331,6 +377,13 @@ namespace BLL.Facturas
 
             if (!string.IsNullOrWhiteSpace(_data.NotaImportanteExtra))
                 sb.AppendLine(_data.NotaImportanteExtra.Trim());
+            else if (_data.EsFinanciada && _data.SaldoPendiente > 0)
+            {
+                sb.AppendLine(
+                    $"Membresía financiada. Abono: {FormatearMonto(_data.MontoPagado)}. " +
+                    $"Saldo pendiente: {FormatearMonto(_data.SaldoPendiente)}. " +
+                    $"Tu membresía vence el próximo {venceLargo}.");
+            }
             else
                 sb.AppendLine($"Tu membresía vence el próximo {venceLargo}. Recuerda registrar tu pago a tiempo.");
 

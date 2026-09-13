@@ -34,6 +34,8 @@ namespace UI.DISEÑO
         // CONTROL
         // ===============================
         private bool cargando = false;
+        /// <summary>Si llega OnPago/etc. durante CargarEstado, no se pierde: se recarga al terminar.</summary>
+        private bool _recargaEstadoPendiente;
         private bool _estadoUiInicializado;
         private DateTime _ultimaSyncEstado = DateTime.MinValue;
 
@@ -173,11 +175,20 @@ namespace UI.DISEÑO
                 return;
             }
 
-            if (cargando) return;
+            if (IsDisposed || Disposing)
+                return;
+
+            // Fuga previa: return silencioso perdía pagos hechos durante el load.
+            if (cargando)
+            {
+                _recargaEstadoPendiente = true;
+                return;
+            }
 
             try
             {
                 cargando = true;
+                _recargaEstadoPendiente = false;
                 dgvEstado.SuspendLayout();
                 dgvEstado.CellFormatting -= dgvEstado_CellFormatting;
 
@@ -209,6 +220,12 @@ namespace UI.DISEÑO
                 dgvEstado.CellFormatting += dgvEstado_CellFormatting;
                 dgvEstado.ResumeLayout();
                 cargando = false;
+
+                if (_recargaEstadoPendiente && !IsDisposed && !Disposing)
+                {
+                    _recargaEstadoPendiente = false;
+                    BeginInvoke(new Action(CargarEstado));
+                }
             }
         }
 

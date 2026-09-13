@@ -61,6 +61,14 @@ namespace CORE
             OnEstadoMembresiaCambiada?.Invoke();
         }
 
+        /// <summary>Alta/edición/baja de cliente en catálogo (combos POS, deudas, añadir miembro).</summary>
+        public static event Action? OnClienteCatalogoCambiado;
+
+        public static void ClienteCatalogoCambiado()
+        {
+            OnClienteCatalogoCambiado?.Invoke();
+        }
+
         public static event Action<ProgramacionActivadaEventArgs>? OnProgramacionActivada;
 
         private static readonly HashSet<int> _programacionEventoEmitido = new();

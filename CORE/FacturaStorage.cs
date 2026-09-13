@@ -108,25 +108,38 @@ namespace CORE
         public static string? ResolverLogoPath()
         {
             string local = Path.Combine(CarpetaRaizMffitness, "Resources", "mf_logo.png");
-            if (File.Exists(local))
-                return local;
-
             string baseRes = Path.Combine(AppContext.BaseDirectory, "Resources", "mf_logo.png");
+
+            // Preferir el PNG del build (más reciente) y espejar a LocalAppData
+            // para que facturas/WhatsApp no queden con un logo viejo cacheado.
+            string? source = null;
             if (File.Exists(baseRes))
+                source = baseRes;
+            else if (File.Exists(local))
+                source = local;
+
+            if (source == null)
+                return null;
+
+            if (!string.Equals(source, local, StringComparison.OrdinalIgnoreCase))
             {
                 try
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(local)!);
-                    File.Copy(baseRes, local, overwrite: true);
+                    bool debeCopiar = !File.Exists(local)
+                        || File.GetLastWriteTimeUtc(source) > File.GetLastWriteTimeUtc(local)
+                        || new FileInfo(source).Length != new FileInfo(local).Length;
+                    if (debeCopiar)
+                        File.Copy(source, local, overwrite: true);
                 }
                 catch
                 {
-                    // ignore
+                    // Si falla el espejo, usar el del build.
+                    return source;
                 }
-                return baseRes;
             }
 
-            return File.Exists(local) ? local : null;
+            return File.Exists(local) ? local : source;
         }
 
         public static string? ConstruirMediaUrlPublica(int pagoId)
