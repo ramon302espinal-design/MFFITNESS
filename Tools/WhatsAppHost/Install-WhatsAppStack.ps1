@@ -80,7 +80,7 @@ function Register-StackTask {
         -ExecutionTimeLimit ([TimeSpan]::Zero)
     $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
     Register-ScheduledTask -TaskName $Name -Action $action -Trigger $triggers -Settings $settings -Principal $principal `
-        -Description "MFFITNESS WhatsApp stack ($Environment)" | Out-Null
+        -Description "MFFITNESS WhatsApp automatizacion 24/7 (deudas, membresias; FrmChat via RegistroMensajes)" | Out-Null
 }
 
 # --- Main ---
@@ -103,6 +103,16 @@ if (-not $SkipBuild) {
 $hostExe = Join-Path $InstallDir 'WhatsAppHost.exe'
 if (-not (Test-Path $hostExe)) { throw "Falta $hostExe — compile con dotnet publish" }
 
+# Forzar BD correcta: sin esto AppConfig cae a Development (MF_CYBER_DB_DEV).
+$localJson = Join-Path $InstallDir 'appsettings.Local.json'
+$localObj = [ordered]@{
+    Database = [ordered]@{
+        DefaultEnvironment = $Environment
+    }
+}
+($localObj | ConvertTo-Json -Depth 5) | Set-Content -Path $localJson -Encoding UTF8
+Write-Host "appsettings.Local.json -> DefaultEnvironment=$Environment" -ForegroundColor Cyan
+
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 Copy-Item $StackConfig (Join-Path $InstallDir 'whatsapp.stack.config') -Force
 
@@ -111,8 +121,19 @@ $triggers = if ($Environment -eq 'Production') { @('Startup', 'Logon') } else { 
 Remove-TaskIfExists $TaskHost
 Remove-TaskIfExists $TaskTunnel
 
-Register-StackTask -Name $TaskHost -Exe $hostExe -Arguments '' -WorkingDirectory $InstallDir -TriggerTypes $triggers
-Write-Host "Tarea host: $TaskHost" -ForegroundColor Green
+# Wrapper: fija entorno aunque falte appsettings.Local (doble seguro).
+$launcher = Join-Path $InstallDir 'Start-WhatsAppHost.cmd'
+@"
+@echo off
+set MFFITNESS_ENVIRONMENT=$Environment
+set DOTNET_ENVIRONMENT=$Environment
+set ASPNETCORE_ENVIRONMENT=$Environment
+cd /d `"%~dp0`"
+`"%~dp0WhatsAppHost.exe`" %*
+"@ | Set-Content -Path $launcher -Encoding ASCII
+
+Register-StackTask -Name $TaskHost -Exe $launcher -Arguments '' -WorkingDirectory $InstallDir -TriggerTypes $triggers
+Write-Host "Tarea host: $TaskHost -> $launcher" -ForegroundColor Green
 
 if (-not $SkipTunnel) {
     $publicUrl = Read-StackSetting 'WhatsAppPublicBaseUrl'

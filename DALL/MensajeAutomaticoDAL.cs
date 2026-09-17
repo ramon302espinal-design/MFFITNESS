@@ -169,7 +169,7 @@ namespace DL
         public DataTable ObtenerMembresiasPorVencer(int diasAntes)
         {
             string query = @"
-            SELECT m.Id AS MembresiaId, m.ClienteId, m.FechaFin, ISNULL(p.Nombre, 'Membresia') AS Plan
+            SELECT m.Id AS MembresiaId, m.ClienteId, m.FechaFin, ISNULL(p.Nombre, 'Membresia') AS [Plan]
             FROM Membresias m
             LEFT JOIN Planes p ON p.Id = m.PlanId
             WHERE m.Activa = 1
@@ -187,7 +187,7 @@ namespace DL
         public DataTable ObtenerMembresiasVencenHoy()
         {
             string query = @"
-            SELECT m.Id AS MembresiaId, m.ClienteId, m.FechaFin, ISNULL(p.Nombre, 'Membresia') AS Plan
+            SELECT m.Id AS MembresiaId, m.ClienteId, m.FechaFin, ISNULL(p.Nombre, 'Membresia') AS [Plan]
             FROM Membresias m
             LEFT JOIN Planes p ON p.Id = m.PlanId
             WHERE m.Activa = 1
@@ -199,12 +199,20 @@ namespace DL
 
         public DataTable ObtenerMembresiasVencidasActivas()
         {
+            // Última membresía del cliente con FechaFin ya pasada.
+            // No exigir Activa=1: ActualizarVencidas() la apaga el mismo ciclo
+            // y el aviso diario (NotificacionYaEnviada por día) dejaría de salir.
+            // Excluye SALIDA manual, congelación activa y programación pendiente.
             string query = @"
-            SELECT m.Id AS MembresiaId, m.ClienteId, m.FechaFin, ISNULL(p.Nombre, 'Membresia') AS Plan
+            SELECT m.Id AS MembresiaId, m.ClienteId, m.FechaFin, ISNULL(p.Nombre, 'Membresia') AS [Plan]
             FROM Membresias m
+            INNER JOIN (
+                SELECT ClienteId, MAX(Id) AS IdUltima
+                FROM Membresias
+                GROUP BY ClienteId
+            ) u ON u.IdUltima = m.Id
             LEFT JOIN Planes p ON p.Id = m.PlanId
-            WHERE m.Activa = 1
-              AND m.FechaFin IS NOT NULL
+            WHERE m.FechaFin IS NOT NULL
               AND CAST(m.FechaFin AS DATE) < CAST(GETDATE() AS DATE)
               AND NOT EXISTS (
                   SELECT 1
@@ -216,6 +224,12 @@ namespace DL
                   ) ult ON ult.ClienteId = h.ClienteId AND ult.UltimoId = h.Id
                     WHERE h.ClienteId = m.ClienteId
                     AND h.TipoMovimiento = 'SALIDA'
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM CongelacionesMembresia g
+                  WHERE g.ClienteId = m.ClienteId
+                    AND g.Activa = 1
               )"
             + MembresiaEstadoSql.FiltroMembresiaSinProgramacionPendiente;
 

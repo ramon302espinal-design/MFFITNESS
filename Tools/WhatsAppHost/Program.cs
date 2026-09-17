@@ -77,6 +77,17 @@ namespace WhatsAppHost
                 Console.WriteLine($"[{Ahora()}] AVISO: {advertencia}");
 
             Console.WriteLine($"[{Ahora()}] WhatsApp Host iniciado.");
+            try
+            {
+                AppConfig.EnsureDatabaseLogged();
+                Console.WriteLine(
+                    $"[{Ahora()}] BD: {AppConfig.DatabaseName} (entorno {AppConfig.EnvironmentName})");
+            }
+            catch (Exception exDb)
+            {
+                Console.WriteLine($"[{Ahora()}] AVISO BD: {exDb.Message}");
+            }
+
             Console.WriteLine($"[{Ahora()}] Origen: {TwilioSettings.PhoneNumber}");
             Console.WriteLine($"[{Ahora()}] ContentSid: {TwilioSettings.ContentSidGenerico}");
             Console.WriteLine($"[{Ahora()}] Facturas: {FacturaStorage.CarpetaFacturas}");
