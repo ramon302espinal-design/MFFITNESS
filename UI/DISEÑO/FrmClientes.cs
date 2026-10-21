@@ -75,6 +75,10 @@ namespace UI.DISEÑO
             AppEventos.OnClienteCatalogoCambiado -= OnClienteCatalogoCambiado;
             AppEventos.OnClienteCatalogoCambiado += OnClienteCatalogoCambiado;
 
+            btnCrear.Visible = AppConfig.IsDevelopment;
+            btnCrear.Click -= btnCrear_Click;
+            btnCrear.Click += btnCrear_Click;
+
             if (_clienteIdPreseleccionado.HasValue)
             {
                 tabControlClientes.SelectedTab = tabMiembros;
@@ -226,6 +230,43 @@ namespace UI.DISEÑO
         // ===============================
         // TAB AGREGAR — alta / edición
         // ===============================
+        private void btnCrear_Click(object? sender, EventArgs e)
+        {
+            if (!AppConfig.IsDevelopment)
+            {
+                btnCrear.Visible = false;
+                return;
+            }
+
+            tabControlClientes.SelectedTab = tabAgregar;
+            LimpiarFormularioAlta();
+
+            txtNombre.Text = NombrePruebaAleatorio();
+            txtTelefono.Text = "8098392136";
+            txtDireccion.Text = "Prueba DEV";
+            EstablecerSexoEnCombo("Masculino");
+
+            txtEmergenciaNombre.Text = "Contacto prueba";
+            txtEmergenciaParentesco.Text = "Familiar";
+            txtEmergenciaTelefono.Text = "8098392136";
+            chkNingunaEnfermedad.Checked = true;
+            chkObjSalud.Checked = true;
+            rbExpNunca.Checked = true;
+            rbHorManana.Checked = true;
+
+            btnAgregar.Focus();
+        }
+
+        private static string NombrePruebaAleatorio()
+        {
+            string[] nombres = { "Ana", "Luis", "Carmen", "Jose", "Maria", "Pedro", "Laura", "Carlos" };
+            string[] apellidos = { "Perez", "Gomez", "Diaz", "Santos", "Reyes", "Cruz", "Mora", "Vega" };
+            int n = Random.Shared.Next(nombres.Length);
+            int a = Random.Shared.Next(apellidos.Length);
+            int serie = Random.Shared.Next(1000, 10000);
+            return $"Prueba {nombres[n]} {apellidos[a]} {serie}";
+        }
+
         private void LimpiarFormularioAlta()
         {
             SalirModoEdicion();

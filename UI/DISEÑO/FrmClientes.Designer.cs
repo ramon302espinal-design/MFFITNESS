@@ -54,8 +54,8 @@ namespace UI.DISEÑO
             label3 = new Label();
             txtTelefono = new TextBox();
             label4 = new Label();
-            lblCedula = new Label();
             txtCedula = new TextBox();
+            lblCedula = new Label();
             txtFecha = new DateTimePicker();
             label5 = new Label();
             txtNombre = new TextBox();
@@ -135,6 +135,7 @@ namespace UI.DISEÑO
             panelDetalleScroll = new Panel();
             ucFichaResumen = new UI.DISEÑO.Controles.UcFichaResumenMiembro();
             btnBack = new Button();
+            btnCrear = new Button();
             layoutNavClientes.SuspendLayout();
             panelNav.SuspendLayout();
             tabControlClientes.SuspendLayout();
@@ -299,6 +300,7 @@ namespace UI.DISEÑO
             tabAgregar.AutoScroll = true;
             tabAgregar.AutoScrollMinSize = new Size(1200, 1350);
             tabAgregar.BackColor = Color.White;
+            tabAgregar.Controls.Add(btnCrear);
             tabAgregar.Controls.Add(txtLesionDescripcion);
             tabAgregar.Controls.Add(cmbsexo);
             tabAgregar.Controls.Add(label16);
@@ -643,6 +645,15 @@ namespace UI.DISEÑO
             label4.TabIndex = 6;
             label4.Text = "TELEFONO";
             // 
+            // txtCedula
+            // 
+            txtCedula.Font = new Font("Segoe UI", 11F);
+            txtCedula.Location = new Point(420, 174);
+            txtCedula.MaxLength = 30;
+            txtCedula.Name = "txtCedula";
+            txtCedula.Size = new Size(203, 32);
+            txtCedula.TabIndex = 80;
+            // 
             // lblCedula
             // 
             lblCedula.AutoSize = true;
@@ -652,15 +663,6 @@ namespace UI.DISEÑO
             lblCedula.Size = new Size(76, 23);
             lblCedula.TabIndex = 79;
             lblCedula.Text = "CEDULA";
-            // 
-            // txtCedula
-            // 
-            txtCedula.Font = new Font("Segoe UI", 11F);
-            txtCedula.Location = new Point(420, 174);
-            txtCedula.MaxLength = 30;
-            txtCedula.Name = "txtCedula";
-            txtCedula.Size = new Size(203, 32);
-            txtCedula.TabIndex = 80;
             // 
             // txtFecha
             // 
@@ -1000,7 +1002,7 @@ namespace UI.DISEÑO
             panelAlergias.Controls.Add(rbAlergiasNo);
             panelAlergias.Location = new Point(662, 581);
             panelAlergias.Name = "panelAlergias";
-            panelAlergias.Size = new Size(405, 36);
+            panelAlergias.Size = new Size(384, 36);
             panelAlergias.TabIndex = 53;
             // 
             // rbAlergiasSi
@@ -1553,6 +1555,15 @@ namespace UI.DISEÑO
             btnBack.UseVisualStyleBackColor = true;
             btnBack.Visible = false;
             // 
+            // btnCrear
+            // 
+            btnCrear.Location = new Point(333, 14);
+            btnCrear.Name = "btnCrear";
+            btnCrear.Size = new Size(193, 41);
+            btnCrear.TabIndex = 81;
+            btnCrear.Text = "CREAR CLIENTE";
+            btnCrear.UseVisualStyleBackColor = true;
+            // 
             // FrmClientes
             // 
             AutoScaleMode = AutoScaleMode.None;
@@ -1713,5 +1724,6 @@ namespace UI.DISEÑO
         private TextBox txtHorarioVariadoDetalle;
         private Label label16;
         private ComboBox cmbsexo;
+        private Button btnCrear;
     }
 }

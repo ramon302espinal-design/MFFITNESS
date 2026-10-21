@@ -27,6 +27,97 @@ namespace BLL
         /// <summary>Detalle del ultimo intento Twilio (para mostrar en UI tras cobrar).</summary>
         public string? UltimoDetalleEnvio { get; private set; }
 
+        public IReadOnlyList<WhatsAppAutomatizacionDto> ListarCentroConversaciones()
+        {
+            var textos = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (DataRow row in dal.ListarPlantillas().Rows)
+            {
+                string tipo = row["Tipo"]?.ToString() ?? string.Empty;
+                if (tipo.Length == 0 || textos.ContainsKey(tipo))
+                    continue;
+                textos[tipo] = row["Plantilla"]?.ToString() ?? string.Empty;
+            }
+
+            var configs = new Dictionary<string, DataRow>(StringComparer.OrdinalIgnoreCase);
+            foreach (DataRow row in dal.ListarConfiguracion().Rows)
+            {
+                string tipo = row["Tipo"]?.ToString() ?? string.Empty;
+                if (tipo.Length > 0)
+                    configs[tipo] = row;
+            }
+
+            var lista = new List<WhatsAppAutomatizacionDto>();
+            foreach (var def in WhatsAppPlantillaCatalogo.Centro)
+            {
+                configs.TryGetValue(def.Tipo, out DataRow? cfg);
+                textos.TryGetValue(def.Tipo, out string? plantilla);
+                lista.Add(new WhatsAppAutomatizacionDto
+                {
+                    Tipo = def.Tipo,
+                    Titulo = def.Titulo,
+                    Activa = cfg == null || cfg["Activa"] == DBNull.Value || Convert.ToBoolean(cfg["Activa"]),
+                    Evento = def.Evento,
+                    Condicion = def.Condicion,
+                    DiasAntes = cfg != null && cfg["DiasAntes"] != DBNull.Value
+                        ? Convert.ToInt32(cfg["DiasAntes"])
+                        : null,
+                    DiasUrgente = cfg != null && cfg.Table.Columns.Contains("DiasUrgente") && cfg["DiasUrgente"] != DBNull.Value
+                        ? Convert.ToInt32(cfg["DiasUrgente"])
+                        : null,
+                    EvitarDuplicadoHoras = cfg != null && cfg["EvitarDuplicadoHoras"] != DBNull.Value
+                        ? Convert.ToInt32(cfg["EvitarDuplicadoHoras"])
+                        : 24,
+                    UltimoResultado = cfg == null || cfg["UltimoResultado"] == DBNull.Value
+                        ? null
+                        : cfg["UltimoResultado"]?.ToString(),
+                    UltimaEjecucion = cfg == null || cfg["UltimaEjecucion"] == DBNull.Value
+                        ? null
+                        : Convert.ToDateTime(cfg["UltimaEjecucion"]),
+                    Plantilla = string.IsNullOrWhiteSpace(plantilla) ? def.Predeterminada : plantilla
+                });
+            }
+
+            return lista;
+        }
+
+        /// <summary>Guarda texto y reglas para envíos futuros. No reenvía historial.</summary>
+        public void GuardarCentroConversaciones(
+            string tipo,
+            string plantilla,
+            bool activa,
+            int? diasAntes,
+            int? diasUrgente,
+            int evitarDuplicadoHoras)
+        {
+            if (WhatsAppPlantillaCatalogo.Buscar(tipo) == null)
+                throw new InvalidOperationException("Tipo de plantilla no reconocido.");
+
+            dal.GuardarPlantilla(tipo, plantilla ?? string.Empty);
+            bool activaReal = WhatsAppAutomatizacionPolitica.PuedeDesactivarse(tipo) ? activa : true;
+            dal.GuardarAutomatizacion(tipo, activaReal, diasAntes, diasUrgente, evitarDuplicadoHoras);
+        }
+
+        public string RestaurarPlantillaPredeterminada(string tipo)
+        {
+            var def = WhatsAppPlantillaCatalogo.Buscar(tipo)
+                ?? throw new InvalidOperationException("Tipo de plantilla no reconocido.");
+            return def.Predeterminada;
+        }
+
+        public string PrevisualizarPlantilla(string plantilla, bool omitirOpcionales)
+        {
+            var datos = new Dictionary<string, string>(WhatsAppPlantillaCatalogo.DatosEjemplo);
+            if (omitirOpcionales)
+            {
+                datos["DETALLE_DEUDA"] = string.Empty;
+                datos["SALDO"] = string.Empty;
+                datos["DETALLE"] = string.Empty;
+                datos["MOTIVO"] = string.Empty;
+            }
+
+            return WhatsAppPlantillaRenderer.Aplicar(plantilla, datos);
+        }
+
         // ===============================
         // ENVÍO POR PLANTILLA (NÚCLEO)
         // ===============================
@@ -43,6 +134,13 @@ namespace BLL
             {
                 System.Diagnostics.Debug.WriteLine($"WhatsApp deshabilitado. No se envia {tipoPlantilla}.");
                 UltimoDetalleEnvio = "WhatsApp deshabilitado.";
+                return false;
+            }
+
+            if (!TipoAutomaticoPermitido(tipoPlantilla))
+            {
+                UltimoDetalleEnvio = "Automatización desactivada en Plantillas y automatizaciones.";
+                dal.RegistrarUltimoResultado(tipoPlantilla, UltimoDetalleEnvio);
                 return false;
             }
 
@@ -83,6 +181,13 @@ namespace BLL
                 else
                 {
                     string mensaje = AplicarVariables(plantilla!, variables);
+                    if (string.IsNullOrWhiteSpace(mensaje))
+                    {
+                        UltimoDetalleEnvio = "Sin contenido: se omitieron bloques sin datos.";
+                        dal.RegistrarUltimoResultado(tipoPlantilla, UltimoDetalleEnvio);
+                        return false;
+                    }
+
                     mensajeTwilio = WhatsAppContentVariableHelper.PrepararCuerpoPlantilla(mensaje, nombreCliente);
                 }
 
@@ -110,6 +215,7 @@ namespace BLL
                 {
                     dal.ActualizarEstadoMensaje(mensajeId, "ERROR", detalleRespuesta);
                     dal.IncrementarIntentos(mensajeId);
+                    dal.RegistrarUltimoResultado(tipoPlantilla, detalleRespuesta);
                     return false;
                 }
 
@@ -122,6 +228,8 @@ namespace BLL
 
                 if (!ok)
                     dal.IncrementarIntentos(mensajeId);
+
+                dal.RegistrarUltimoResultado(tipoPlantilla, detalleRespuesta);
 
                 // Meta puede rechazar despues de "sent": confirmar el estado real mas tarde.
                 ProgramarVerificacionEntrega(mensajeId, resultado.MessageSid);
@@ -312,7 +420,7 @@ namespace BLL
         {
             // Un envio por dia y por membresia: a los 10 dias y a los 3 dias
             // (misma plantilla, distinto DIAS_RESTANTES) salen en dias distintos.
-            if (dal.NotificacionYaEnviada(clienteId, "VENCIMIENTO_PROXIMO", membresiaId))
+            if (YaNotificado(clienteId, "VENCIMIENTO_PROXIMO", membresiaId))
                 return false;
 
             return EnviarMensajeTemplado(clienteId, "VENCIMIENTO_PROXIMO", new Dictionary<string, string>
@@ -347,7 +455,7 @@ namespace BLL
         /// </summary>
         public bool EnviarMensajeMembresiaVencida(int clienteId, DateTime fechaVencimiento, string nombrePlan, int? membresiaId = null)
         {
-            if (dal.NotificacionYaEnviada(clienteId, "MEMBRESIA_VENCIDA", membresiaId))
+            if (YaNotificado(clienteId, "MEMBRESIA_VENCIDA", membresiaId))
                 return false;
 
             var (motivo, saldo, detalleDeuda) = ConstruirMotivoDeudaPendiente(clienteId);
@@ -786,7 +894,7 @@ namespace BLL
             if (deuda == null) return false;
 
             int clienteId = Convert.ToInt32(deuda["ClienteId"]);
-            if (!forzar && dal.NotificacionYaEnviada(clienteId, "RECORDATORIO_VENCIMIENTO_DEUDA", deudaId))
+            if (!forzar && YaNotificado(clienteId, "RECORDATORIO_VENCIMIENTO_DEUDA", deudaId))
                 return true;
 
             DateTime fechaPago = LeerFechaPagoRecordatorio(deuda);
@@ -1199,7 +1307,7 @@ namespace BLL
         public int VerificarRecordatoriosDeuda()
         {
             int enviados = 0;
-            var diasActivos = new HashSet<int>(DiasRecordatorioDeudaActivos());
+            var diasActivos = new HashSet<int>(PlazosDeudaActivos());
             if (diasActivos.Count == 0)
                 return 0;
 
@@ -1229,20 +1337,12 @@ namespace BLL
             return enviados;
         }
 
-        /// <summary>Días configurados para aviso de financiamiento (p. ej. 10 y 2), sin duplicados.</summary>
-        private static IEnumerable<int> DiasRecordatorioDeudaActivos()
-        {
-            var vistos = new HashSet<int>();
-            foreach (int dias in new[]
-            {
+        /// <summary>Los dos plazos de deuda. Si el centro guardó números, usa esos. Si no, App.config.</summary>
+        private IEnumerable<int> PlazosDeudaActivos() =>
+            PlazosGuardadosOConfig(
+                "RECORDATORIO_VENCIMIENTO_DEUDA",
                 TwilioSettings.DiasRecordatorioDeuda,
-                TwilioSettings.DiasRecordatorioDeudaUrgente
-            })
-            {
-                if (dias > 0 && vistos.Add(dias))
-                    yield return dias;
-            }
-        }
+                TwilioSettings.DiasRecordatorioDeudaUrgente);
 
         public int VerificarDeudasVencenHoy()
         {
@@ -1375,7 +1475,7 @@ namespace BLL
 
             // Ambos ciclos (pago el 15 y pago a fin de mes) se cubren con FechaFin:
             // el aviso sale exactamente N dias antes de la fecha real de vencimiento.
-            foreach (int diasAntes in DiasRecordatorioMembresiaActivos())
+            foreach (int diasAntes in PlazosMembresiaActivos())
             {
                 var membresias = dal.ObtenerMembresiasPorVencer(diasAntes);
                 foreach (DataRow row in membresias.Rows)
@@ -1393,19 +1493,34 @@ namespace BLL
             return enviados;
         }
 
-        /// <summary>Dias configurados para el aviso previo (p. ej. 10 y 3), sin duplicados.</summary>
-        private static IEnumerable<int> DiasRecordatorioMembresiaActivos()
-        {
-            var vistos = new HashSet<int>();
-            foreach (int dias in new[]
-            {
+        /// <summary>Los dos plazos de membresía. Si el centro guardó números, usa esos. Si no, App.config.</summary>
+        private IEnumerable<int> PlazosMembresiaActivos() =>
+            PlazosGuardadosOConfig(
+                "VENCIMIENTO_PROXIMO",
                 TwilioSettings.DiasRecordatorioMembresia,
-                TwilioSettings.DiasRecordatorioMembresiaUrgente
-            })
+                TwilioSettings.DiasRecordatorioMembresiaUrgente);
+
+        private IEnumerable<int> PlazosGuardadosOConfig(string tipo, int fallbackA, int fallbackB)
+        {
+            int? primero = null;
+            int? urgente = null;
+            try
             {
-                if (dias > 0 && vistos.Add(dias))
-                    yield return dias;
+                primero = dal.ObtenerDiasAntes(tipo);
+                urgente = dal.ObtenerDiasUrgente(tipo);
             }
+            catch
+            {
+                primero = null;
+                urgente = null;
+            }
+
+            if (primero == null && urgente == null)
+            {
+                return WhatsAppAutomatizacionPolitica.PlazosActivos(new[] { fallbackA, fallbackB });
+            }
+
+            return WhatsAppAutomatizacionPolitica.PlazosActivos(new[] { primero ?? 0, urgente ?? 0 });
         }
 
         public int VerificarMembresiasVencenHoy()
@@ -1611,12 +1726,41 @@ namespace BLL
             _ => "Actualizacion de cuenta"
         };
 
-        private static string AplicarVariables(string plantilla, Dictionary<string, string> variables)
-        {
-            foreach (var par in variables)
-                plantilla = plantilla.Replace("{" + par.Key + "}", par.Value ?? string.Empty);
+        private static string AplicarVariables(string plantilla, Dictionary<string, string> variables) =>
+            WhatsAppPlantillaRenderer.Aplicar(plantilla, variables);
 
-            return plantilla;
+        private bool TipoAutomaticoPermitido(string tipo)
+        {
+            if (!WhatsAppAutomatizacionPolitica.PuedeDesactivarse(tipo))
+                return true;
+
+            try
+            {
+                return dal.AutomatizacionEstaActiva(tipo);
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
+        private bool YaNotificado(int clienteId, string tipo, int? referenciaId)
+        {
+            int horas = 24;
+            try
+            {
+                horas = dal.ObtenerHorasDedup(tipo);
+            }
+            catch
+            {
+                horas = 24;
+            }
+
+            if (horas <= 24)
+                return dal.NotificacionYaEnviada(clienteId, tipo, referenciaId);
+
+            int dias = Math.Max(1, (int)Math.Ceiling(horas / 24d));
+            return dal.NotificacionEnviadaEnDias(clienteId, tipo, dias, referenciaId);
         }
 
         private static string FormatearMonto(decimal monto) =>

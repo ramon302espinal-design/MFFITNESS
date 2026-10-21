@@ -299,5 +299,218 @@ namespace DL
             object? result = db.ExecuteScalar(query, parametros);
             return Convert.ToInt32(result) > 0;
         }
+
+        private static bool _configLista;
+        private static readonly object ConfigLock = new();
+
+        public void EnsureConfigSchema()
+        {
+            if (_configLista)
+                return;
+
+            lock (ConfigLock)
+            {
+                if (_configLista)
+                    return;
+
+                db.ExecuteNonQuery(@"
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = N'WhatsAppAutomatizacionConfig')
+BEGIN
+    CREATE TABLE dbo.WhatsAppAutomatizacionConfig
+    (
+        Tipo NVARCHAR(50) NOT NULL PRIMARY KEY,
+        Activa BIT NOT NULL CONSTRAINT DF_WAAuto_Activa DEFAULT (1),
+        Evento NVARCHAR(160) NOT NULL,
+        Condicion NVARCHAR(300) NULL,
+        DiasAntes INT NULL,
+        EvitarDuplicadoHoras INT NOT NULL CONSTRAINT DF_WAAuto_Dedup DEFAULT (24),
+        UltimoResultado NVARCHAR(500) NULL,
+        UltimaEjecucion DATETIME2 NULL,
+        FechaModificacion DATETIME2 NOT NULL CONSTRAINT DF_WAAuto_Mod DEFAULT (SYSDATETIME())
+    );
+END
+IF COL_LENGTH('dbo.WhatsAppAutomatizacionConfig', 'DiasUrgente') IS NULL
+    ALTER TABLE dbo.WhatsAppAutomatizacionConfig ADD DiasUrgente INT NULL;");
+
+                db.ExecuteNonQuery(@"
+INSERT INTO dbo.WhatsAppAutomatizacionConfig (Tipo, Activa, Evento, Condicion, DiasAntes, EvitarDuplicadoHoras)
+SELECT v.Tipo, 1, v.Evento, v.Condicion, NULL, 24
+FROM (VALUES
+    (N'VENCIMIENTO_PROXIMO', N'FechaFin de la membresía activa', N'N días antes. Un aviso por día y membresía.'),
+    (N'MEMBRESIA_VENCIDA', N'Membresía vencida y aún activa', N'Aviso diario. No cambia el acceso.'),
+    (N'RECORDATORIO_VENCIMIENTO_DEUDA', N'Deuda activa con saldo', N'N días antes del pago.'),
+    (N'DEUDA_CREADA', N'Se registra una deuda o préstamo', N'Al crear la venta a crédito.'),
+    (N'PAGO_MEMBRESIA', N'Pago de membresía registrado', N'Cada pago nuevo.'),
+    (N'PROGRAMACION_ACTIVADA', N'Se activa una membresía programada', N'Al activar la programación ya pagada.')
+) v(Tipo, Evento, Condicion)
+WHERE NOT EXISTS (
+    SELECT 1 FROM dbo.WhatsAppAutomatizacionConfig c WHERE c.Tipo = v.Tipo);");
+
+                _configLista = true;
+            }
+        }
+
+        public bool AutomatizacionEstaActiva(string tipo)
+        {
+            EnsureConfigSchema();
+
+            string query = @"
+SELECT Activa
+FROM dbo.WhatsAppAutomatizacionConfig
+WHERE Tipo = @Tipo;";
+
+            object? result = db.ExecuteScalar(query, new[] { new SqlParameter("@Tipo", tipo) });
+            if (result == null || result == DBNull.Value)
+                return true;
+
+            return Convert.ToBoolean(result);
+        }
+
+        public int? ObtenerDiasAntes(string tipo)
+        {
+            EnsureConfigSchema();
+
+            object? result = db.ExecuteScalar(
+                "SELECT DiasAntes FROM dbo.WhatsAppAutomatizacionConfig WHERE Tipo = @Tipo;",
+                new[] { new SqlParameter("@Tipo", tipo) });
+
+            if (result == null || result == DBNull.Value)
+                return null;
+
+            int dias = Convert.ToInt32(result);
+            return dias > 0 ? dias : null;
+        }
+
+        public int? ObtenerDiasUrgente(string tipo)
+        {
+            EnsureConfigSchema();
+
+            object? result = db.ExecuteScalar(
+                "SELECT DiasUrgente FROM dbo.WhatsAppAutomatizacionConfig WHERE Tipo = @Tipo;",
+                new[] { new SqlParameter("@Tipo", tipo) });
+
+            if (result == null || result == DBNull.Value)
+                return null;
+
+            int dias = Convert.ToInt32(result);
+            return dias > 0 ? dias : null;
+        }
+
+        public int ObtenerHorasDedup(string tipo)
+        {
+            EnsureConfigSchema();
+
+            object? result = db.ExecuteScalar(
+                "SELECT EvitarDuplicadoHoras FROM dbo.WhatsAppAutomatizacionConfig WHERE Tipo = @Tipo;",
+                new[] { new SqlParameter("@Tipo", tipo) });
+
+            if (result == null || result == DBNull.Value)
+                return 24;
+
+            int horas = Convert.ToInt32(result);
+            return horas > 0 ? horas : 24;
+        }
+
+        /// <summary>Persiste la configuración. No dispara envíos.</summary>
+        public void GuardarAutomatizacion(string tipo, bool activa, int? diasAntes, int? diasUrgente, int evitarDuplicadoHoras)
+        {
+            EnsureConfigSchema();
+
+            string query = @"
+UPDATE dbo.WhatsAppAutomatizacionConfig
+SET Activa = @Activa,
+    DiasAntes = @DiasAntes,
+    DiasUrgente = @DiasUrgente,
+    EvitarDuplicadoHoras = @Horas,
+    FechaModificacion = SYSDATETIME()
+WHERE Tipo = @Tipo;";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Tipo", tipo),
+                new SqlParameter("@Activa", activa),
+                new SqlParameter("@DiasAntes", (object?)diasAntes ?? DBNull.Value),
+                new SqlParameter("@DiasUrgente", (object?)diasUrgente ?? DBNull.Value),
+                new SqlParameter("@Horas", evitarDuplicadoHoras < 1 ? 24 : evitarDuplicadoHoras)
+            };
+            db.ExecuteNonQuery(query, parametros);
+        }
+
+        public void RegistrarUltimoResultado(string tipo, string? resultado)
+        {
+            try
+            {
+                EnsureConfigSchema();
+                string texto = resultado ?? string.Empty;
+                if (texto.Length > 500)
+                    texto = texto[..500];
+
+                db.ExecuteNonQuery(@"
+UPDATE dbo.WhatsAppAutomatizacionConfig
+SET UltimoResultado = @Resultado,
+    UltimaEjecucion = SYSDATETIME()
+WHERE Tipo = @Tipo;",
+                    new[]
+                    {
+                        new SqlParameter("@Tipo", tipo),
+                        new SqlParameter("@Resultado", texto)
+                    });
+            }
+            catch
+            {
+                // El registro del resultado no debe tumbar el envío.
+            }
+        }
+
+        public DataTable ListarConfiguracion()
+        {
+            EnsureConfigSchema();
+            return db.ExecuteQuery(@"
+SELECT Tipo, Activa, Evento, Condicion, DiasAntes, DiasUrgente, EvitarDuplicadoHoras, UltimoResultado, UltimaEjecucion
+FROM dbo.WhatsAppAutomatizacionConfig
+ORDER BY Tipo;");
+        }
+
+        public DataTable ListarPlantillas()
+        {
+            return db.ExecuteQuery(@"
+SELECT Tipo, Plantilla, Activa
+FROM dbo.MensajesAutomaticos
+ORDER BY Tipo;");
+        }
+
+        /// <summary>Actualiza el texto futuro. No inserta en RegistroMensajes.</summary>
+        public void GuardarPlantilla(string tipo, string plantilla)
+        {
+            bool tieneModificacion = ColumnaExiste("MensajesAutomaticos", "FechaModificacion");
+            string setFecha = tieneModificacion ? ", FechaModificacion = GETDATE()" : string.Empty;
+
+            string update = $@"
+UPDATE dbo.MensajesAutomaticos
+SET Plantilla = @Plantilla
+    {setFecha}
+WHERE Tipo = @Tipo;";
+
+            int filas = db.ExecuteNonQuery(update, new[]
+            {
+                new SqlParameter("@Tipo", tipo),
+                new SqlParameter("@Plantilla", plantilla ?? string.Empty)
+            });
+
+            if (filas > 0)
+                return;
+
+            string insert = tieneModificacion
+                ? @"INSERT INTO dbo.MensajesAutomaticos (Tipo, Plantilla, Activa, FechaCreacion, FechaModificacion)
+                    VALUES (@Tipo, @Plantilla, 1, GETDATE(), GETDATE());"
+                : @"INSERT INTO dbo.MensajesAutomaticos (Tipo, Plantilla, Activa, FechaCreacion)
+                    VALUES (@Tipo, @Plantilla, 1, GETDATE());";
+
+            db.ExecuteNonQuery(insert, new[]
+            {
+                new SqlParameter("@Tipo", tipo),
+                new SqlParameter("@Plantilla", plantilla ?? string.Empty)
+            });
+        }
     }
 }

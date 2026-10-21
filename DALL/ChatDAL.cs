@@ -1,6 +1,7 @@
 using Microsoft.Data.SqlClient;
 using System;
 using System.Data;
+using System.Linq;
 
 namespace DL
 {
@@ -54,7 +55,13 @@ BEGIN
     CREATE UNIQUE INDEX UX_ChatMensajes_TwilioSid
         ON dbo.ChatMensajes (TwilioMessageSid)
         WHERE TwilioMessageSid IS NOT NULL;
-END");
+END
+
+IF COL_LENGTH(N'dbo.ChatMensajes', N'Origen') IS NULL
+    ALTER TABLE dbo.ChatMensajes ADD Origen NVARCHAR(20) NULL;
+
+IF COL_LENGTH(N'dbo.ChatMensajes', N'ContentSid') IS NULL
+    ALTER TABLE dbo.ChatMensajes ADD ContentSid NVARCHAR(64) NULL;");
 
                 _schemaReady = true;
             }
@@ -66,7 +73,14 @@ END");
 
             string filtro = string.IsNullOrWhiteSpace(filtroNombre)
                 ? string.Empty
-                : " AND c.Nombre LIKE @Filtro ";
+                : @" AND (
+                        c.Nombre LIKE @Filtro
+                        OR ISNULL(c.Telefono, N'') LIKE @Filtro
+                        OR (
+                            @Digitos <> N''
+                            AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(ISNULL(c.Telefono, N''), N' ', N''), N'-', N''), N'+', N''), N'(', N''), N')', N'') LIKE @Digitos
+                        )
+                    ) ";
 
             string query = $@"
 WITH Timeline AS (
@@ -113,9 +127,11 @@ ORDER BY
             if (string.IsNullOrWhiteSpace(filtroNombre))
                 return db.ExecuteQuery(query);
 
+            string digitos = new string(filtroNombre.Where(char.IsDigit).ToArray());
             SqlParameter[] parametros =
             {
-                new SqlParameter("@Filtro", "%" + filtroNombre.Trim() + "%")
+                new SqlParameter("@Filtro", "%" + filtroNombre.Trim() + "%"),
+                new SqlParameter("@Digitos", string.IsNullOrEmpty(digitos) ? string.Empty : "%" + digitos + "%")
             };
             return db.ExecuteQuery(query, parametros);
         }
@@ -134,7 +150,9 @@ SELECT
     Usuario,
     Fecha,
     CAST(0 AS BIT) AS EsAutomatico,
-    CAST(NULL AS NVARCHAR(50)) AS TipoAutomatico
+    CAST(NULL AS NVARCHAR(50)) AS TipoAutomatico,
+    ISNULL(Origen, N'MANUAL') AS Origen,
+    DetalleError
 FROM dbo.ChatMensajes
 WHERE ClienteId = @ClienteId
 
@@ -149,7 +167,9 @@ SELECT
     CAST(NULL AS NVARCHAR(100)) AS Usuario,
     COALESCE(FechaEnvio, FechaCreacion) AS Fecha,
     CAST(1 AS BIT) AS EsAutomatico,
-    Tipo AS TipoAutomatico
+    Tipo AS TipoAutomatico,
+    N'AUTO' AS Origen,
+    CASE WHEN Estado = N'ERROR' THEN LEFT(ISNULL(Respuesta, N''), 500) ELSE NULL END AS DetalleError
 FROM dbo.RegistroMensajes
 WHERE ClienteId = @ClienteId
   AND Estado IN (N'ENVIADO', N'ERROR', N'PENDIENTE')
@@ -197,16 +217,18 @@ WHERE ClienteId = @ClienteId;";
             string estado,
             string? usuario,
             string? twilioSid = null,
-            string? detalleError = null)
+            string? detalleError = null,
+            string? origen = null,
+            string? contentSid = null)
         {
             EnsureSchema();
 
             string query = @"
 INSERT INTO dbo.ChatMensajes
-    (ClienteId, Direccion, Cuerpo, Estado, TwilioMessageSid, Usuario, DetalleError)
+    (ClienteId, Direccion, Cuerpo, Estado, TwilioMessageSid, Usuario, DetalleError, Origen, ContentSid)
 OUTPUT INSERTED.Id
 VALUES
-    (@ClienteId, @Direccion, @Cuerpo, @Estado, @TwilioSid, @Usuario, @DetalleError);";
+    (@ClienteId, @Direccion, @Cuerpo, @Estado, @TwilioSid, @Usuario, @DetalleError, @Origen, @ContentSid);";
 
             SqlParameter[] parametros =
             {
@@ -216,7 +238,9 @@ VALUES
                 new SqlParameter("@Estado", estado),
                 new SqlParameter("@TwilioSid", (object?)twilioSid ?? DBNull.Value),
                 new SqlParameter("@Usuario", (object?)usuario ?? DBNull.Value),
-                new SqlParameter("@DetalleError", (object?)detalleError ?? DBNull.Value)
+                new SqlParameter("@DetalleError", (object?)detalleError ?? DBNull.Value),
+                new SqlParameter("@Origen", (object?)origen ?? DBNull.Value),
+                new SqlParameter("@ContentSid", (object?)contentSid ?? DBNull.Value)
             };
 
             object? result = db.ExecuteScalar(query, parametros);
@@ -227,7 +251,8 @@ VALUES
             int mensajeId,
             string estado,
             string? twilioSid,
-            string? detalleError)
+            string? detalleError,
+            string? contentSid = null)
         {
             EnsureSchema();
 
@@ -235,6 +260,7 @@ VALUES
 UPDATE dbo.ChatMensajes
 SET Estado = @Estado,
     TwilioMessageSid = COALESCE(@TwilioSid, TwilioMessageSid),
+    ContentSid = COALESCE(@ContentSid, ContentSid),
     DetalleError = @DetalleError
 WHERE Id = @Id;";
 
@@ -243,10 +269,25 @@ WHERE Id = @Id;";
                 new SqlParameter("@Id", mensajeId),
                 new SqlParameter("@Estado", estado),
                 new SqlParameter("@TwilioSid", (object?)twilioSid ?? DBNull.Value),
+                new SqlParameter("@ContentSid", (object?)contentSid ?? DBNull.Value),
                 new SqlParameter("@DetalleError", (object?)detalleError ?? DBNull.Value)
             };
 
             db.ExecuteNonQuery(query, parametros);
+        }
+
+        public int ObtenerHuellaEstados(int clienteId)
+        {
+            EnsureSchema();
+
+            string query = @"
+SELECT ISNULL(CHECKSUM_AGG(BINARY_CHECKSUM(Id, Estado, ISNULL(DetalleError, N''))), 0)
+FROM dbo.ChatMensajes
+WHERE ClienteId = @ClienteId
+  AND Direccion = N'SALIDA';";
+
+            object? result = db.ExecuteScalar(query, new[] { new SqlParameter("@ClienteId", clienteId) });
+            return result == null || result == DBNull.Value ? 0 : Convert.ToInt32(result);
         }
 
         public void MarcarEntradaLeida(int clienteId)
@@ -343,6 +384,93 @@ SELECT CASE WHEN EXISTS (
             SqlParameter[] parametros = { new SqlParameter("@Sid", messageSid.Trim()) };
             object? result = db.ExecuteScalar(query, parametros);
             return Convert.ToInt32(result) == 1;
+        }
+
+        public DateTime? ObtenerUltimaEntrada(int clienteId)
+        {
+            EnsureSchema();
+
+            string query = @"
+SELECT MAX(Fecha)
+FROM dbo.ChatMensajes
+WHERE ClienteId = @ClienteId
+  AND Direccion = N'ENTRADA';";
+
+            object? result = db.ExecuteScalar(query, new[] { new SqlParameter("@ClienteId", clienteId) });
+            if (result == null || result == DBNull.Value)
+                return null;
+
+            return Convert.ToDateTime(result);
+        }
+
+        public string? ObtenerEstadoPorTwilioSid(string messageSid)
+        {
+            if (string.IsNullOrWhiteSpace(messageSid))
+                return null;
+
+            EnsureSchema();
+
+            string query = @"
+SELECT TOP 1 Estado
+FROM dbo.ChatMensajes
+WHERE TwilioMessageSid = @Sid;";
+
+            object? result = db.ExecuteScalar(query, new[] { new SqlParameter("@Sid", messageSid.Trim()) });
+            return result == null || result == DBNull.Value ? null : result.ToString();
+        }
+
+        public void ActualizarEstadoPorTwilioSid(string messageSid, string estado, string? detalleError)
+        {
+            EnsureSchema();
+
+            string query = @"
+UPDATE dbo.ChatMensajes
+SET Estado = @Estado,
+    DetalleError = @DetalleError
+WHERE TwilioMessageSid = @Sid;";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@Sid", messageSid.Trim()),
+                new SqlParameter("@Estado", estado),
+                new SqlParameter("@DetalleError", (object?)detalleError ?? DBNull.Value)
+            };
+            db.ExecuteNonQuery(query, parametros);
+        }
+
+        public DataTable ObtenerResumenMiembro(int clienteId)
+        {
+            EnsureSchema();
+
+            string query = @"
+SELECT
+    c.ID AS ClienteId,
+    c.Nombre,
+    ISNULL(c.Telefono, N'') AS Telefono,
+    (
+        SELECT TOP 1 ISNULL(p.Nombre, N'')
+        FROM dbo.Membresias m
+        LEFT JOIN dbo.Planes p ON p.Id = m.PlanId
+        WHERE m.ClienteId = c.ID
+        ORDER BY m.Id DESC
+    ) AS [Plan],
+    (
+        SELECT TOP 1 m.FechaFin
+        FROM dbo.Membresias m
+        WHERE m.ClienteId = c.ID
+        ORDER BY m.Id DESC
+    ) AS FechaFin,
+    (
+        SELECT ISNULL(SUM(d.Saldo), 0)
+        FROM dbo.Deudas d
+        WHERE d.ClienteId = c.ID
+          AND d.Estado = N'ACTIVA'
+          AND d.Saldo > 0
+    ) AS SaldoDeuda
+FROM dbo.Clientes c
+WHERE c.ID = @ClienteId;";
+
+            return db.ExecuteQuery(query, new[] { new SqlParameter("@ClienteId", clienteId) });
         }
     }
 }

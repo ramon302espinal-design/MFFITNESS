@@ -319,7 +319,7 @@
             panelComposer.Location = new Point(0, 502);
             panelComposer.Name = "panelComposer";
             panelComposer.Padding = new Padding(8);
-            panelComposer.Size = new Size(776, 96);
+            panelComposer.Size = new Size(776, 188);
             panelComposer.TabIndex = 2;
             // 
             // txtMensaje

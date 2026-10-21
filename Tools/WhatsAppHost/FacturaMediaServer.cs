@@ -40,6 +40,7 @@ namespace WhatsAppHost
             });
 
             app.MapPost(TwilioSettings.WebhookInboundPath, (Delegate)TwilioInboundWebhook.HandleAsync);
+            app.MapPost(TwilioSettings.WebhookStatusPath, (Delegate)TwilioStatusWebhook.HandleAsync);
 
             app.MapGet("/media/factura/{pagoId:int}", (int pagoId) =>
             {

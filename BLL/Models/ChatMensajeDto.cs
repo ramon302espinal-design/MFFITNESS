@@ -13,5 +13,7 @@ namespace BLL.Models
         public DateTime Fecha { get; init; }
         public bool EsAutomatico { get; init; }
         public string? TipoAutomatico { get; init; }
+        public string Origen { get; init; } = string.Empty;
+        public string? DetalleError { get; init; }
     }
 }

@@ -137,7 +137,13 @@ namespace BLL
                     EsAutomatico = row["EsAutomatico"] != DBNull.Value && Convert.ToBoolean(row["EsAutomatico"]),
                     TipoAutomatico = row["TipoAutomatico"] == DBNull.Value
                         ? null
-                        : row["TipoAutomatico"]?.ToString()
+                        : row["TipoAutomatico"]?.ToString(),
+                    Origen = row.Table.Columns.Contains("Origen")
+                        ? row["Origen"]?.ToString() ?? string.Empty
+                        : string.Empty,
+                    DetalleError = row.Table.Columns.Contains("DetalleError") && row["DetalleError"] != DBNull.Value
+                        ? row["DetalleError"]?.ToString()
+                        : null
                 });
             }
 
@@ -156,15 +162,19 @@ namespace BLL
             return chatDal.ObtenerMaxIdChatCliente(clienteId);
         }
 
-        public ChatEnvioResult EnviarMensajeManual(int clienteId, string texto)
+        public ChatEnvioResult EnviarMensajeManual(int clienteId, string texto) =>
+            EnviarMensajeManual(clienteId, texto, simular: false, usarPlantillaAprobada: false);
+
+        public ChatEnvioResult EnviarMensajeManual(
+            int clienteId,
+            string texto,
+            bool simular,
+            bool usarPlantillaAprobada)
         {
             chatDal.EnsureSchema();
 
             if (string.IsNullOrWhiteSpace(texto))
                 return Fallo("Escriba un mensaje antes de enviar.");
-
-            if (!ValidarWhatsAppConfigurado(out ChatEnvioResult? errorConfig))
-                return errorConfig!;
 
             if (!TryGetClienteParaEnvio(clienteId, out string telefono, out string nombre))
             {
@@ -177,17 +187,144 @@ namespace BLL
             }
 
             string cuerpo = texto.Trim();
+            WhatsAppVentanaInfo ventana = EvaluarVentana(clienteId);
+
+            if (simular && !usarPlantillaAprobada && !ventana.Abierta)
+            {
+                return new ChatEnvioResult
+                {
+                    Exito = false,
+                    RequierePlantilla = true,
+                    Simulado = true,
+                    Detalle = ventana.Resumen + " La prueba tampoco envía texto libre con la ventana cerrada."
+                };
+            }
+
+            if (!simular && !usarPlantillaAprobada && !ventana.Abierta)
+            {
+                return new ChatEnvioResult
+                {
+                    Exito = false,
+                    RequierePlantilla = true,
+                    Detalle = ventana.Resumen
+                };
+            }
+
+            if (usarPlantillaAprobada)
+            {
+                string? sidAprobado = twilio.ObtenerContentSidTextoAprobado();
+                var compat = WhatsAppPlantillaCompatibilidad.Evaluar(sidAprobado != null, cuerpo);
+                if (!compat.PuedeEnviar)
+                {
+                    return Fallo(sidAprobado == null
+                        ? "Ninguna plantilla de texto está Approved en Meta. No se envía fuera de la ventana de 24 horas."
+                        : compat.Aviso);
+                }
+            }
+
+            if (simular)
+            {
+                return new ChatEnvioResult
+                {
+                    Exito = true,
+                    Simulado = true,
+                    Estado = WhatsAppEstadoChat.Simulado,
+                    Detalle = usarPlantillaAprobada
+                        ? $"Prueba de plantilla para {nombre}. No se llamó a Twilio y no se guardó en el historial.\r\n\r\n{cuerpo}"
+                        : $"Prueba de texto libre para {nombre}. No se llamó a Twilio y no se guardó en el historial.\r\n\r\n{cuerpo}"
+                };
+            }
+
+            if (!ValidarWhatsAppConfigurado(out ChatEnvioResult? errorConfig))
+                return errorConfig!;
+
             string usuario = ObtenerUsuarioActual();
+            string origen = usarPlantillaAprobada ? "PLANTILLA" : "SESION";
 
             int mensajeId = chatDal.InsertarMensaje(
                 clienteId,
                 "SALIDA",
                 cuerpo,
-                "PENDIENTE",
-                usuario);
+                WhatsAppEstadoChat.Pendiente,
+                usuario,
+                origen: origen);
 
-            WhatsAppEnvioResult envio = twilio.Enviar(telefono, cuerpo);
-            return FinalizarEnvio(clienteId, nombre, mensajeId, envio, "Mensaje enviado");
+            WhatsAppEnvioResult envio = usarPlantillaAprobada
+                ? twilio.Enviar(telefono, cuerpo)
+                : twilio.EnviarTextoSesion(telefono, cuerpo);
+
+            string prefijo = usarPlantillaAprobada
+                ? "Enviado con plantilla aprobada"
+                : "Mensaje enviado";
+            return FinalizarEnvio(clienteId, nombre, mensajeId, envio, prefijo);
+        }
+
+        public int ObtenerHuellaEstados(int clienteId)
+        {
+            chatDal.EnsureSchema();
+            return chatDal.ObtenerHuellaEstados(clienteId);
+        }
+
+        public WhatsAppVentanaInfo EvaluarVentana(int clienteId)
+        {
+            chatDal.EnsureSchema();
+            DateTime? ultima = chatDal.ObtenerUltimaEntrada(clienteId);
+            bool abierta = WhatsAppVentanaAtencion.EstaAbierta(ultima, DateTime.Now);
+            return new WhatsAppVentanaInfo
+            {
+                Abierta = abierta,
+                UltimaEntrada = ultima,
+                CierraEn = WhatsAppVentanaAtencion.CierraEn(ultima)
+            };
+        }
+
+        public string ObtenerResumenMiembro(int clienteId)
+        {
+            DataTable dt = chatDal.ObtenerResumenMiembro(clienteId);
+            if (dt.Rows.Count == 0)
+                return "Miembro no encontrado.";
+
+            DataRow row = dt.Rows[0];
+            string nombre = row["Nombre"]?.ToString() ?? "Miembro";
+            string telefono = row["Telefono"]?.ToString() ?? string.Empty;
+            string plan = row["Plan"] == DBNull.Value ? "sin plan" : row["Plan"]?.ToString() ?? "sin plan";
+            string vence = row["FechaFin"] == DBNull.Value
+                ? "sin fecha"
+                : Convert.ToDateTime(row["FechaFin"]).ToString("dd/MM/yyyy");
+            decimal saldo = row["SaldoDeuda"] == DBNull.Value ? 0m : Convert.ToDecimal(row["SaldoDeuda"]);
+
+            return $"{nombre}\r\nTeléfono: {telefono}\r\nPlan: {plan}\r\nVence: {vence}\r\nSaldo de deuda activa: {saldo:C2}";
+        }
+
+        public bool AplicarEstadoEntregaTwilio(string messageSid, string? statusTwilio, string? errorCode, string? errorMessage)
+        {
+            if (string.IsNullOrWhiteSpace(messageSid))
+                return false;
+
+            chatDal.EnsureSchema();
+            string? actual = chatDal.ObtenerEstadoPorTwilioSid(messageSid);
+            if (actual == null)
+                return false;
+
+            string? mapeado = WhatsAppEstadoChat.DesdeStatusTwilio(statusTwilio);
+            if (mapeado == null)
+                return false;
+
+            if (!WhatsAppEstadoChat.DebeActualizar(actual, mapeado))
+                return false;
+
+            string? detalle = null;
+            if (mapeado == WhatsAppEstadoChat.Fallido)
+            {
+                detalle = string.Join(" ", new[] { errorCode, errorMessage }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (detalle.Length > 500)
+                    detalle = detalle[..500];
+                if (string.IsNullOrWhiteSpace(detalle))
+                    detalle = "Twilio reportó fallo de entrega.";
+            }
+
+            chatDal.ActualizarEstadoPorTwilioSid(messageSid, mapeado, detalle);
+            return true;
         }
 
         public ChatEnvioResult EnviarPdfManual(int clienteId, string rutaPdf, string? caption = null)
@@ -245,6 +382,10 @@ namespace BLL
                 : $"{captionEnvio}\n[PDF: {nombreArchivo}]\n{mediaUrl}";
 
             string usuario = ObtenerUsuarioActual();
+            bool adjuntoLibre = VentanaPermiteAdjuntoLibre(clienteId, out ChatEnvioResult? bloqueoPdf);
+            if (bloqueoPdf != null)
+                return bloqueoPdf;
+
             int mensajeId = chatDal.InsertarMensaje(
                 clienteId,
                 "SALIDA",
@@ -252,7 +393,11 @@ namespace BLL
                 "PENDIENTE",
                 usuario);
 
-            WhatsAppEnvioResult envio = twilio.Enviar(telefono, captionEnvio, mediaUrl: mediaUrl);
+            WhatsAppEnvioResult envio = twilio.Enviar(
+                telefono,
+                captionEnvio,
+                mediaUrl: mediaUrl,
+                permitirAdjuntoLibre: adjuntoLibre);
             return FinalizarEnvio(clienteId, nombre, mensajeId, envio, "PDF enviado");
         }
 
@@ -307,6 +452,10 @@ namespace BLL
                 : $"{captionEnvio}\n[Factura #{pagoId}] {concepto} · {monto:C2}\n{mediaUrl}";
 
             string usuario = ObtenerUsuarioActual();
+            bool adjuntoLibre = VentanaPermiteAdjuntoLibre(clienteId, out ChatEnvioResult? bloqueoPdf);
+            if (bloqueoPdf != null)
+                return bloqueoPdf;
+
             int mensajeId = chatDal.InsertarMensaje(
                 clienteId,
                 "SALIDA",
@@ -314,8 +463,27 @@ namespace BLL
                 "PENDIENTE",
                 usuario);
 
-            WhatsAppEnvioResult envio = twilio.Enviar(telefono, captionEnvio, mediaUrl: mediaUrl);
+            WhatsAppEnvioResult envio = twilio.Enviar(
+                telefono,
+                captionEnvio,
+                mediaUrl: mediaUrl,
+                permitirAdjuntoLibre: adjuntoLibre);
             return FinalizarEnvio(clienteId, nombre, mensajeId, envio, "Factura enviada");
+        }
+
+        private bool VentanaPermiteAdjuntoLibre(int clienteId, out ChatEnvioResult? bloqueo)
+        {
+            bloqueo = null;
+            if (EvaluarVentana(clienteId).Abierta)
+                return true;
+
+            if (twilio.PlantillaFacturaAprobada())
+                return false;
+
+            bloqueo = Fallo(
+                "Ventana de 24 horas cerrada. No se envía el PDF como adjunto libre. " +
+                "La plantilla de factura no está Approved en Meta.");
+            return false;
         }
 
         private static string? ResolverMediaUrlFactura(int pagoId)
@@ -447,28 +615,43 @@ namespace BLL
             WhatsAppEnvioResult envio,
             string prefijoExito)
         {
-            string estado = envio.Exito ? "ENVIADO" : "ERROR";
+            string estado = WhatsAppEstadoChat.DesdeRespuestaApi(envio.Exito, envio.StatusFinal);
+            string? detalleError = estado == WhatsAppEstadoChat.Fallido ? envio.Detalle : null;
             chatDal.ActualizarEstadoMensaje(
                 mensajeId,
                 estado,
                 envio.MessageSid,
-                envio.Exito ? null : envio.Detalle);
+                detalleError,
+                envio.ContentSidUsado);
 
-            if (!envio.Exito)
+            bool aceptado = estado is WhatsAppEstadoChat.Enviado
+                or WhatsAppEstadoChat.Entregado
+                or WhatsAppEstadoChat.Leido;
+
+            if (!aceptado)
             {
                 return new ChatEnvioResult
                 {
                     Exito = false,
                     Detalle = envio.Detalle,
-                    MensajeId = mensajeId
+                    MensajeId = mensajeId,
+                    Estado = estado
                 };
             }
+
+            string confirmacion = estado switch
+            {
+                WhatsAppEstadoChat.Entregado => $"{prefijoExito} y entregado a {nombre}.",
+                WhatsAppEstadoChat.Leido => $"{prefijoExito} y leído por {nombre}.",
+                _ => $"{prefijoExito} a {nombre}. Twilio lo aceptó; todavía no consta como entregado."
+            };
 
             return new ChatEnvioResult
             {
                 Exito = true,
-                Detalle = $"{prefijoExito} a {nombre}.",
-                MensajeId = mensajeId
+                Detalle = confirmacion,
+                MensajeId = mensajeId,
+                Estado = estado
             };
         }
 
@@ -553,7 +736,8 @@ namespace BLL
                 cuerpo,
                 "RECIBIDO",
                 remitente,
-                messageSid);
+                messageSid,
+                origen: "ENTRANTE");
 
             return new ChatInboundResult
             {

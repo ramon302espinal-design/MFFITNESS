@@ -29,6 +29,8 @@ namespace WhatsAppHost
 
                     Webhook inbound (Twilio Console → When a message comes in):
                       {WhatsAppPublicBaseUrl}/webhook/twilio/whatsapp
+                    Estados de entrega (Status callback):
+                      {WhatsAppPublicBaseUrl}/webhook/twilio/status
 
                     Stack dev (una terminal):
                       powershell -ExecutionPolicy Bypass -File .\Start-WhatsAppStack.ps1 -Profile Dev

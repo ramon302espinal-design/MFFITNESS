@@ -23,7 +23,8 @@ namespace BLL
             string mensaje,
             string? contentSidEspecifico = null,
             string? mediaUrl = null,
-            IReadOnlyDictionary<string, string>? variablesFactura = null)
+            IReadOnlyDictionary<string, string>? variablesFactura = null,
+            bool permitirAdjuntoLibre = true)
         {
             if (string.IsNullOrWhiteSpace(numeroDestino))
             {
@@ -48,7 +49,8 @@ namespace BLL
             // 1) Plantilla media aprobada (unica via que Meta entrega fuera de la ventana 24h).
             // 2) Adjunto libre SIN caption (solo llega dentro de la ventana 24h; error 63016 fuera).
             // NUNCA plantilla de texto con link.
-            bool adjuntarLibre = tieneMedia
+            bool adjuntarLibre = permitirAdjuntoLibre
+                && tieneMedia
                 && (TwilioSettings.AdjuntarPdfLibre
                     || !TwilioSettings.ModoProduccion
                     || TwilioSettings.PermitirBodyEnProduccion);
@@ -123,6 +125,62 @@ namespace BLL
 
             return EnviarInterno(numeroDestino, mensaje, contentSid, mediaUrl: null);
         }
+
+        /// <summary>
+        /// Texto libre dentro de la ventana de 24 h. No usa ContentSid.
+        /// El caller debe haber comprobado la ventana.
+        /// </summary>
+        public WhatsAppEnvioResult EnviarTextoSesion(string numeroDestino, string mensaje)
+        {
+            if (string.IsNullOrWhiteSpace(numeroDestino))
+                return Fallo("Telefono destino invalido.");
+
+            if (string.IsNullOrWhiteSpace(mensaje))
+                return Fallo("Mensaje WhatsApp vacio.");
+
+            if (!TwilioSettings.CredencialesConfiguradas)
+                return Fallo("Credenciales Twilio no configuradas.");
+
+            return EnviarInterno(
+                numeroDestino,
+                mensaje,
+                contentSid: null,
+                mediaUrl: null,
+                permitirBodySesion: true);
+        }
+
+        public bool HayContentSidConfigurado() =>
+            TwilioSettings.UsaPlantillaContent || TwilioSettings.UsaPlantillaAvisoUtility;
+
+        public string? ContentSidConfigurado()
+        {
+            if (TwilioSettings.UsaPlantillaAvisoUtility)
+                return TwilioSettings.ContentSidAvisoUtility;
+
+            return TwilioSettings.UsaPlantillaContent ? TwilioSettings.ContentSidGenerico : null;
+        }
+
+        /// <summary>
+        /// SID de texto que Meta tiene en Approved ahora.
+        /// Primero la utility; si no, la genérica. Null si ninguna está aprobada.
+        /// </summary>
+        public string? ObtenerContentSidTextoAprobado()
+        {
+            string? utility = ResolverAvisoUtilitySid();
+            if (!string.IsNullOrWhiteSpace(utility))
+                return utility;
+
+            if (!TwilioSettings.UsaPlantillaContent)
+                return null;
+
+            return ContentAprobadoEnWhatsApp(TwilioSettings.ContentSidGenerico)
+                ? TwilioSettings.ContentSidGenerico.Trim()
+                : null;
+        }
+
+        public bool PlantillaFacturaAprobada() =>
+            TwilioSettings.UsaPlantillaFacturaMedia
+            && ContentAprobadoEnWhatsApp(TwilioSettings.ContentSidFactura);
 
         /// <summary>
         /// La plantilla UTILITY solo sirve cuando Meta ya la aprobo; enviarla antes
@@ -270,7 +328,8 @@ namespace BLL
                 to: new PhoneNumber($"whatsapp:{numeroTo}"),
                 from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
                 contentSid: contentSidAviso,
-                contentVariables: contentVariables);
+                contentVariables: contentVariables,
+                statusCallback: ResolverStatusCallback());
 
             string? messageSid = message.Sid;
             if (string.IsNullOrWhiteSpace(messageSid))
@@ -280,7 +339,8 @@ namespace BLL
                     Exito = true,
                     Entregado = true,
                     Detalle = "Aviso (plantilla UTILITY) aceptado por Twilio.",
-                    StatusFinal = "accepted"
+                    StatusFinal = "accepted",
+                    ContentSidUsado = contentSidAviso
                 };
             }
 
@@ -296,7 +356,8 @@ namespace BLL
                     ? $"Aviso enviado (plantilla UTILITY, status={estado.Status})."
                     : FormatearErrorEstado(estado),
                 MessageSid = messageSid,
-                StatusFinal = estado.Status
+                StatusFinal = estado.Status,
+                ContentSidUsado = contentSidAviso
             };
         }
 
@@ -361,7 +422,8 @@ namespace BLL
                     to: new PhoneNumber($"whatsapp:{numeroTo}"),
                     from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
                     contentSid: TwilioSettings.ContentSidFactura,
-                    contentVariables: contentVariables);
+                    contentVariables: contentVariables,
+                    statusCallback: ResolverStatusCallback());
 
                 string? messageSid = message.Sid;
                 if (string.IsNullOrWhiteSpace(messageSid))
@@ -372,7 +434,8 @@ namespace BLL
                         Entregado = true,
                         Detalle = "PDF adjunto (plantilla media) aceptado por Twilio."
                             + DetalleMediaUrl(mediaUrl),
-                        StatusFinal = "accepted"
+                        StatusFinal = "accepted",
+                        ContentSidUsado = TwilioSettings.ContentSidFactura
                     };
                 }
 
@@ -388,7 +451,8 @@ namespace BLL
                         ? "PDF adjunto enviado (plantilla twilio/media)." + DetalleMediaUrl(mediaUrl)
                         : FormatearErrorEstado(estado) + DetalleMediaUrl(mediaUrl),
                     MessageSid = messageSid,
-                    StatusFinal = estado.Status
+                    StatusFinal = estado.Status,
+                    ContentSidUsado = TwilioSettings.ContentSidFactura
                 };
             }
             catch (ApiException apiEx)
@@ -427,12 +491,14 @@ namespace BLL
             string? contentSid,
             string? mediaUrl,
             bool forzarBodyConMedia = false,
-            bool soloMediaSinCaption = false)
+            bool soloMediaSinCaption = false,
+            bool permitirBodySesion = false)
         {
             bool usarPlantilla = !string.IsNullOrWhiteSpace(contentSid) && string.IsNullOrWhiteSpace(mediaUrl);
 
             if (TwilioSettings.ModoProduccion
                 && !usarPlantilla
+                && !permitirBodySesion
                 && !TwilioSettings.PermitirBodyEnProduccion
                 && string.IsNullOrWhiteSpace(mediaUrl))
             {
@@ -464,7 +530,8 @@ namespace BLL
                         to: new PhoneNumber($"whatsapp:{numeroTo}"),
                         from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
                         contentSid: contentSid,
-                        contentVariables: contentVariables);
+                        contentVariables: contentVariables,
+                        statusCallback: ResolverStatusCallback());
                 }
                 else if (!string.IsNullOrWhiteSpace(mediaUrl))
                 {
@@ -488,7 +555,8 @@ namespace BLL
                         message = MessageResource.Create(
                             to: new PhoneNumber($"whatsapp:{numeroTo}"),
                             from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
-                            mediaUrl: mediaUrls);
+                            mediaUrl: mediaUrls,
+                            statusCallback: ResolverStatusCallback());
                     }
                     else
                     {
@@ -496,7 +564,8 @@ namespace BLL
                             to: new PhoneNumber($"whatsapp:{numeroTo}"),
                             from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
                             body: mensaje,
-                            mediaUrl: mediaUrls);
+                            mediaUrl: mediaUrls,
+                            statusCallback: ResolverStatusCallback());
                     }
                 }
                 else
@@ -507,7 +576,8 @@ namespace BLL
                     message = MessageResource.Create(
                         to: new PhoneNumber($"whatsapp:{numeroTo}"),
                         from: new PhoneNumber($"whatsapp:{numeroOrigen}"),
-                        body: mensaje);
+                        body: mensaje,
+                        statusCallback: ResolverStatusCallback());
                 }
 
                 string? messageSid = message.Sid;
@@ -519,7 +589,8 @@ namespace BLL
                         Entregado = true,
                         Detalle = "Mensaje aceptado por Twilio." + DetalleMediaUrl(mediaUrl),
                         MessageSid = null,
-                        StatusFinal = "accepted"
+                        StatusFinal = "accepted",
+                        ContentSidUsado = usarPlantilla ? contentSid : null
                     };
                 }
 
@@ -533,7 +604,8 @@ namespace BLL
                         Entregado = false,
                         Detalle = FormatearErrorEstado(estadoFinal) + DetalleMediaUrl(mediaUrl),
                         MessageSid = messageSid,
-                        StatusFinal = estadoFinal.Status
+                        StatusFinal = estadoFinal.Status,
+                        ContentSidUsado = usarPlantilla ? contentSid : null
                     };
                 }
 
@@ -550,7 +622,8 @@ namespace BLL
                                 : $"Aceptado por Twilio (status={estadoFinal.Status}).")
                                 + DetalleMediaUrl(mediaUrl),
                             MessageSid = messageSid,
-                            StatusFinal = estadoFinal.Status
+                            StatusFinal = estadoFinal.Status,
+                            ContentSidUsado = usarPlantilla ? contentSid : null
                         };
                     }
 
@@ -565,7 +638,8 @@ namespace BLL
                                 : "En produccion use TwilioContentSidGenerico con plantilla aprobada.")
                             + DetalleMediaUrl(mediaUrl),
                         MessageSid = messageSid,
-                        StatusFinal = estadoFinal.Status
+                        StatusFinal = estadoFinal.Status,
+                        ContentSidUsado = usarPlantilla ? contentSid : null
                     };
                 }
 
@@ -576,7 +650,8 @@ namespace BLL
                     Entregado = entregado,
                     Detalle = $"status={estadoFinal.Status}" + DetalleMediaUrl(mediaUrl),
                     MessageSid = messageSid,
-                    StatusFinal = estadoFinal.Status
+                    StatusFinal = estadoFinal.Status,
+                    ContentSidUsado = usarPlantilla ? contentSid : null
                 };
             }
             catch (ApiException apiEx)
@@ -587,6 +662,18 @@ namespace BLL
             {
                 return Fallo(ex.Message + DetalleMediaUrl(mediaUrl));
             }
+        }
+
+        private static Uri? ResolverStatusCallback()
+        {
+            string? url = TwilioSettings.StatusCallbackPublicUrl;
+            if (string.IsNullOrWhiteSpace(url))
+                return null;
+
+            return Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)
+                   && uri.Scheme == Uri.UriSchemeHttps
+                ? uri
+                : null;
         }
 
         private static string LeerVar(

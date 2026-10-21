@@ -250,6 +250,22 @@ namespace CORE
             }
         }
 
+        /// <summary>POST de estados de entrega Twilio (delivered, read, failed).</summary>
+        public static string WebhookStatusPath => "/webhook/twilio/status";
+
+        public static string? StatusCallbackPublicUrl
+        {
+            get
+            {
+                string baseUrl = PublicBaseUrl;
+                if (string.IsNullOrWhiteSpace(baseUrl)
+                    || !baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                    return null;
+
+                return baseUrl.TrimEnd('/') + WebhookStatusPath;
+            }
+        }
+
         /// <summary>Estado del webhook inbound para la UI de chat.</summary>
         public static string? ObtenerEstadoWebhookInbound()
         {

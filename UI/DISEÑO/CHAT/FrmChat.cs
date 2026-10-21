@@ -35,6 +35,10 @@ namespace UI.DISEÑO.CHAT
         private System.Windows.Forms.Timer? _timerEstadoWebhook;
         private ToolTip? _toolTipEstado;
         private Label? _lblEstadoMensajes;
+        private CheckBox? _chkModoPrueba;
+        private Label? _lblVentana;
+        private bool _ajustandoModoPrueba;
+        private int _ultimaHuellaEstados = int.MinValue;
 
         public FrmChat() : this(null)
         {
@@ -77,7 +81,8 @@ namespace UI.DISEÑO.CHAT
 
             WhatsAppStackSecrets.InvalidateCache();
             ConfigurarPanelMensajes();
-            ConfigurarModoSoloRecepcion();
+            ConfigurarCentroConversaciones();
+            txtBuscar.PlaceholderText = "Buscar nombre o teléfono";
             ChatNotificationHost.MensajeEntranteRecibido += OnMensajeEntranteGlobal;
 
             ActualizarEstadoTwilio();
@@ -114,6 +119,7 @@ namespace UI.DISEÑO.CHAT
             _timerEstadoWebhook.Tick += (_, _) =>
             {
                 ActualizarEstadoTwilio();
+                RefrescarEstadosEntrega();
                 if (!TwilioSettings.WebhookInboundConfigurado || string.IsNullOrWhiteSpace(WhatsAppStackBootstrapper.TryGetNgrokPublicUrl()))
                     _ = SincronizarNgrokSilenciosoAsync();
             };
@@ -251,27 +257,190 @@ namespace UI.DISEÑO.CHAT
                 aplicar();
         }
 
-        private void ConfigurarModoSoloRecepcion()
+        private void ConfigurarCentroConversaciones()
         {
-            if (TwilioSettings.ChatEnvioManualHabilitado)
+            panelComposer.Height = 188;
+
+            btnPdf.Location = new Point(11, 112);
+            btnPdf.Size = new Size(72, 56);
+            btnUltimaFactura.Location = new Point(89, 112);
+            btnUltimaFactura.Size = new Size(98, 56);
+            txtMensaje.Location = new Point(197, 112);
+            txtMensaje.Height = 56;
+            btnEnviar.Location = new Point(panelComposer.Width - 124, 112);
+            btnEnviar.Size = new Size(112, 56);
+            btnEnviar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblAdjunto.Location = new Point(197, 92);
+
+            _lblVentana = new Label
+            {
+                AutoSize = false,
+                Location = new Point(11, 8),
+                Size = new Size(430, 36),
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                Text = "Seleccione un miembro. El modo prueba no llama a Twilio ni guarda el mensaje."
+            };
+
+            _chkModoPrueba = new CheckBox
+            {
+                AutoSize = true,
+                Location = new Point(480, 10),
+                Text = "Modo prueba (no envía a WhatsApp)",
+                Checked = true,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+            };
+            _chkModoPrueba.CheckedChanged += (_, _) =>
+            {
+                if (_ajustandoModoPrueba)
+                    return;
+
+                if (_chkModoPrueba.Checked)
+                {
+                    btnEnviar.Text = "Probar";
+                    return;
+                }
+
+                DialogResult ok = MessageBox.Show(this,
+                    "El modo real enviará WhatsApp por Twilio al número del miembro.\r\n" +
+                    "Con la ventana de 24 horas cerrada solo se ofrece la plantilla aprobada.\r\n\r\n¿Activar el envío real?",
+                    "WhatsApp",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (ok != DialogResult.Yes)
+                {
+                    _ajustandoModoPrueba = true;
+                    _chkModoPrueba.Checked = true;
+                    _ajustandoModoPrueba = false;
+                    return;
+                }
+
+                btnEnviar.Text = "Enviar";
+            };
+
+            var btnFicha = new Button
+            {
+                Text = "Ficha",
+                Location = new Point(11, 72),
+                Size = new Size(72, 28),
+                FlatStyle = FlatStyle.Flat
+            };
+            btnFicha.Click += (_, _) => AbrirFichaMiembro();
+
+            var btnPlantillas = new Button
+            {
+                Text = "Plantillas y automatizaciones",
+                Location = new Point(89, 72),
+                Size = new Size(220, 28),
+                FlatStyle = FlatStyle.Flat
+            };
+            btnPlantillas.Click += (_, _) => AbrirPlantillas();
+
+            panelComposer.Controls.Add(_lblVentana);
+            panelComposer.Controls.Add(_chkModoPrueba);
+            panelComposer.Controls.Add(btnFicha);
+            panelComposer.Controls.Add(btnPlantillas);
+            btnEnviar.Text = "Probar";
+
+            panelComposer.Resize += (_, _) =>
+            {
+                if (_chkModoPrueba == null || _lblVentana == null)
+                    return;
+
+                _lblVentana.Width = Math.Max(200, _chkModoPrueba.Left - 20);
+                txtMensaje.Width = Math.Max(120, panelComposer.ClientSize.Width - txtMensaje.Left - btnEnviar.Width - 24);
+                btnEnviar.Left = panelComposer.ClientSize.Width - btnEnviar.Width - 12;
+            };
+        }
+
+        private void AbrirPlantillas()
+        {
+            using var frm = new FrmPlantillasAutomatizaciones(_clienteSeleccionadoId);
+            frm.ShowDialog(this);
+            if (_clienteSeleccionadoId is int id)
+                CargarMensajes(id);
+        }
+
+        private void AbrirFichaMiembro()
+        {
+            if (_clienteSeleccionadoId is not int clienteId)
+            {
+                MessageBox.Show(this, "Seleccione un miembro.", "Ficha", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string resumen;
+            try
+            {
+                resumen = _chatBll.ObtenerResumenMiembro(clienteId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Ficha del miembro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            UI.DISEÑO.FrmPresentacion? presentacion = null;
+            foreach (Form form in Application.OpenForms)
+            {
+                if (form is UI.DISEÑO.FrmPresentacion abierta)
+                {
+                    presentacion = abierta;
+                    break;
+                }
+            }
+
+            if (presentacion == null)
+            {
+                MessageBox.Show(this, resumen, "Ficha del miembro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using var frm = new UI.DISEÑO.FrmClientes(presentacion, clienteId);
+            frm.ShowDialog(this);
+        }
+
+        private void RefrescarEstadosEntrega()
+        {
+            if (_clienteSeleccionadoId is not int clienteId || clienteId <= 0 || _enviando)
                 return;
 
-            txtMensaje.Visible = false;
-            btnEnviar.Visible = false;
-            btnPdf.Visible = false;
-            btnUltimaFactura.Visible = false;
-            lblAdjunto.Visible = false;
-
-            var lblSoloRecepcion = new Label
+            int huella;
+            try
             {
-                Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(100, 100, 100),
-                Text = "Solo recepción de WhatsApp — envío deshabilitado temporalmente",
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            panelComposer.Controls.Add(lblSoloRecepcion);
-            lblSoloRecepcion.BringToFront();
+                huella = _chatBll.ObtenerHuellaEstados(clienteId);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (huella == _ultimaHuellaEstados)
+                return;
+
+            _ultimaHuellaEstados = huella;
+            CargarMensajes(clienteId);
+        }
+
+        private void ActualizarVentana(int clienteId)
+        {
+            try
+            {
+                var info = _chatBll.EvaluarVentana(clienteId);
+                if (_lblVentana != null)
+                {
+                    _lblVentana.Text = info.Resumen;
+                    _lblVentana.ForeColor = info.Abierta
+                        ? Color.FromArgb(0, 110, 80)
+                        : Color.FromArgb(150, 70, 0);
+                }
+            }
+            catch
+            {
+                if (_lblVentana != null)
+                    _lblVentana.Text = "No se pudo consultar la ventana de atención.";
+            }
         }
 
         private void ConfigurarPanelMensajes()
@@ -531,15 +700,16 @@ namespace UI.DISEÑO.CHAT
                 ? $"{conv.Nombre}  ·  {telefono}"
                 : $"{conv.Nombre}  ·  (sin teléfono válido)";
 
-            bool puedeEnviar = conv.TelefonoValido && TwilioSettings.ChatEnvioManualHabilitado;
+            bool puedeEnviar = conv.TelefonoValido;
             btnEnviar.Enabled = puedeEnviar && !_enviando;
             txtMensaje.Enabled = puedeEnviar;
             btnPdf.Enabled = puedeEnviar && !_enviando;
             btnUltimaFactura.Enabled = puedeEnviar && !_enviando;
+            ActualizarVentana(conv.ClienteId);
 
-            if (!puedeEnviar)
-                lblEstadoTwilio.Text = "Teléfono inválido — actualice en Clientes";
-            else
+            if (!puedeEnviar && _lblVentana != null)
+                _lblVentana.Text = "Teléfono inválido — actualice el número en Clientes.";
+            else if (puedeEnviar)
                 ActualizarEstadoTwilio();
 
             _chatBll.MarcarConversacionLeida(conv.ClienteId);
@@ -641,6 +811,14 @@ namespace UI.DISEÑO.CHAT
                 _lblEstadoMensajes.Visible = mensajes.Count == 0;
 
             BeginInvoke(ScrollAlFinal);
+            try
+            {
+                _ultimaHuellaEstados = _chatBll.ObtenerHuellaEstados(clienteId);
+            }
+            catch
+            {
+                // la huella se reintenta en el timer
+            }
         }
 
         private void CargarMensajes(int clienteId) => _ = CargarMensajesAsync(clienteId);
@@ -651,16 +829,31 @@ namespace UI.DISEÑO.CHAT
             int innerW = maxAnchoBurbuja - 24;
 
             Color fondo = esSalida ? Color.FromArgb(220, 248, 198) : Color.White;
-            if (msg.EsAutomatico)
+            if (msg.EsAutomatico || string.Equals(msg.Origen, "AUTO", StringComparison.OrdinalIgnoreCase))
                 fondo = Color.FromArgb(255, 249, 220);
+            else if (string.Equals(msg.Origen, "PLANTILLA", StringComparison.OrdinalIgnoreCase))
+                fondo = Color.FromArgb(220, 235, 255);
+            else if (string.Equals(msg.Estado, "SIMULADO", StringComparison.OrdinalIgnoreCase))
+                fondo = Color.FromArgb(230, 230, 230);
+
+            bool fallido = string.Equals(msg.Estado, "FALLIDO", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(msg.Estado, "ERROR", StringComparison.OrdinalIgnoreCase);
+            if (fallido)
+                fondo = Color.FromArgb(255, 214, 214);
 
             string cuerpo = FormatearCuerpoBurbuja(msg);
             string meta = msg.Fecha.ToString("dd/MM HH:mm");
+            if (!string.IsNullOrWhiteSpace(msg.Estado))
+                meta += " · " + WhatsAppEstadoChat.Etiqueta(msg.Estado);
             if (esSalida && !string.IsNullOrWhiteSpace(msg.Usuario))
                 meta += $" · {msg.Usuario}";
-            if (!string.Equals(msg.Estado, "ENVIADO", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(msg.Estado, "RECIBIDO", StringComparison.OrdinalIgnoreCase))
-                meta += $" · {msg.Estado}";
+            if (fallido && !string.IsNullOrWhiteSpace(msg.DetalleError))
+            {
+                string error = msg.DetalleError.Trim();
+                if (error.Length > 140)
+                    error = error[..140];
+                meta += " · " + error;
+            }
 
             var fontCuerpo = new Font("Segoe UI", 10F);
             var fontMeta = new Font("Segoe UI", 7.5F);
@@ -720,11 +913,18 @@ namespace UI.DISEÑO.CHAT
         private static string FormatearCuerpoBurbuja(ChatMensajeDto msg)
         {
             var sb = new StringBuilder();
-            if (msg.EsAutomatico)
+            if (msg.EsAutomatico || string.Equals(msg.Origen, "AUTO", StringComparison.OrdinalIgnoreCase))
             {
                 string tipo = string.IsNullOrWhiteSpace(msg.TipoAutomatico) ? "" : ": " + msg.TipoAutomatico;
-                sb.AppendLine("[Auto" + tipo + "]");
+                sb.AppendLine("[Automático" + tipo + "]");
             }
+            else if (string.Equals(msg.Origen, "PLANTILLA", StringComparison.OrdinalIgnoreCase))
+                sb.AppendLine("[Plantilla aprobada]");
+            else if (string.Equals(msg.Origen, "SESION", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(msg.Origen, "MANUAL", StringComparison.OrdinalIgnoreCase))
+                sb.AppendLine("[Manual]");
+            else if (string.Equals(msg.Estado, "SIMULADO", StringComparison.OrdinalIgnoreCase))
+                sb.AppendLine("[Prueba]");
 
             if (string.IsNullOrWhiteSpace(msg.Cuerpo))
                 return sb.Length > 0 ? sb.ToString().TrimEnd() : "(sin texto)";
@@ -768,8 +968,13 @@ namespace UI.DISEÑO.CHAT
 
         private void btnPdf_Click(object sender, EventArgs e)
         {
-            if (!TwilioSettings.ChatEnvioManualHabilitado)
+            if (_chkModoPrueba?.Checked != false)
+            {
+                MessageBox.Show(this,
+                    "El modo prueba no adjunta PDF. Desactive el modo prueba para enviar un archivo real.",
+                    "WhatsApp", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
+            }
             if (!_clienteSeleccionadoId.HasValue)
                 return;
 
@@ -808,34 +1013,41 @@ namespace UI.DISEÑO.CHAT
             ActualizarAdjuntoUi();
         }
 
-        private void btnUltimaFactura_Click(object sender, EventArgs e) => EnviarUltimaFacturaMiembro();
+        private void btnUltimaFactura_Click(object sender, EventArgs e) => _ = EnviarUltimaFacturaMiembroAsync();
 
-        private void EnviarUltimaFacturaMiembro()
+        private async Task EnviarUltimaFacturaMiembroAsync()
         {
-            if (!TwilioSettings.ChatEnvioManualHabilitado)
+            if (_chkModoPrueba?.Checked != false)
+            {
+                MessageBox.Show(this,
+                    "El modo prueba no envía la factura. Desactive el modo prueba para el envío real.",
+                    "WhatsApp", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
+            }
             if (!_clienteSeleccionadoId.HasValue || _enviando)
                 return;
 
-            _enviando = true;
-            btnEnviar.Enabled = false;
-            btnPdf.Enabled = false;
-            btnUltimaFactura.Enabled = false;
-            txtMensaje.Enabled = false;
-            Cursor = Cursors.WaitCursor;
+            int clienteId = _clienteSeleccionadoId.Value;
+            string caption = txtMensaje.Text.Trim();
+            MarcarEnvioEnCurso(true, "Buscando la última factura…");
 
             try
             {
-                string caption = txtMensaje.Text.Trim();
-                ChatEnvioResult resultado = _chatBll.EnviarUltimaFacturaMiembro(
-                    _clienteSeleccionadoId.Value,
-                    string.IsNullOrWhiteSpace(caption) ? null : caption);
+                ChatEnvioResult resultado = await Task.Run(() =>
+                    _chatBll.EnviarUltimaFacturaMiembro(
+                        clienteId,
+                        string.IsNullOrWhiteSpace(caption) ? null : caption)).ConfigureAwait(true);
+
+                if (IsDisposed)
+                    return;
 
                 if (resultado.Exito)
                 {
+                    if (_lblVentana != null)
+                        _lblVentana.Text = resultado.Detalle;
                     txtMensaje.Clear();
                     LimpiarAdjuntoPdf();
-                    CargarMensajes(_clienteSeleccionadoId.Value);
+                    CargarMensajes(clienteId);
                     CargarConversaciones(mantenerSeleccion: true);
                     SincronizarHuellaChat();
                 }
@@ -843,93 +1055,140 @@ namespace UI.DISEÑO.CHAT
                 {
                     MessageBox.Show(this, resultado.Detalle, "WhatsApp",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    CargarMensajes(_clienteSeleccionadoId.Value);
+                    CargarMensajes(clienteId);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (!IsDisposed)
+                    MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                _enviando = false;
-                Cursor = Cursors.Default;
-                txtMensaje.Enabled = true;
-                btnPdf.Enabled = true;
-                btnUltimaFactura.Enabled = true;
-                btnEnviar.Enabled = true;
-                txtMensaje.Focus();
+                if (!IsDisposed)
+                    MarcarEnvioEnCurso(false, null);
             }
         }
 
-        private void btnEnviar_Click(object sender, EventArgs e) => EnviarMensajeActual();
+        private void MarcarEnvioEnCurso(bool enCurso, string? aviso)
+        {
+            _enviando = enCurso;
+            UseWaitCursor = enCurso;
+            btnEnviar.Enabled = !enCurso && _clienteSeleccionadoId.HasValue;
+            btnPdf.Enabled = !enCurso && _clienteSeleccionadoId.HasValue;
+            btnUltimaFactura.Enabled = !enCurso && _clienteSeleccionadoId.HasValue;
+            txtMensaje.Enabled = !enCurso && _clienteSeleccionadoId.HasValue;
+            if (_lblVentana != null && !string.IsNullOrWhiteSpace(aviso))
+                _lblVentana.Text = aviso;
+            if (!enCurso)
+                txtMensaje.Focus();
+        }
+
+        private void btnEnviar_Click(object sender, EventArgs e) => _ = EnviarMensajeActualAsync();
 
         private void txtMensaje_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter && !e.Shift)
             {
                 e.SuppressKeyPress = true;
-                EnviarMensajeActual();
+                _ = EnviarMensajeActualAsync();
             }
         }
 
-        private void EnviarMensajeActual()
+        private async Task EnviarMensajeActualAsync()
         {
-            if (!TwilioSettings.ChatEnvioManualHabilitado)
-                return;
             if (!_clienteSeleccionadoId.HasValue || _enviando)
                 return;
 
+            int clienteId = _clienteSeleccionadoId.Value;
             string texto = txtMensaje.Text.Trim();
-            bool tienePdf = !string.IsNullOrWhiteSpace(_rutaPdfPendiente);
+            string? rutaPdf = _rutaPdfPendiente;
+            bool tienePdf = !string.IsNullOrWhiteSpace(rutaPdf);
+            bool simular = _chkModoPrueba?.Checked != false;
 
             if (!tienePdf && string.IsNullOrWhiteSpace(texto))
                 return;
 
+            if (tienePdf && simular)
+            {
+                MessageBox.Show(this,
+                    "El modo prueba no envía PDF. Quite el adjunto o desactive el modo prueba.",
+                    "WhatsApp", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             if (tienePdf && string.IsNullOrWhiteSpace(texto) && !ConfirmarEnvioPdfSinTexto())
                 return;
 
-            _enviando = true;
-            btnEnviar.Enabled = false;
-            btnPdf.Enabled = false;
-            btnUltimaFactura.Enabled = false;
-            txtMensaje.Enabled = false;
-            Cursor = Cursors.WaitCursor;
+            MarcarEnvioEnCurso(true, tienePdf ? "Enviando PDF…" : "Enviando…");
 
             try
             {
-                ChatEnvioResult resultado = tienePdf
-                    ? _chatBll.EnviarPdfManual(_clienteSeleccionadoId.Value, _rutaPdfPendiente!, texto)
-                    : _chatBll.EnviarMensajeManual(_clienteSeleccionadoId.Value, texto);
+                ChatEnvioResult resultado = await Task.Run(() => tienePdf
+                    ? _chatBll.EnviarPdfManual(clienteId, rutaPdf!, texto)
+                    : _chatBll.EnviarMensajeManual(clienteId, texto, simular, usarPlantillaAprobada: false))
+                    .ConfigureAwait(true);
+
+                if (IsDisposed)
+                    return;
+
+                if (!tienePdf && resultado.RequierePlantilla)
+                {
+                    DialogResult usar = MessageBox.Show(this,
+                        resultado.Detalle + "\r\n\r\n¿Enviar este texto dentro de la plantilla aprobada de Twilio?",
+                        "Ventana de WhatsApp cerrada",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+                    if (usar == DialogResult.Yes)
+                    {
+                        MarcarEnvioEnCurso(true, "Enviando con plantilla…");
+                        resultado = await Task.Run(() => _chatBll.EnviarMensajeManual(
+                            clienteId,
+                            texto,
+                            simular,
+                            usarPlantillaAprobada: true)).ConfigureAwait(true);
+                    }
+                }
+
+                if (IsDisposed)
+                    return;
 
                 if (resultado.Exito)
                 {
-                    txtMensaje.Clear();
-                    LimpiarAdjuntoPdf();
-                    CargarMensajes(_clienteSeleccionadoId.Value);
-                    CargarConversaciones(mantenerSeleccion: true);
-                    SincronizarHuellaChat();
+                    if (resultado.Simulado)
+                    {
+                        if (_lblVentana != null)
+                            _lblVentana.Text = "Prueba hecha. No se llamó a Twilio y no se guardó en el historial.";
+                        MessageBox.Show(this, resultado.Detalle, "Modo prueba",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        if (_lblVentana != null)
+                            _lblVentana.Text = resultado.Detalle;
+                        txtMensaje.Clear();
+                        LimpiarAdjuntoPdf();
+                        CargarMensajes(clienteId);
+                        CargarConversaciones(mantenerSeleccion: true);
+                        SincronizarHuellaChat();
+                    }
                 }
-                else
+                else if (!resultado.RequierePlantilla)
                 {
                     MessageBox.Show(this, resultado.Detalle, "WhatsApp",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    CargarMensajes(_clienteSeleccionadoId.Value);
+                    CargarMensajes(clienteId);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (!IsDisposed)
+                    MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                _enviando = false;
-                Cursor = Cursors.Default;
-                txtMensaje.Enabled = true;
-                btnPdf.Enabled = true;
-                btnUltimaFactura.Enabled = true;
-                btnEnviar.Enabled = true;
-                txtMensaje.Focus();
+                if (!IsDisposed)
+                    MarcarEnvioEnCurso(false, null);
             }
         }
 
