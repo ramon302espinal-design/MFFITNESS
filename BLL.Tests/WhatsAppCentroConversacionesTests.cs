@@ -121,5 +121,28 @@ namespace BLL.Tests
             IReadOnlyList<int> plazos = WhatsAppAutomatizacionPolitica.PlazosActivos(new[] { 10, 3, 0, 10 });
             Assert.Equal(new[] { 10, 3 }, plazos);
         }
+
+        [Theory]
+        [InlineData(8, 59, false)]
+        [InlineData(9, 0, true)]
+        [InlineData(15, 30, true)]
+        public void Aviso_de_membresia_vencida_empieza_a_las_9(int hora, int minuto, bool esperado)
+        {
+            var ahora = new DateTime(2026, 10, 27, hora, minuto, 0);
+            Assert.Equal(esperado, WhatsAppAutomatizacionPolitica.EsHorarioAvisoMembresiaVencida(ahora));
+        }
+
+        [Fact]
+        public void Aviso_de_membresia_vencida_se_repite_cada_tres_dias()
+        {
+            var lunes = new DateTime(2026, 10, 26, 9, 5, 0);
+
+            Assert.True(WhatsAppAutomatizacionPolitica.AvisoMembresiaVencidaAunVigente(
+                lunes, new DateTime(2026, 10, 26, 18, 0, 0)));
+            Assert.True(WhatsAppAutomatizacionPolitica.AvisoMembresiaVencidaAunVigente(
+                lunes, new DateTime(2026, 10, 28, 9, 0, 0)));
+            Assert.False(WhatsAppAutomatizacionPolitica.AvisoMembresiaVencidaAunVigente(
+                lunes, new DateTime(2026, 10, 29, 9, 0, 0)));
+        }
     }
 }

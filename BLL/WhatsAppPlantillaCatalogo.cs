@@ -51,7 +51,7 @@ namespace BLL
                 "MEMBRESIA_VENCIDA",
                 "Membresía vencida",
                 "Membresía vencida y aún activa",
-                "Aviso diario mientras siga vencida. No cambia el acceso al gimnasio.",
+                "Cada 3 días, a partir de las 9:00. No cambia el acceso al gimnasio.",
                 "Hola {CLIENTE}! Tu membresía {PLAN} venció el {FECHA_VENCE}. {MOTIVO}\n[[DETALLE_DEUDA]]{DETALLE_DEUDA}\n[[/DETALLE_DEUDA]]",
                 new[] { "CLIENTE", "PLAN", "FECHA_VENCE", "MOTIVO", "SALDO", "DETALLE_DEUDA" },
                 programada: true),

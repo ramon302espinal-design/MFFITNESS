@@ -201,7 +201,7 @@ namespace DL
         {
             // Última membresía del cliente con FechaFin ya pasada.
             // No exigir Activa=1: ActualizarVencidas() la apaga el mismo ciclo
-            // y el aviso diario (NotificacionYaEnviada por día) dejaría de salir.
+            // y el aviso cada 3 días dejaría de salir.
             // Excluye SALIDA manual, congelación activa y programación pendiente.
             string query = @"
             SELECT m.Id AS MembresiaId, m.ClienteId, m.FechaFin, ISNULL(p.Nombre, 'Membresia') AS [Plan]
@@ -277,6 +277,34 @@ namespace DL
             db.ExecuteNonQuery(query, parametros);
         }
 
+        /// <summary>
+        /// Fecha del último envío exitoso de este aviso. La regla de cada 3 días
+        /// se decide en código con el reloj de República Dominicana.
+        /// </summary>
+        public DateTime? ObtenerUltimaFechaEnvio(int clienteId, string tipo, int? referenciaId = null)
+        {
+            string query = @"
+            SELECT MAX([FechaEnvio])
+            FROM [dbo].[RegistroMensajes]
+            WHERE [ClienteId] = @ClienteId
+              AND [Tipo] = @Tipo
+              AND [Estado] = 'ENVIADO'
+              AND (@ReferenciaId IS NULL OR [ReferenciaId] = @ReferenciaId)";
+
+            SqlParameter[] parametros =
+            {
+                new SqlParameter("@ClienteId", clienteId),
+                new SqlParameter("@Tipo", tipo),
+                new SqlParameter("@ReferenciaId", (object?)referenciaId ?? DBNull.Value)
+            };
+
+            object? result = db.ExecuteScalar(query, parametros);
+            if (result == null || result == DBNull.Value)
+                return null;
+
+            return Convert.ToDateTime(result);
+        }
+
         public bool NotificacionEnviadaEnDias(int clienteId, string tipo, int dias, int? referenciaId = null)
         {
             string query = @"
@@ -334,17 +362,28 @@ IF COL_LENGTH('dbo.WhatsAppAutomatizacionConfig', 'DiasUrgente') IS NULL
 
                 db.ExecuteNonQuery(@"
 INSERT INTO dbo.WhatsAppAutomatizacionConfig (Tipo, Activa, Evento, Condicion, DiasAntes, EvitarDuplicadoHoras)
-SELECT v.Tipo, 1, v.Evento, v.Condicion, NULL, 24
+SELECT v.Tipo, 1, v.Evento, v.Condicion, NULL,
+       CASE WHEN v.Tipo = N'MEMBRESIA_VENCIDA' THEN 72 ELSE 24 END
 FROM (VALUES
     (N'VENCIMIENTO_PROXIMO', N'FechaFin de la membresía activa', N'N días antes. Un aviso por día y membresía.'),
-    (N'MEMBRESIA_VENCIDA', N'Membresía vencida y aún activa', N'Aviso diario. No cambia el acceso.'),
+    (N'MEMBRESIA_VENCIDA', N'Membresía vencida y aún activa', N'Cada 3 días, a partir de las 9:00. No cambia el acceso.'),
     (N'RECORDATORIO_VENCIMIENTO_DEUDA', N'Deuda activa con saldo', N'N días antes del pago.'),
     (N'DEUDA_CREADA', N'Se registra una deuda o préstamo', N'Al crear la venta a crédito.'),
     (N'PAGO_MEMBRESIA', N'Pago de membresía registrado', N'Cada pago nuevo.'),
     (N'PROGRAMACION_ACTIVADA', N'Se activa una membresía programada', N'Al activar la programación ya pagada.')
 ) v(Tipo, Evento, Condicion)
 WHERE NOT EXISTS (
-    SELECT 1 FROM dbo.WhatsAppAutomatizacionConfig c WHERE c.Tipo = v.Tipo);");
+    SELECT 1 FROM dbo.WhatsAppAutomatizacionConfig c WHERE c.Tipo = v.Tipo);
+
+UPDATE dbo.WhatsAppAutomatizacionConfig
+SET Condicion = N'Cada 3 días, a partir de las 9:00. No cambia el acceso.',
+    EvitarDuplicadoHoras = 72,
+    FechaModificacion = SYSDATETIME()
+WHERE Tipo = N'MEMBRESIA_VENCIDA'
+  AND (
+      EvitarDuplicadoHoras <= 24
+      OR Condicion LIKE N'Aviso diario%'
+  );");
 
                 _configLista = true;
             }

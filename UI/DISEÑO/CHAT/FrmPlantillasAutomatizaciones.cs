@@ -150,8 +150,12 @@ namespace UI.DISEÑO.CHAT
             _evento.Text = item.Evento + " — " + item.Condicion;
             _activa.Enabled = true;
             _activa.Checked = item.Activa;
-            _horas.Enabled = true;
-            _horas.Value = Math.Min(_horas.Maximum, Math.Max(_horas.Minimum, item.EvitarDuplicadoHoras));
+            bool membresiaVencida = string.Equals(item.Tipo, "MEMBRESIA_VENCIDA", StringComparison.OrdinalIgnoreCase);
+            _lblHoras.Text = membresiaVencida ? "Cada 3 días (72 h)" : "Evitar duplicado (horas)";
+            _horas.Enabled = !membresiaVencida;
+            _horas.Value = membresiaVencida
+                ? 72
+                : Math.Min(_horas.Maximum, Math.Max(_horas.Minimum, item.EvitarDuplicadoHoras));
 
             bool deuda = string.Equals(item.Tipo, "RECORDATORIO_VENCIMIENTO_DEUDA", StringComparison.OrdinalIgnoreCase);
             int fallbackPrimero = deuda ? TwilioSettings.DiasRecordatorioDeuda : TwilioSettings.DiasRecordatorioMembresia;

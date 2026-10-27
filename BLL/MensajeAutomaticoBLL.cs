@@ -94,6 +94,8 @@ namespace BLL
 
             dal.GuardarPlantilla(tipo, plantilla ?? string.Empty);
             bool activaReal = WhatsAppAutomatizacionPolitica.PuedeDesactivarse(tipo) ? activa : true;
+            if (string.Equals(tipo, "MEMBRESIA_VENCIDA", StringComparison.OrdinalIgnoreCase))
+                evitarDuplicadoHoras = WhatsAppAutomatizacionPolitica.IntervaloDiasMembresiaVencida * 24;
             dal.GuardarAutomatizacion(tipo, activaReal, diasAntes, diasUrgente, evitarDuplicadoHoras);
         }
 
@@ -450,12 +452,18 @@ namespace BLL
         }
 
         /// <summary>
-        /// Aviso diario mientras la membresia siga vencida y activa:
+        /// Cada 3 días, desde las 9:00, mientras la membresía siga vencida y activa:
         /// pide saldar la deuda pendiente (o renovar si no hay financiamiento).
         /// </summary>
         public bool EnviarMensajeMembresiaVencida(int clienteId, DateTime fechaVencimiento, string nombrePlan, int? membresiaId = null)
         {
-            if (YaNotificado(clienteId, "MEMBRESIA_VENCIDA", membresiaId))
+            DateTime ahora = TimeZoneHelper.NowDominicanRepublic();
+            if (!WhatsAppAutomatizacionPolitica.EsHorarioAvisoMembresiaVencida(ahora))
+                return false;
+
+            DateTime? ultimoEnvio = dal.ObtenerUltimaFechaEnvio(clienteId, "MEMBRESIA_VENCIDA", membresiaId);
+            if (ultimoEnvio.HasValue
+                && WhatsAppAutomatizacionPolitica.AvisoMembresiaVencidaAunVigente(ultimoEnvio.Value, ahora))
                 return false;
 
             var (motivo, saldo, detalleDeuda) = ConstruirMotivoDeudaPendiente(clienteId);
@@ -471,7 +479,7 @@ namespace BLL
         }
 
         /// <summary>
-        /// Motivo del aviso diario: si hay financiamientos pendientes, pedirle
+        /// Motivo del aviso: si hay financiamientos pendientes, pedirle
         /// que los salde; si no, que renueve la membresia vencida.
         /// </summary>
         private (string Motivo, decimal Saldo, string Detalle) ConstruirMotivoDeudaPendiente(int clienteId)
@@ -1543,8 +1551,8 @@ namespace BLL
         }
 
         /// <summary>
-        /// Cada dia, mientras la membresia siga vencida y sin salida registrada,
-        /// se reenvia el aviso pidiendo saldar la deuda / renovar.
+        /// Cada 3 días y no antes de las 9:00, mientras la membresía siga vencida
+        /// y sin salida registrada, se reenvía el aviso pidiendo saldar o renovar.
         /// </summary>
         public int VerificarMembresiasRecienVencidas()
         {
