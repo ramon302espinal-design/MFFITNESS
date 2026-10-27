@@ -198,6 +198,7 @@ namespace UI.DISEÑO
                     ?? throw new InvalidOperationException("No se pudo obtener el estado de clientes.");
 
                 AsegurarColumnasEstado(tabla);
+                AsegurarPlanCategoria(tabla);
 
                 bsEstado.DataSource = tabla;
                 dgvEstado.DataSource = bsEstado;
@@ -343,6 +344,7 @@ namespace UI.DISEÑO
                 DataGridViewHelper.RunColumnLayout(dgvEstado, () =>
                 {
                 DataGridViewHelper.HideColumn(dgvEstado, "ID");
+                DataGridViewHelper.HideColumn(dgvEstado, "PlanCategoria");
 
                 DataGridViewHelper.ConfigureColumn(dgvEstado, "Nombre", col =>
                 {
@@ -466,8 +468,33 @@ namespace UI.DISEÑO
                 "CONGELADOS" => "Estado = 'CONGELADO'",
                 "PAGOS PAL 15" => activos + " AND " + ConstruirFiltroFechaFinExacta(MembresiaHelper.ObtenerProximoDia15(DateTime.Today)),
                 "PAGOS PAL FIN DE MES" => activos + " AND " + ConstruirFiltroFechaFinExacta(MembresiaHelper.ObtenerProximoFinDeMes(DateTime.Today)),
+                "PREMIUM" => "PlanCategoria = 'PREMIUM'",
+                "PRO" => "PlanCategoria = 'PRO'",
+                "MENSUALIDAD" => "PlanCategoria = 'MENSUALIDAD'",
+                "3X" => "PlanCategoria = '3X'",
+                "GLUTEOS GRANDE" => "PlanCategoria = 'GLUTEOS GRANDE'",
+                "ABDOMEN PLANO" => "PlanCategoria = 'ABDOMEN PLANO'",
                 _ => null // TODOS / desconocido → sin filtro de categoría
             };
+        }
+
+        /// <summary>
+        /// Columna solo para filtrar el grid y el PDF. M-A entra en MENSUALIDAD, igual que los KPIs.
+        /// No se muestra en la grilla.
+        /// </summary>
+        private static void AsegurarPlanCategoria(DataTable tabla)
+        {
+            if (!tabla.Columns.Contains("Membresia"))
+                return;
+
+            if (!tabla.Columns.Contains("PlanCategoria"))
+                tabla.Columns.Add("PlanCategoria", typeof(string));
+
+            foreach (DataRow row in tabla.Rows)
+            {
+                string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
+                row["PlanCategoria"] = EstadoBLL.ClasificarPlanParaKpi(plan);
+            }
         }
 
         /// <summary>Filtro DataView para FechaFin en un día calendario (invariant #M/d/yyyy#).</summary>
@@ -1133,6 +1160,18 @@ namespace UI.DISEÑO
         // ===============================
         private void btnDescargarPDF_Click(object? sender, EventArgs e)
         {
+            string categoria = cmbEstaCategoria?.SelectedItem?.ToString()?.Trim() ?? "TODOS";
+            if (string.IsNullOrWhiteSpace(categoria))
+                categoria = "TODOS";
+
+            // El reporte mensual histórico se conserva solo en TODOS.
+            // Cualquier otro filtro descarga el listado actual de esa categoría.
+            if (!string.Equals(categoria, "TODOS", StringComparison.OrdinalIgnoreCase))
+            {
+                DescargarPdfCategoriaActual(categoria);
+                return;
+            }
+
             var periodo = SeleccionPeriodoEstadoDialog.Mostrar(this);
             if (periodo == null)
                 return;
@@ -1142,12 +1181,15 @@ namespace UI.DISEÑO
                 DataTable detalle;
                 DataTable resumen;
                 string etiqueta = periodo.Etiqueta;
+                string? nota = null;
 
                 if (periodo.EsHoy)
                 {
-                    detalle = estadoBLL.ObtenerDetalleActivosReporte();
+                    DataTable estado = ObtenerTablaEstadoParaPdf();
+                    detalle = ConstruirDetalleCategoria(estado, "TODOS");
                     resumen = estadoBLL.ObtenerResumenDesdeDetalle(detalle);
-                    etiqueta = "HOY";
+                    etiqueta = "HOY · TODOS";
+                    nota = "Tipo: listado actual de todos los miembros (activos, vencidos, desactivados y congelados).";
                 }
                 else
                 {
@@ -1155,40 +1197,81 @@ namespace UI.DISEÑO
                     resumen = estadoBLL.ObtenerResumenPlanesPorMes(periodo.Anio, periodo.Mes);
                 }
 
-                if (detalle.Rows.Count == 0)
-                {
-                    MessageBox.Show(this,
-                        "No hay datos para el período seleccionado.",
-                        "Reporte PDF",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    return;
-                }
+                GuardarPdfEstado(detalle, resumen, etiqueta, periodo.EsHoy, nota, periodo.EsHoy ? "Todos" : $"{periodo.Anio}{periodo.Mes:00}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "No se pudo generar el PDF: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                Cursor = Cursors.Default;
+            }
+        }
 
-                string slug = periodo.EsHoy
-                    ? "Hoy"
-                    : $"{periodo.Anio}{periodo.Mes:00}";
+        private void DescargarPdfCategoriaActual(string categoria)
+        {
+            try
+            {
+                DataTable estado = ObtenerTablaEstadoParaPdf();
+                DataTable detalle = ConstruirDetalleCategoria(estado, categoria);
+                DataTable resumen = estadoBLL.ObtenerResumenDesdeDetalle(detalle);
+                string nota = $"Tipo: listado actual filtrado por {categoria}.";
+                string slug = categoria.Replace(' ', '_');
+                GuardarPdfEstado(detalle, resumen, categoria, true, nota, slug);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "No se pudo generar el PDF: " + ex.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                Cursor = Cursors.Default;
+            }
+        }
 
-                using var sfd = new SaveFileDialog
-                {
-                    Filter = "PDF (*.pdf)|*.pdf",
-                    DefaultExt = "pdf",
-                    AddExtension = true,
-                    FileName = $"EstadoClientes_{slug}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
-                };
+        private void GuardarPdfEstado(
+            DataTable detalle,
+            DataTable resumen,
+            string etiqueta,
+            bool esListadoActual,
+            string? nota,
+            string slugArchivo)
+        {
+            if (detalle.Rows.Count == 0)
+            {
+                MessageBox.Show(this,
+                    "No hay clientes para el filtro seleccionado.",
+                    "Reporte PDF",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
 
-                if (sfd.ShowDialog(this) != DialogResult.OK)
-                    return;
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "PDF (*.pdf)|*.pdf",
+                DefaultExt = "pdf",
+                AddExtension = true,
+                FileName = $"EstadoClientes_{slugArchivo}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+            };
 
-                Cursor = Cursors.WaitCursor;
-                DateTime generado = DateTime.Now;
+            if (sfd.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            Cursor = Cursors.WaitCursor;
+            try
+            {
                 reporteBLL.GenerarPdfEstadoClientes(
                     resumen,
                     detalle,
                     etiqueta,
-                    periodo.EsHoy,
-                    generado,
-                    sfd.FileName);
+                    esListadoActual,
+                    DateTime.Now,
+                    sfd.FileName,
+                    nota);
 
                 DialogResult abrir = MessageBox.Show(this,
                     $"PDF generado correctamente.\n\n{sfd.FileName}\n\n¿Desea abrirlo?",
@@ -1205,18 +1288,107 @@ namespace UI.DISEÑO
                     });
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this,
-                    "No se pudo generar el PDF: " + ex.Message,
-                    "Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-            }
             finally
             {
                 Cursor = Cursors.Default;
             }
+        }
+
+        private DataTable ObtenerTablaEstadoParaPdf()
+        {
+            if (bsEstado.DataSource is DataTable tabla && tabla.Columns.Contains("Estado"))
+            {
+                AsegurarPlanCategoria(tabla);
+                return tabla;
+            }
+
+            DataTable cargada = estadoBLL.ObtenerEstadoClientes()
+                ?? throw new InvalidOperationException("No se pudo obtener el estado de clientes.");
+            AsegurarPlanCategoria(cargada);
+            return cargada;
+        }
+
+        /// <summary>Misma regla que el combo: arma el detalle que el PDF ya sabe imprimir.</summary>
+        private static DataTable ConstruirDetalleCategoria(DataTable estado, string categoria)
+        {
+            var detalle = new DataTable();
+            detalle.Columns.Add("Fecha", typeof(DateTime));
+            detalle.Columns.Add("Cliente", typeof(string));
+            detalle.Columns.Add("Plan", typeof(string));
+            detalle.Columns.Add("Movimiento", typeof(string));
+            detalle.Columns.Add("Monto", typeof(decimal));
+
+            foreach (DataRow row in estado.Rows)
+            {
+                if (!FilaCumpleCategoria(row, categoria))
+                    continue;
+
+                string cliente = Convert.ToString(row["Nombre"])?.Trim() ?? string.Empty;
+                string plan = Convert.ToString(row["Membresia"])?.Trim() ?? string.Empty;
+                string movimiento = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
+                decimal monto = row.Table.Columns.Contains("MontoPagado") && row["MontoPagado"] != DBNull.Value
+                    ? Convert.ToDecimal(row["MontoPagado"])
+                    : 0m;
+
+                DateTime fecha = DateTime.Today;
+                if (row.Table.Columns.Contains("FechaFin") && row["FechaFin"] != null && row["FechaFin"] != DBNull.Value)
+                    fecha = Convert.ToDateTime(row["FechaFin"]).Date;
+                else if (row.Table.Columns.Contains("FechaInicio") && row["FechaInicio"] != null && row["FechaInicio"] != DBNull.Value)
+                    fecha = Convert.ToDateTime(row["FechaInicio"]).Date;
+
+                detalle.Rows.Add(fecha, cliente, plan, movimiento, monto);
+            }
+
+            return detalle;
+        }
+
+        private static bool FilaCumpleCategoria(DataRow row, string categoria)
+        {
+            string cat = string.IsNullOrWhiteSpace(categoria) ? "TODOS" : categoria.Trim().ToUpperInvariant();
+            if (cat == "TODOS")
+                return true;
+
+            string estado = Convert.ToString(row["Estado"])?.Trim() ?? string.Empty;
+            bool activo = EstadoBLL.EsEstadoActivoVigente(estado);
+
+            switch (cat)
+            {
+                case "CON DEUDA":
+                    string estadoDeuda = Convert.ToString(row["EstadoDeuda"])?.Trim() ?? string.Empty;
+                    decimal saldo = row["SaldoPendiente"] == null || row["SaldoPendiente"] == DBNull.Value
+                        ? 0m
+                        : Convert.ToDecimal(row["SaldoPendiente"]);
+                    return string.Equals(estadoDeuda, "ACTIVA", StringComparison.OrdinalIgnoreCase) && saldo > 0m;
+                case "ACTIVOS":
+                    return activo;
+                case "VENCIDOS":
+                    return string.Equals(estado, "VENCIDO", StringComparison.OrdinalIgnoreCase);
+                case "DESACTIVADOS":
+                    return string.Equals(estado, "DESACTIVADO", StringComparison.OrdinalIgnoreCase);
+                case "CONGELADOS":
+                    return string.Equals(estado, "CONGELADO", StringComparison.OrdinalIgnoreCase);
+                case "PAGOS PAL 15":
+                    return activo && FechaFinEs(row, MembresiaHelper.ObtenerProximoDia15(DateTime.Today));
+                case "PAGOS PAL FIN DE MES":
+                    return activo && FechaFinEs(row, MembresiaHelper.ObtenerProximoFinDeMes(DateTime.Today));
+                case "PREMIUM":
+                case "PRO":
+                case "MENSUALIDAD":
+                case "3X":
+                case "GLUTEOS GRANDE":
+                case "ABDOMEN PLANO":
+                    return string.Equals(Convert.ToString(row["PlanCategoria"])?.Trim(), cat, StringComparison.OrdinalIgnoreCase);
+                default:
+                    return true;
+            }
+        }
+
+        private static bool FechaFinEs(DataRow row, DateTime dia)
+        {
+            if (!row.Table.Columns.Contains("FechaFin") || row["FechaFin"] == null || row["FechaFin"] == DBNull.Value)
+                return false;
+
+            return Convert.ToDateTime(row["FechaFin"]).Date == dia.Date;
         }
 
         // ===============================

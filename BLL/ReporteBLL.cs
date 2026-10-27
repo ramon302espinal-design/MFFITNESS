@@ -544,7 +544,8 @@ namespace BLL
             string periodoEtiqueta,
             bool esSnapshotHoy,
             DateTime fechaGeneracion,
-            string ruta)
+            string ruta,
+            string? notaTipo = null)
         {
             if (detalle == null || detalle.Rows.Count == 0)
                 throw new InvalidOperationException("No hay datos para exportar en el período seleccionado.");
@@ -578,10 +579,12 @@ namespace BLL
                     .SetFont(negrita).SetFontSize(18).SetTextAlignment(TextAlignment.CENTER));
                 doc.Add(new Paragraph($"Período: {periodoEtiqueta.Trim().ToUpperInvariant()}")
                     .SetFont(negrita).SetFontSize(12).SetTextAlignment(TextAlignment.CENTER).SetMarginBottom(4));
-                doc.Add(new Paragraph(
-                        esSnapshotHoy
-                            ? "Tipo: snapshot en vivo (miembros ACTIVO al momento del reporte)"
-                            : "Tipo: histórico de cobros y altas del mes")
+                string tipoLinea = string.IsNullOrWhiteSpace(notaTipo)
+                    ? (esSnapshotHoy
+                        ? "Tipo: snapshot en vivo (miembros ACTIVO al momento del reporte)"
+                        : "Tipo: histórico de cobros y altas del mes")
+                    : notaTipo.Trim();
+                doc.Add(new Paragraph(tipoLinea)
                     .SetFont(normal).SetFontSize(9).SetTextAlignment(TextAlignment.CENTER)
                     .SetFontColor(ColorConstants.GRAY));
 

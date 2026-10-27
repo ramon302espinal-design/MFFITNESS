@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,6 +40,14 @@ namespace UI.DISEÑO.CHAT
         private Label? _lblVentana;
         private bool _ajustandoModoPrueba;
         private int _ultimaHuellaEstados = int.MinValue;
+        private int _cargaListaToken;
+        private int _tickEstadoOcupado;
+        private int _burbujasClienteId;
+        private readonly List<BurbujaSlot> _burbujas = new();
+        private readonly Font _fuenteListaNombre = new("Segoe UI", 10F, FontStyle.Bold);
+        private readonly Font _fuenteListaDetalle = new("Segoe UI", 9F);
+        private readonly Font _fuenteBurbuja = new("Segoe UI", 10F);
+        private readonly Font _fuenteBurbujaMeta = new("Segoe UI", 7.5F);
 
         public FrmChat() : this(null)
         {
@@ -86,14 +95,14 @@ namespace UI.DISEÑO.CHAT
             ChatNotificationHost.MensajeEntranteRecibido += OnMensajeEntranteGlobal;
 
             ActualizarEstadoTwilio();
-            CargarConversaciones(mantenerSeleccion: false);
+            _ = CargarConversacionesAsync(mantenerSeleccion: false);
             _ = BootstrapWebhookSilenciosoAsync();
 
             _timerBuscar = new System.Windows.Forms.Timer { Interval = 350 };
             _timerBuscar.Tick += (_, _) =>
             {
                 _timerBuscar!.Stop();
-                CargarConversaciones(mantenerSeleccion: true);
+                _ = CargarConversacionesAsync(mantenerSeleccion: true);
             };
 
             _toolTipEstado = new ToolTip { AutoPopDelay = 30_000, InitialDelay = 400 };
@@ -116,12 +125,22 @@ namespace UI.DISEÑO.CHAT
             lblEstadoTwilio.Click += (_, _) => _ = ActivarWebhookInboundAsync();
 
             _timerEstadoWebhook = new System.Windows.Forms.Timer { Interval = 8000 };
-            _timerEstadoWebhook.Tick += (_, _) =>
+            _timerEstadoWebhook.Tick += async (_, _) =>
             {
-                ActualizarEstadoTwilio();
-                RefrescarEstadosEntrega();
-                if (!TwilioSettings.WebhookInboundConfigurado || string.IsNullOrWhiteSpace(WhatsAppStackBootstrapper.TryGetNgrokPublicUrl()))
-                    _ = SincronizarNgrokSilenciosoAsync();
+                if (Interlocked.CompareExchange(ref _tickEstadoOcupado, 1, 0) != 0)
+                    return;
+
+                try
+                {
+                    ActualizarEstadoTwilio();
+                    await RefrescarEstadosEntregaAsync();
+                    if (!TwilioSettings.WebhookInboundConfigurado || string.IsNullOrWhiteSpace(WhatsAppStackBootstrapper.TryGetNgrokPublicUrl()))
+                        _ = SincronizarNgrokSilenciosoAsync();
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _tickEstadoOcupado, 0);
+                }
             };
             _timerEstadoWebhook.Start();
 
@@ -146,6 +165,11 @@ namespace UI.DISEÑO.CHAT
             _timerEstadoWebhook?.Dispose();
             _cargaMensajesCts?.Cancel();
             _cargaMensajesCts?.Dispose();
+            LiberarBurbujas();
+            _fuenteListaNombre.Dispose();
+            _fuenteListaDetalle.Dispose();
+            _fuenteBurbuja.Dispose();
+            _fuenteBurbujaMeta.Dispose();
             _toolTipEstado?.Dispose();
         }
 
@@ -156,7 +180,15 @@ namespace UI.DISEÑO.CHAT
                 return;
 
             _clienteInicialId = clienteId;
-            CargarConversaciones(mantenerSeleccion: false);
+            _ = NavegarAClienteAsync(clienteId);
+        }
+
+        private async Task NavegarAClienteAsync(int clienteId)
+        {
+            await CargarConversacionesAsync(mantenerSeleccion: false);
+            if (IsDisposed)
+                return;
+
             SeleccionarCliente(clienteId);
 
             if (lstConversaciones.SelectedIndex < 0)
@@ -173,25 +205,29 @@ namespace UI.DISEÑO.CHAT
                 return;
 
             // Al volver al form: UI solo si hay cambio real (no rebuild cada focus).
-            RefrescarVista(forzar: false);
+            _ = RefrescarVistaAsync(forzar: false);
         }
 
         /// <summary>
         /// Recarga lista/mensajes. Con forzar=false solo si cambió huella (no leídos / max entrada / hilo abierto).
+        /// La lectura va fuera de la pantalla para que el chat no se congele.
         /// </summary>
-        private void RefrescarVista(bool forzar = false)
+        private async Task RefrescarVistaAsync(bool forzar = false)
         {
             int noLeidos;
             int maxEntrada;
             try
             {
-                noLeidos = _chatBll.ContarNoLeidosTotal();
-                maxEntrada = _chatBll.ObtenerMaxIdMensajeEntrada();
+                (noLeidos, maxEntrada) = await Task.Run(() =>
+                    (_chatBll.ContarNoLeidosTotal(), _chatBll.ObtenerMaxIdMensajeEntrada())).ConfigureAwait(true);
             }
             catch
             {
                 return;
             }
+
+            if (IsDisposed)
+                return;
 
             bool hayCambio = forzar
                 || noLeidos != _ultimoNoLeidosConocido
@@ -201,7 +237,10 @@ namespace UI.DISEÑO.CHAT
             {
                 try
                 {
-                    int maxId = _chatBll.ObtenerMaxIdMensajeChat(cid);
+                    int maxId = await Task.Run(() => _chatBll.ObtenerMaxIdMensajeChat(cid)).ConfigureAwait(true);
+                    if (IsDisposed)
+                        return;
+
                     if (maxId != _ultimoMaxIdMensajes)
                     {
                         hayCambio = true;
@@ -219,8 +258,8 @@ namespace UI.DISEÑO.CHAT
 
             _ultimoNoLeidosConocido = noLeidos;
             _ultimoMaxIdEntradaConocido = maxEntrada;
-            ActualizarContadorNoLeidos();
-            CargarConversaciones(mantenerSeleccion: true);
+            MostrarContadorNoLeidos(noLeidos);
+            await CargarConversacionesAsync(mantenerSeleccion: true);
         }
 
         private void SincronizarHuellaChat()
@@ -245,7 +284,7 @@ namespace UI.DISEÑO.CHAT
             void aplicar()
             {
                 // Tiempo real por evento (mensaje entrante), no por timer de UI.
-                RefrescarVista(forzar: true);
+                _ = RefrescarVistaAsync(forzar: true);
 
                 if (_clienteSeleccionadoId == clienteId)
                     _ = CargarMensajesAsync(clienteId);
@@ -401,7 +440,7 @@ namespace UI.DISEÑO.CHAT
             frm.ShowDialog(this);
         }
 
-        private void RefrescarEstadosEntrega()
+        private async Task RefrescarEstadosEntregaAsync()
         {
             if (_clienteSeleccionadoId is not int clienteId || clienteId <= 0 || _enviando)
                 return;
@@ -409,51 +448,43 @@ namespace UI.DISEÑO.CHAT
             int huella;
             try
             {
-                huella = _chatBll.ObtenerHuellaEstados(clienteId);
+                huella = await Task.Run(() => _chatBll.ObtenerHuellaEstados(clienteId)).ConfigureAwait(true);
             }
             catch
             {
                 return;
             }
 
-            if (huella == _ultimaHuellaEstados)
+            if (IsDisposed || _clienteSeleccionadoId != clienteId || huella == _ultimaHuellaEstados)
                 return;
 
             _ultimaHuellaEstados = huella;
-            CargarMensajes(clienteId);
-        }
-
-        private void ActualizarVentana(int clienteId)
-        {
-            try
-            {
-                var info = _chatBll.EvaluarVentana(clienteId);
-                if (_lblVentana != null)
-                {
-                    _lblVentana.Text = info.Resumen;
-                    _lblVentana.ForeColor = info.Abierta
-                        ? Color.FromArgb(0, 110, 80)
-                        : Color.FromArgb(150, 70, 0);
-                }
-            }
-            catch
-            {
-                if (_lblVentana != null)
-                    _lblVentana.Text = "No se pudo consultar la ventana de atención.";
-            }
+            await CargarMensajesAsync(clienteId);
         }
 
         private void ConfigurarPanelMensajes()
         {
             panelMensajes.BackColor = Color.FromArgb(233, 237, 234);
+            ActivarDobleBuffer(panelMensajes);
+            ActivarDobleBuffer(lstConversaciones);
             flowMensajes.Dock = DockStyle.None;
             flowMensajes.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             flowMensajes.WrapContents = false;
             flowMensajes.FlowDirection = FlowDirection.TopDown;
-            flowMensajes.AutoSize = true;
+            flowMensajes.AutoSize = false;
             flowMensajes.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             AjustarAnchoFlowMensajes();
             panelMensajes.Resize += (_, _) => AjustarAnchoFlowMensajes();
+        }
+
+        private static void ActivarDobleBuffer(Control control)
+        {
+            typeof(Control).InvokeMember(
+                "DoubleBuffered",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.SetProperty,
+                null,
+                control,
+                new object[] { true });
         }
 
         private void CentrarEstadoMensajes()
@@ -471,25 +502,48 @@ namespace UI.DISEÑO.CHAT
 
         private void AjustarAnchoFlowMensajes()
         {
-            int w = panelMensajes.ClientSize.Width - panelMensajes.Padding.Horizontal;
-            flowMensajes.Width = Math.Max(200, w);
-            foreach (Control c in flowMensajes.Controls)
-                c.Width = flowMensajes.Width;
+            int w = Math.Max(200, panelMensajes.ClientSize.Width - panelMensajes.Padding.Horizontal);
+            if (flowMensajes.Width == w)
+                return;
+
+            flowMensajes.Width = w;
+            foreach (BurbujaSlot slot in _burbujas)
+            {
+                slot.Contenedor.Width = w;
+                slot.Caja.Location = slot.EsSalida
+                    ? new Point(Math.Max(0, w - slot.Caja.Width - 8), 0)
+                    : new Point(8, 0);
+            }
         }
 
-        private void AjustarAltoFlowMensajes()
+        private void AjustarAltoFlowMensajes(bool conservarScroll)
         {
+            Point scroll = panelMensajes.AutoScrollPosition;
+            int y = conservarScroll ? -scroll.Y : 0;
             int h = 0;
             foreach (Control c in flowMensajes.Controls)
                 h += c.Height + c.Margin.Vertical;
 
             flowMensajes.Height = Math.Max(h, 1);
             panelMensajes.AutoScrollMinSize = new Size(0, flowMensajes.Height + panelMensajes.Padding.Vertical + 8);
+            if (conservarScroll)
+                panelMensajes.AutoScrollPosition = new Point(0, y);
         }
 
         private void ActualizarContadorNoLeidos()
         {
-            int total = _chatBll.ContarNoLeidosTotal();
+            try
+            {
+                MostrarContadorNoLeidos(_chatBll.ContarNoLeidosTotal());
+            }
+            catch
+            {
+                // el contador se reintenta en el próximo refresco
+            }
+        }
+
+        private void MostrarContadorNoLeidos(int total)
+        {
             lblNoLeidosTotal.Text = total > 0
                 ? $"{total} mensaje(s) nuevo(s)"
                 : "Sin mensajes nuevos";
@@ -500,7 +554,7 @@ namespace UI.DISEÑO.CHAT
 
         private void chkSoloNoLeidos_CheckedChanged(object sender, EventArgs e)
         {
-            CargarConversaciones(mantenerSeleccion: true);
+            _ = CargarConversacionesAsync(mantenerSeleccion: true);
         }
 
         private void ActualizarEstadoTwilio()
@@ -619,14 +673,29 @@ namespace UI.DISEÑO.CHAT
             }
         }
 
-        private void CargarConversaciones(bool mantenerSeleccion)
+        private async Task CargarConversacionesAsync(bool mantenerSeleccion)
         {
-            int? previo = mantenerSeleccion ? _clienteSeleccionadoId : null;
+            int token = Interlocked.Increment(ref _cargaListaToken);
             string filtro = txtBuscar.Text.Trim();
-            _conversaciones = _chatBll.ListarConversaciones(
-                string.IsNullOrWhiteSpace(filtro) ? null : filtro,
-                chkSoloNoLeidos.Checked).ToList();
+            bool soloNoLeidos = chkSoloNoLeidos.Checked;
 
+            List<ChatConversacionDto> lista;
+            try
+            {
+                lista = await Task.Run(() => _chatBll.ListarConversaciones(
+                    string.IsNullOrWhiteSpace(filtro) ? null : filtro,
+                    soloNoLeidos).ToList()).ConfigureAwait(true);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (token != _cargaListaToken || IsDisposed)
+                return;
+
+            int? previo = mantenerSeleccion ? _clienteSeleccionadoId : null;
+            _conversaciones = lista;
             _suprimirSeleccion = true;
             try
             {
@@ -683,7 +752,7 @@ namespace UI.DISEÑO.CHAT
                 btnPdf.Enabled = false;
                 btnUltimaFactura.Enabled = false;
                 LimpiarAdjuntoPdf();
-                flowMensajes.Controls.Clear();
+                LiberarBurbujas();
                 if (_lblEstadoMensajes != null)
                     _lblEstadoMensajes.Visible = true;
                 return;
@@ -705,18 +774,52 @@ namespace UI.DISEÑO.CHAT
             txtMensaje.Enabled = puedeEnviar;
             btnPdf.Enabled = puedeEnviar && !_enviando;
             btnUltimaFactura.Enabled = puedeEnviar && !_enviando;
-            ActualizarVentana(conv.ClienteId);
 
             if (!puedeEnviar && _lblVentana != null)
                 _lblVentana.Text = "Teléfono inválido — actualice el número en Clientes.";
             else if (puedeEnviar)
                 ActualizarEstadoTwilio();
 
-            _chatBll.MarcarConversacionLeida(conv.ClienteId);
-            MarcarConversacionLeidaEnLista(conv.ClienteId);
-            ActualizarContadorNoLeidos();
-            SincronizarHuellaChat();
             _ = CargarMensajesAsync(conv.ClienteId);
+            _ = CompletarSeleccionAsync(conv.ClienteId, puedeEnviar);
+        }
+
+        private async Task CompletarSeleccionAsync(int clienteId, bool consultarVentana)
+        {
+            try
+            {
+                var info = await Task.Run(() =>
+                {
+                    _chatBll.MarcarConversacionLeida(clienteId);
+                    WhatsAppVentanaInfo? ventana = consultarVentana
+                        ? _chatBll.EvaluarVentana(clienteId)
+                        : null;
+                    int noLeidos = _chatBll.ContarNoLeidosTotal();
+                    int maxEntrada = _chatBll.ObtenerMaxIdMensajeEntrada();
+                    return (ventana, noLeidos, maxEntrada);
+                }).ConfigureAwait(true);
+
+                if (IsDisposed || _clienteSeleccionadoId != clienteId)
+                    return;
+
+                if (info.ventana != null && _lblVentana != null)
+                {
+                    _lblVentana.Text = info.ventana.Resumen;
+                    _lblVentana.ForeColor = info.ventana.Abierta
+                        ? Color.FromArgb(0, 110, 80)
+                        : Color.FromArgb(150, 70, 0);
+                }
+
+                MostrarContadorNoLeidos(info.noLeidos);
+                _ultimoNoLeidosConocido = info.noLeidos;
+                _ultimoMaxIdEntradaConocido = info.maxEntrada;
+                MarcarConversacionLeidaEnLista(clienteId);
+            }
+            catch
+            {
+                if (!IsDisposed && _lblVentana != null && consultarVentana)
+                    _lblVentana.Text = "No se pudo consultar la ventana de atención.";
+            }
         }
 
         private void MarcarConversacionLeidaEnLista(int clienteId)
@@ -767,6 +870,19 @@ namespace UI.DISEÑO.CHAT
             {
                 return;
             }
+            catch (Exception)
+            {
+                if (token != _cargaMensajesToken || IsDisposed || _clienteSeleccionadoId != clienteId)
+                    return;
+
+                if (_burbujas.Count == 0 && _lblEstadoMensajes != null)
+                {
+                    _lblEstadoMensajes.Visible = true;
+                    _lblEstadoMensajes.Text = "La conversación tardó demasiado.\r\nVuelva a seleccionar al miembro.";
+                }
+
+                return;
+            }
 
             if (token != _cargaMensajesToken || IsDisposed || _clienteSeleccionadoId != clienteId)
                 return;
@@ -785,35 +901,16 @@ namespace UI.DISEÑO.CHAT
                     : string.Empty;
             }
 
-            flowMensajes.SuspendLayout();
-            panelMensajes.SuspendLayout();
-            try
-            {
-                flowMensajes.Controls.Clear();
-                foreach (ChatMensajeDto msg in mensajes)
-                {
-                    if (ct.IsCancellationRequested)
-                        return;
-
-                    bool esSalida = !string.Equals(msg.Direccion, "ENTRADA", StringComparison.OrdinalIgnoreCase);
-                    flowMensajes.Controls.Add(CrearBurbuja(msg, esSalida, anchoMax));
-                }
-            }
-            finally
-            {
-                flowMensajes.ResumeLayout(true);
-                panelMensajes.ResumeLayout(true);
-            }
-
-            AjustarAnchoFlowMensajes();
-            AjustarAltoFlowMensajes();
+            bool irAlFinal = PintarMensajes(clienteId, mensajes, anchoMax);
             if (_lblEstadoMensajes != null)
                 _lblEstadoMensajes.Visible = mensajes.Count == 0;
 
-            BeginInvoke(ScrollAlFinal);
+            if (irAlFinal)
+                BeginInvoke(ScrollAlFinal);
+
             try
             {
-                _ultimaHuellaEstados = _chatBll.ObtenerHuellaEstados(clienteId);
+                _ultimaHuellaEstados = await Task.Run(() => _chatBll.ObtenerHuellaEstados(clienteId)).ConfigureAwait(true);
             }
             catch
             {
@@ -821,13 +918,114 @@ namespace UI.DISEÑO.CHAT
             }
         }
 
-        private void CargarMensajes(int clienteId) => _ = CargarMensajesAsync(clienteId);
-
-        private Panel CrearBurbuja(ChatMensajeDto msg, bool esSalida, int anchoMax)
+        /// <summary>
+        /// True si hay mensajes nuevos y conviene bajar al final.
+        /// Si solo cambió el estado de entrega, actualiza esas burbujas y no mueve el scroll.
+        /// </summary>
+        private bool PintarMensajes(int clienteId, IReadOnlyList<ChatMensajeDto> mensajes, int anchoMax)
         {
-            int maxAnchoBurbuja = (int)(anchoMax * 0.72);
-            int innerW = maxAnchoBurbuja - 24;
+            bool mismoHilo = _burbujasClienteId == clienteId && _burbujas.Count > 0 && _burbujas.Count <= mensajes.Count;
+            if (mismoHilo)
+            {
+                for (int i = 0; i < _burbujas.Count; i++)
+                {
+                    if (_burbujas[i].Id != mensajes[i].Id)
+                    {
+                        mismoHilo = false;
+                        break;
+                    }
+                }
+            }
 
+            if (mismoHilo)
+            {
+                bool cambioEstado = false;
+                bool agrego = _burbujas.Count < mensajes.Count;
+                flowMensajes.SuspendLayout();
+                try
+                {
+                    for (int i = 0; i < _burbujas.Count; i++)
+                    {
+                        string firma = FirmaMensaje(mensajes[i]);
+                        if (_burbujas[i].Firma == firma)
+                            continue;
+
+                        AplicarBurbuja(_burbujas[i], mensajes[i], anchoMax, firma);
+                        cambioEstado = true;
+                    }
+
+                    for (int i = _burbujas.Count; i < mensajes.Count; i++)
+                        AgregarBurbuja(mensajes[i], anchoMax);
+                }
+                finally
+                {
+                    flowMensajes.ResumeLayout(false);
+                }
+
+                if (!cambioEstado && !agrego)
+                    return false;
+
+                AjustarAltoFlowMensajes(conservarScroll: !agrego);
+                return agrego;
+            }
+
+            flowMensajes.SuspendLayout();
+            panelMensajes.SuspendLayout();
+            try
+            {
+                LiberarBurbujas();
+                _burbujasClienteId = clienteId;
+                foreach (ChatMensajeDto msg in mensajes)
+                    AgregarBurbuja(msg, anchoMax);
+            }
+            finally
+            {
+                flowMensajes.ResumeLayout(false);
+                panelMensajes.ResumeLayout(false);
+            }
+
+            AjustarAnchoFlowMensajes();
+            AjustarAltoFlowMensajes(conservarScroll: false);
+            return mensajes.Count > 0;
+        }
+
+        private void AgregarBurbuja(ChatMensajeDto msg, int anchoMax)
+        {
+            var slot = new BurbujaSlot();
+            slot.Caja = new Panel();
+            slot.Cuerpo = new Label
+            {
+                AutoSize = false,
+                Font = _fuenteBurbuja,
+                ForeColor = Color.Black
+            };
+            slot.Meta = new Label
+            {
+                AutoSize = false,
+                Font = _fuenteBurbujaMeta,
+                ForeColor = Color.Gray
+            };
+            slot.Caja.Controls.Add(slot.Cuerpo);
+            slot.Caja.Controls.Add(slot.Meta);
+            slot.Contenedor = new Panel
+            {
+                Margin = new Padding(0, 2, 0, 2)
+            };
+            slot.Contenedor.Controls.Add(slot.Caja);
+            AplicarBurbuja(slot, msg, anchoMax, FirmaMensaje(msg));
+            flowMensajes.Controls.Add(slot.Contenedor);
+            _burbujas.Add(slot);
+        }
+
+        private void AplicarBurbuja(BurbujaSlot slot, ChatMensajeDto msg, int anchoMax, string firma)
+        {
+            slot.Id = msg.Id;
+            slot.Firma = firma;
+            bool esSalida = !string.Equals(msg.Direccion, "ENTRADA", StringComparison.OrdinalIgnoreCase);
+            slot.EsSalida = esSalida;
+
+            int maxAnchoBurbuja = (int)(anchoMax * 0.72);
+            int innerW = Math.Max(40, maxAnchoBurbuja - 24);
             Color fondo = esSalida ? Color.FromArgb(220, 248, 198) : Color.White;
             if (msg.EsAutomatico || string.Equals(msg.Origen, "AUTO", StringComparison.OrdinalIgnoreCase))
                 fondo = Color.FromArgb(255, 249, 220);
@@ -855,60 +1053,62 @@ namespace UI.DISEÑO.CHAT
                 meta += " · " + error;
             }
 
-            var fontCuerpo = new Font("Segoe UI", 10F);
-            var fontMeta = new Font("Segoe UI", 7.5F);
-            Size szCuerpo = TextRenderer.MeasureText(cuerpo, fontCuerpo, new Size(innerW, int.MaxValue),
+            Size szCuerpo = TextRenderer.MeasureText(cuerpo, _fuenteBurbuja, new Size(innerW, int.MaxValue),
                 TextFormatFlags.WordBreak);
-            Size szMeta = TextRenderer.MeasureText(meta, fontMeta, new Size(innerW, int.MaxValue),
+            Size szMeta = TextRenderer.MeasureText(meta, _fuenteBurbujaMeta, new Size(innerW, int.MaxValue),
                 TextFormatFlags.WordBreak);
-
             int burbujaH = 16 + szCuerpo.Height + 4 + szMeta.Height + 10;
 
-            var burbuja = new Panel
-            {
-                Width = maxAnchoBurbuja,
-                Height = burbujaH,
-                BackColor = fondo,
-                Padding = new Padding(10, 8, 10, 8)
-            };
-
-            var lblCuerpo = new Label
-            {
-                AutoSize = false,
-                Font = fontCuerpo,
-                ForeColor = Color.Black,
-                Location = new Point(10, 8),
-                Size = szCuerpo,
-                Text = cuerpo
-            };
-            var lblMeta = new Label
-            {
-                AutoSize = false,
-                Font = fontMeta,
-                ForeColor = Color.Gray,
-                Location = new Point(10, 8 + szCuerpo.Height + 4),
-                Size = szMeta,
-                Text = meta
-            };
-
-            burbuja.Controls.Add(lblCuerpo);
-            burbuja.Controls.Add(lblMeta);
-
-            var contenedor = new Panel
-            {
-                Width = anchoMax,
-                Height = burbujaH + 8,
-                Padding = new Padding(0, 4, 0, 4),
-                Margin = new Padding(0, 2, 0, 2)
-            };
-
-            burbuja.Location = esSalida
-                ? new Point(anchoMax - burbuja.Width - 8, 0)
+            slot.Caja.BackColor = fondo;
+            slot.Caja.Width = maxAnchoBurbuja;
+            slot.Caja.Height = burbujaH;
+            slot.Cuerpo.Location = new Point(10, 8);
+            slot.Cuerpo.Size = szCuerpo;
+            slot.Cuerpo.Text = cuerpo;
+            slot.Meta.Location = new Point(10, 8 + szCuerpo.Height + 4);
+            slot.Meta.Size = szMeta;
+            slot.Meta.Text = meta;
+            slot.Contenedor.Width = anchoMax;
+            slot.Contenedor.Height = burbujaH + 8;
+            slot.Caja.Location = esSalida
+                ? new Point(Math.Max(0, anchoMax - slot.Caja.Width - 8), 0)
                 : new Point(8, 0);
-
-            contenedor.Controls.Add(burbuja);
-            return contenedor;
         }
+
+        private static string FirmaMensaje(ChatMensajeDto msg) =>
+            string.Concat(
+                msg.Direccion, "\u001f",
+                msg.Estado, "\u001f",
+                msg.DetalleError, "\u001f",
+                msg.Cuerpo, "\u001f",
+                msg.Origen, "\u001f",
+                msg.Usuario, "\u001f",
+                msg.EsAutomatico ? "1" : "0", "\u001f",
+                msg.TipoAutomatico);
+
+        private void LiberarBurbujas()
+        {
+            foreach (BurbujaSlot slot in _burbujas)
+                slot.Contenedor.Dispose();
+
+            _burbujas.Clear();
+            _burbujasClienteId = 0;
+            if (flowMensajes.Controls.Count > 0)
+                flowMensajes.Controls.Clear();
+        }
+
+        private sealed class BurbujaSlot
+        {
+            public long Id;
+            public string Firma = string.Empty;
+            public bool EsSalida;
+            public Panel Contenedor = null!;
+            public Panel Caja = null!;
+            public Label Cuerpo = null!;
+            public Label Meta = null!;
+        }
+
+        private void CargarMensajes(int clienteId) => _ = CargarMensajesAsync(clienteId);
 
         private static string FormatearCuerpoBurbuja(ChatMensajeDto msg)
         {
@@ -956,7 +1156,7 @@ namespace UI.DISEÑO.CHAT
         {
             try
             {
-                AjustarAltoFlowMensajes();
+                AjustarAltoFlowMensajes(conservarScroll: false);
                 int max = panelMensajes.VerticalScroll.Maximum;
                 panelMensajes.AutoScrollPosition = new Point(0, max);
             }
@@ -1047,8 +1247,8 @@ namespace UI.DISEÑO.CHAT
                         _lblVentana.Text = resultado.Detalle;
                     txtMensaje.Clear();
                     LimpiarAdjuntoPdf();
-                    CargarMensajes(clienteId);
-                    CargarConversaciones(mantenerSeleccion: true);
+                    await CargarMensajesAsync(clienteId);
+                    _ = CargarConversacionesAsync(mantenerSeleccion: true);
                     SincronizarHuellaChat();
                 }
                 else
@@ -1168,8 +1368,8 @@ namespace UI.DISEÑO.CHAT
                             _lblVentana.Text = resultado.Detalle;
                         txtMensaje.Clear();
                         LimpiarAdjuntoPdf();
-                        CargarMensajes(clienteId);
-                        CargarConversaciones(mantenerSeleccion: true);
+                        await CargarMensajesAsync(clienteId);
+                        _ = CargarConversacionesAsync(mantenerSeleccion: true);
                         SincronizarHuellaChat();
                     }
                 }
@@ -1228,8 +1428,6 @@ namespace UI.DISEÑO.CHAT
             var bounds = e.Bounds;
             bounds.Inflate(-8, -4);
 
-            using var fontNombre = new Font("Segoe UI", 10F, FontStyle.Bold);
-            using var fontPreview = new Font("Segoe UI", 9F);
             using var brushTexto = new SolidBrush(texto);
             using var brushSec = new SolidBrush(secundario);
 
@@ -1237,13 +1435,13 @@ namespace UI.DISEÑO.CHAT
             if (!conv.TelefonoValido)
                 nombre += " ⚠";
 
-            e.Graphics.DrawString(nombre, fontNombre, brushTexto, bounds.Left, bounds.Top);
+            e.Graphics.DrawString(nombre, _fuenteListaNombre, brushTexto, bounds.Left, bounds.Top);
 
             string preview = conv.UltimoMensaje ?? conv.Telefono;
             if (preview.Length > 42)
                 preview = preview[..39] + "...";
 
-            e.Graphics.DrawString(preview, fontPreview, brushSec, bounds.Left, bounds.Top + 22);
+            e.Graphics.DrawString(preview, _fuenteListaDetalle, brushSec, bounds.Left, bounds.Top + 22);
 
             if (conv.NoLeidos > 0)
             {
@@ -1252,13 +1450,13 @@ namespace UI.DISEÑO.CHAT
                 using var brushBadge = new SolidBrush(Color.FromArgb(37, 211, 102));
                 e.Graphics.FillEllipse(brushBadge, badgeRect);
                 using var brushBadgeText = new SolidBrush(Color.White);
-                e.Graphics.DrawString(badge, fontPreview, brushBadgeText, badgeRect.X + 4, badgeRect.Y + 1);
+                e.Graphics.DrawString(badge, _fuenteListaDetalle, brushBadgeText, badgeRect.X + 4, badgeRect.Y + 1);
             }
             else if (conv.UltimaFecha.HasValue)
             {
                 string hora = conv.UltimaFecha.Value.ToString("dd/MM HH:mm");
-                var size = e.Graphics.MeasureString(hora, fontPreview);
-                e.Graphics.DrawString(hora, fontPreview, brushSec,
+                var size = e.Graphics.MeasureString(hora, _fuenteListaDetalle);
+                e.Graphics.DrawString(hora, _fuenteListaDetalle, brushSec,
                     bounds.Right - size.Width, bounds.Top + 2);
             }
         }

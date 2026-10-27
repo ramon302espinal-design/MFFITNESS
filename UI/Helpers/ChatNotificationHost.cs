@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using BLL;
 using BLL.Models;
@@ -15,6 +17,7 @@ namespace UI.Helpers
         private static readonly ChatBLL Chat = new();
         private static System.Windows.Forms.Timer? _timer;
         private static int _ultimoIdConocido = -1;
+        private static int _revisando;
         private static bool _iniciado;
 
         public static void Start()
@@ -59,11 +62,15 @@ namespace UI.Helpers
             }
         }
 
-        private static void RevisarNuevosMensajes()
+        private static async void RevisarNuevosMensajes()
         {
+            if (Interlocked.CompareExchange(ref _revisando, 1, 0) != 0)
+                return;
+
             try
             {
-                IReadOnlyList<ChatNotificacionDto> nuevos = Chat.ListarEntradasDesdeId(_ultimoIdConocido);
+                int desde = _ultimoIdConocido;
+                IReadOnlyList<ChatNotificacionDto> nuevos = await Task.Run(() => Chat.ListarEntradasDesdeId(desde));
                 if (nuevos.Count == 0)
                     return;
 
@@ -90,6 +97,10 @@ namespace UI.Helpers
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"ChatNotificationHost: {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _revisando, 0);
             }
         }
     }

@@ -48,7 +48,7 @@ namespace UI.DISEÑO
                 Font = new System.Drawing.Font("Segoe UI", 10F)
             };
 
-            cmb.Items.Add(new OpcionPeriodo { EsHoy = true, Anio = anio, Etiqueta = "HOY (activos en vivo)" });
+            cmb.Items.Add(new OpcionPeriodo { EsHoy = true, Anio = anio, Etiqueta = "HOY (todos los miembros del listado)" });
             for (int mes = 1; mes <= 12; mes++)
             {
                 string nombre = cultura.DateTimeFormat.GetMonthName(mes);

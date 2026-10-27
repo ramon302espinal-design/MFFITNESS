@@ -322,7 +322,7 @@ namespace UI.DISEÑO
             cmbEstaCategoria.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbEstaCategoria.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             cmbEstaCategoria.FormattingEnabled = true;
-            cmbEstaCategoria.Items.AddRange(new object[] { "TODOS", "CON DEUDA", "ACTIVOS", "VENCIDOS", "DESACTIVADOS", "CONGELADOS", "PAGOS PAL 15", "PAGOS PAL FIN DE MES" });
+            cmbEstaCategoria.Items.AddRange(new object[] { "TODOS", "CON DEUDA", "ACTIVOS", "VENCIDOS", "DESACTIVADOS", "CONGELADOS", "PAGOS PAL 15", "PAGOS PAL FIN DE MES", "PREMIUM", "PRO", "MENSUALIDAD", "3X", "GLUTEOS GRANDE", "ABDOMEN PLANO" });
             cmbEstaCategoria.Location = new Point(1298, 11);
             cmbEstaCategoria.Name = "cmbEstaCategoria";
             cmbEstaCategoria.Size = new Size(230, 33);

@@ -82,46 +82,59 @@ IF COL_LENGTH(N'dbo.ChatMensajes', N'ContentSid') IS NULL
                         )
                     ) ";
 
+            // Un mensaje por lado (chat y automático), sin ordenar todo el archivo.
+            // NOLOCK: esta lectura no espera ni bloquea los envíos de WhatsApp.
             string query = $@"
-WITH Timeline AS (
-    SELECT ClienteId, Cuerpo, Fecha, Direccion, Leido
-    FROM dbo.ChatMensajes
-    UNION ALL
-    SELECT ClienteId,
-           Mensaje AS Cuerpo,
-           COALESCE(FechaEnvio, FechaCreacion) AS Fecha,
-           N'SALIDA' AS Direccion,
-           CAST(1 AS BIT) AS Leido
-    FROM dbo.RegistroMensajes
-    WHERE Estado IN (N'ENVIADO', N'ERROR', N'PENDIENTE')
-),
-Ultimo AS (
-    SELECT ClienteId, Cuerpo, Fecha,
-           ROW_NUMBER() OVER (PARTITION BY ClienteId ORDER BY Fecha DESC) AS Rn
-    FROM Timeline
-),
-NoLeidos AS (
-    SELECT ClienteId, COUNT(*) AS Cantidad
-    FROM dbo.ChatMensajes
-    WHERE Direccion = N'ENTRADA' AND Leido = 0
-    GROUP BY ClienteId
-)
 SELECT
     c.ID AS ClienteId,
     c.Nombre,
     ISNULL(c.Telefono, N'') AS Telefono,
-    u.Cuerpo AS UltimoMensaje,
-    u.Fecha AS UltimaFecha,
+    CASE
+        WHEN chat.Fecha IS NULL THEN auto.Cuerpo
+        WHEN auto.Fecha IS NULL THEN chat.Cuerpo
+        WHEN auto.Fecha >= chat.Fecha THEN auto.Cuerpo
+        ELSE chat.Cuerpo
+    END AS UltimoMensaje,
+    CASE
+        WHEN chat.Fecha IS NULL THEN auto.Fecha
+        WHEN auto.Fecha IS NULL THEN chat.Fecha
+        WHEN auto.Fecha >= chat.Fecha THEN auto.Fecha
+        ELSE chat.Fecha
+    END AS UltimaFecha,
     ISNULL(nl.Cantidad, 0) AS NoLeidos
-FROM dbo.Clientes c
-LEFT JOIN Ultimo u ON u.ClienteId = c.ID AND u.Rn = 1
-LEFT JOIN NoLeidos nl ON nl.ClienteId = c.ID
+FROM dbo.Clientes c WITH (NOLOCK)
+OUTER APPLY (
+    SELECT TOP (1) cm.Cuerpo, cm.Fecha
+    FROM dbo.ChatMensajes cm WITH (NOLOCK)
+    WHERE cm.ClienteId = c.ID
+    ORDER BY cm.Fecha DESC, cm.Id DESC
+) chat
+OUTER APPLY (
+    SELECT TOP (1)
+        rm.Mensaje AS Cuerpo,
+        COALESCE(rm.FechaEnvio, rm.FechaCreacion) AS Fecha
+    FROM dbo.RegistroMensajes rm WITH (NOLOCK)
+    WHERE rm.ClienteId = c.ID
+      AND rm.Estado IN (N'ENVIADO', N'ERROR', N'PENDIENTE')
+    ORDER BY rm.Id DESC
+) auto
+LEFT JOIN (
+    SELECT ClienteId, COUNT(*) AS Cantidad
+    FROM dbo.ChatMensajes WITH (NOLOCK)
+    WHERE Direccion = N'ENTRADA' AND Leido = 0
+    GROUP BY ClienteId
+) nl ON nl.ClienteId = c.ID
 WHERE c.Telefono IS NOT NULL
   AND LTRIM(RTRIM(c.Telefono)) <> N''
   {filtro}
 ORDER BY
-    CASE WHEN u.Fecha IS NULL THEN 1 ELSE 0 END,
-    u.Fecha DESC,
+    CASE WHEN chat.Fecha IS NULL AND auto.Fecha IS NULL THEN 1 ELSE 0 END,
+    CASE
+        WHEN chat.Fecha IS NULL THEN auto.Fecha
+        WHEN auto.Fecha IS NULL THEN chat.Fecha
+        WHEN auto.Fecha >= chat.Fecha THEN auto.Fecha
+        ELSE chat.Fecha
+    END DESC,
     c.Nombre ASC;";
 
             if (string.IsNullOrWhiteSpace(filtroNombre))
@@ -153,13 +166,13 @@ SELECT
     CAST(NULL AS NVARCHAR(50)) AS TipoAutomatico,
     ISNULL(Origen, N'MANUAL') AS Origen,
     DetalleError
-FROM dbo.ChatMensajes
+FROM dbo.ChatMensajes WITH (NOLOCK)
 WHERE ClienteId = @ClienteId
 
 UNION ALL
 
 SELECT
-    CAST(1000000000 + Id AS BIGINT) AS Id,
+    CAST(1000000000 AS BIGINT) + CAST(Id AS BIGINT) AS Id,
     ClienteId,
     N'SALIDA' AS Direccion,
     Mensaje AS Cuerpo,
@@ -169,8 +182,8 @@ SELECT
     CAST(1 AS BIT) AS EsAutomatico,
     Tipo AS TipoAutomatico,
     N'AUTO' AS Origen,
-    CASE WHEN Estado = N'ERROR' THEN LEFT(ISNULL(Respuesta, N''), 500) ELSE NULL END AS DetalleError
-FROM dbo.RegistroMensajes
+    CASE WHEN Estado = N'ERROR' THEN LEFT(Respuesta, 500) ELSE NULL END AS DetalleError
+FROM dbo.RegistroMensajes WITH (NOLOCK)
 WHERE ClienteId = @ClienteId
   AND Estado IN (N'ENVIADO', N'ERROR', N'PENDIENTE')
 
@@ -186,8 +199,8 @@ ORDER BY Fecha ASC;";
 
             string query = @"
 SELECT
-    (SELECT COUNT(1) FROM dbo.ChatMensajes WHERE ClienteId = @ClienteId)
-  + (SELECT COUNT(1) FROM dbo.RegistroMensajes
+    (SELECT COUNT(1) FROM dbo.ChatMensajes WITH (NOLOCK) WHERE ClienteId = @ClienteId)
+  + (SELECT COUNT(1) FROM dbo.RegistroMensajes WITH (NOLOCK)
      WHERE ClienteId = @ClienteId
        AND Estado IN (N'ENVIADO', N'ERROR', N'PENDIENTE'));";
 
@@ -359,8 +372,8 @@ SELECT
     c.Nombre AS ClienteNombre,
     cm.Cuerpo,
     cm.Fecha
-FROM dbo.ChatMensajes cm
-INNER JOIN dbo.Clientes c ON c.ID = cm.ClienteId
+FROM dbo.ChatMensajes cm WITH (NOLOCK)
+INNER JOIN dbo.Clientes c WITH (NOLOCK) ON c.ID = cm.ClienteId
 WHERE cm.Direccion = N'ENTRADA'
   AND cm.Id > @UltimoId
 ORDER BY cm.Id ASC;";
