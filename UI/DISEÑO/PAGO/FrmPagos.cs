@@ -1289,9 +1289,10 @@ namespace UI.DISEÑO
             PlanBLL planBLL = new PlanBLL();
             DataTable dt = planBLL.ObtenerPlanes();
 
-            // POS: ocultar 3x (se cobra por otros flujos). MENSUALIDAD visible junto a M-A.
+            // 3x (Id 1011, RD$ 1000, 30 días) entra al mismo cobro que el resto:
+            // caja, membresía, historial y el KPI 3X de Estado. No se filtra.
             DataView dv = dt.DefaultView;
-            dv.RowFilter = "Nombre <> '3x'";
+            dv.RowFilter = string.Empty;
 
             cmbMembresia.DataSource = dv;
             cmbMembresia.DisplayMember = "Nombre";
