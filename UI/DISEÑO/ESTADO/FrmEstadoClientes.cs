@@ -114,6 +114,7 @@ namespace UI.DISEÑO
             AppEventos.OnEstadoMembresiaCambiada += OnDatosEstadoCambiaron;
             AppEventos.OnProgramacionActivada += OnProgramacionActivadaEstado;
 
+            ActualizarTextoBotonCalendario();
             CargarEstado();
             timerActualizacion.Start();
         }
@@ -125,6 +126,16 @@ namespace UI.DISEÑO
             AppEventos.OnEstadoMembresiaCambiada -= OnDatosEstadoCambiaron;
             AppEventos.OnProgramacionActivada -= OnProgramacionActivadaEstado;
             timerActualizacion.Stop();
+            try
+            {
+                _calendarioPopup?.Close();
+                _calendarioPopup?.Dispose();
+                _calendarioPopup = null;
+            }
+            catch
+            {
+                // ignore
+            }
             base.OnFormClosed(e);
         }
 
@@ -159,8 +170,9 @@ namespace UI.DISEÑO
                 : Color.FromArgb(180, 83, 9);
         }
 
-        private void TimerActualizacion_Tick(object? sender, EventArgs e) 
+        private void TimerActualizacion_Tick(object? sender, EventArgs e)
         {
+            ActualizarTextoBotonCalendario();
             CargarEstado();
         }
 
@@ -275,7 +287,8 @@ namespace UI.DISEÑO
             if (label == null || label.IsDisposed)
                 return;
 
-            label.Text = titulo + ": " + cantidad.ToString("N0", CulturaDo);
+            // Estilo mockup (viñeta + mayúsculas) con conteo operativo.
+            label.Text = "•  " + titulo + ": " + cantidad.ToString("N0", CulturaDo);
         }
 
         /// <summary>M-A y MENSUALIDAD → bucket MENSUALIDAD; planes especiales con bucket propio; resto → OTROS (solo TOTAL).</summary>
@@ -472,6 +485,7 @@ namespace UI.DISEÑO
                 "PRO" => "PlanCategoria = 'PRO'",
                 "MENSUALIDAD" => "PlanCategoria = 'MENSUALIDAD'",
                 "3X" => "PlanCategoria = '3X'",
+                "2X" => "PlanCategoria = '2X'",
                 "GLUTEOS GRANDE" => "PlanCategoria = 'GLUTEOS GRANDE'",
                 "ABDOMEN PLANO" => "PlanCategoria = 'ABDOMEN PLANO'",
                 _ => null // TODOS / desconocido → sin filtro de categoría
@@ -1375,6 +1389,7 @@ namespace UI.DISEÑO
                 case "PRO":
                 case "MENSUALIDAD":
                 case "3X":
+                case "2X":
                 case "GLUTEOS GRANDE":
                 case "ABDOMEN PLANO":
                     return string.Equals(Convert.ToString(row["PlanCategoria"])?.Trim(), cat, StringComparison.OrdinalIgnoreCase);
@@ -1773,6 +1788,11 @@ namespace UI.DISEÑO
                 case "3X":
                     c3x += cantidad;
                     m3x += monto;
+                    break;
+                case "2X":
+                    // Sin panel KPI dedicado: entra en el total (misma vía que OTROS).
+                    cOtros += cantidad;
+                    mOtros += monto;
                     break;
                 case "ABDOMEN PLANO":
                     cAbdomen += cantidad;

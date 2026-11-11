@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -19,6 +20,7 @@ namespace UI.Helpers
         private static int _ultimoIdConocido = -1;
         private static int _revisando;
         private static bool _iniciado;
+        private static SynchronizationContext? _uiContext;
 
         public static void Start()
         {
@@ -27,8 +29,11 @@ namespace UI.Helpers
                 if (_iniciado)
                     return;
 
+                _uiContext = SynchronizationContext.Current;
+
                 try
                 {
+                    // Lectura inicial fuera del hilo UI cuando sea posible.
                     _ultimoIdConocido = Chat.ObtenerMaxIdMensajeEntrada();
                 }
                 catch
@@ -59,6 +64,7 @@ namespace UI.Helpers
 
                 _iniciado = false;
                 _ultimoIdConocido = -1;
+                _uiContext = null;
             }
         }
 
@@ -70,29 +76,50 @@ namespace UI.Helpers
             try
             {
                 int desde = _ultimoIdConocido;
-                IReadOnlyList<ChatNotificacionDto> nuevos = await Task.Run(() => Chat.ListarEntradasDesdeId(desde));
+                IReadOnlyList<ChatNotificacionDto> nuevos = await Task.Run(() => Chat.ListarEntradasDesdeId(desde))
+                    .ConfigureAwait(false);
+
                 if (nuevos.Count == 0)
                     return;
 
                 int maxId = _ultimoIdConocido;
-                bool notificar = false;
-
                 foreach (ChatNotificacionDto msg in nuevos)
-                {
                     maxId = Math.Max(maxId, msg.MensajeId);
-                    MensajeEntranteRecibido?.Invoke(msg.ClienteId, msg.MensajeId);
-
-                    if (FrmChat.EstaViendoCliente(msg.ClienteId))
-                        continue;
-
-                    notificar = true;
-                    FrmChatMensajeToast.Mostrar(msg);
-                }
 
                 _ultimoIdConocido = maxId;
 
-                if (notificar)
-                    ChatSoundHelper.ReproducirMensajeEntrante();
+                // OpenForms / toast solo en el hilo UI.
+                void enUi()
+                {
+                    bool notificar = false;
+                    foreach (ChatNotificacionDto msg in nuevos)
+                    {
+                        MensajeEntranteRecibido?.Invoke(msg.ClienteId, msg.MensajeId);
+
+                        if (FrmChat.EstaViendoCliente(msg.ClienteId))
+                            continue;
+
+                        notificar = true;
+                        FrmChatMensajeToast.Mostrar(msg);
+                    }
+
+                    if (notificar)
+                        ChatSoundHelper.ReproducirMensajeEntrante();
+                }
+
+                SynchronizationContext? ctx = _uiContext;
+                if (ctx != null)
+                    ctx.Post(_ => enUi(), null);
+                else if (Application.OpenForms.Count > 0)
+                {
+                    Form? seed = Application.OpenForms[0];
+                    if (seed != null && seed.IsHandleCreated && !seed.IsDisposed)
+                        seed.BeginInvoke((Action)enUi);
+                    else
+                        enUi();
+                }
+                else
+                    enUi();
             }
             catch (Exception ex)
             {

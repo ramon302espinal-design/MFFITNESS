@@ -92,6 +92,8 @@ namespace UI.DISEÑO
             dgvEstado = new DataGridView();
             btnAtras = new Button();
             panelCiclos = new Panel();
+            btnCalendario = new Button();
+            tlpEstados = new TableLayoutPanel();
             lblCondeuda = new Label();
             lblCongelado = new Label();
             lblDesactivados = new Label();
@@ -125,6 +127,7 @@ namespace UI.DISEÑO
             panel7.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvEstado).BeginInit();
             panelCiclos.SuspendLayout();
+            tlpEstados.SuspendLayout();
             pnlQuincena.SuspendLayout();
             pnlMensualidad.SuspendLayout();
             SuspendLayout();
@@ -322,7 +325,7 @@ namespace UI.DISEÑO
             cmbEstaCategoria.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbEstaCategoria.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             cmbEstaCategoria.FormattingEnabled = true;
-            cmbEstaCategoria.Items.AddRange(new object[] { "TODOS", "CON DEUDA", "ACTIVOS", "VENCIDOS", "DESACTIVADOS", "CONGELADOS", "PAGOS PAL 15", "PAGOS PAL FIN DE MES", "PREMIUM", "PRO", "MENSUALIDAD", "3X", "GLUTEOS GRANDE", "ABDOMEN PLANO" });
+            cmbEstaCategoria.Items.AddRange(new object[] { "TODOS", "CON DEUDA", "ACTIVOS", "VENCIDOS", "DESACTIVADOS", "CONGELADOS", "PAGOS PAL 15", "PAGOS PAL FIN DE MES", "PREMIUM", "PRO", "MENSUALIDAD", "3X", "2X", "GLUTEOS GRANDE", "ABDOMEN PLANO" });
             cmbEstaCategoria.Location = new Point(1298, 11);
             cmbEstaCategoria.Name = "cmbEstaCategoria";
             cmbEstaCategoria.Size = new Size(230, 33);
@@ -803,22 +806,101 @@ namespace UI.DISEÑO
             label6.Tag = "classic";
             label6.Text = "PRO";
             // 
-            // panel6
+            // panel6 — antes GLUTEOS GRANDE: lista negra de estados
             // 
-            panel6.BackColor = Color.Blue;
+            panel6.BackColor = Color.Black;
+            panel6.Controls.Add(tlpEstados);
             panel6.Controls.Add(lblCGluteosGrande);
             panel6.Controls.Add(lblMGluteosGrande);
             panel6.Controls.Add(label15);
             panel6.Dock = DockStyle.Fill;
-            panel6.ForeColor = Color.Crimson;
+            panel6.ForeColor = Color.White;
             panel6.Location = new Point(1594, 4);
             panel6.Margin = new Padding(4);
             panel6.Name = "panel6";
+            panel6.Padding = new Padding(10, 6, 10, 6);
             panel6.Size = new Size(310, 128);
             panel6.TabIndex = 69;
             panel6.Tag = "classic";
             // 
-            // lblCGluteosGrande
+            // tlpEstados (reemplaza la tarjeta GLUTEOS GRANDE)
+            // 
+            tlpEstados.BackColor = Color.Black;
+            tlpEstados.ColumnCount = 1;
+            tlpEstados.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tlpEstados.Controls.Add(lblVencidos, 0, 0);
+            tlpEstados.Controls.Add(lblDesactivados, 0, 1);
+            tlpEstados.Controls.Add(lblCongelado, 0, 2);
+            tlpEstados.Controls.Add(lblCondeuda, 0, 3);
+            tlpEstados.Dock = DockStyle.Fill;
+            tlpEstados.Location = new Point(10, 6);
+            tlpEstados.Name = "tlpEstados";
+            tlpEstados.RowCount = 4;
+            tlpEstados.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tlpEstados.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tlpEstados.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tlpEstados.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tlpEstados.Size = new Size(290, 116);
+            tlpEstados.TabIndex = 0;
+            tlpEstados.Tag = "classic";
+            // 
+            // lblVencidos
+            // 
+            lblVencidos.BackColor = Color.Black;
+            lblVencidos.Dock = DockStyle.Fill;
+            lblVencidos.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblVencidos.ForeColor = Color.White;
+            lblVencidos.Location = new Point(0, 0);
+            lblVencidos.Margin = new Padding(0);
+            lblVencidos.Name = "lblVencidos";
+            lblVencidos.Size = new Size(290, 29);
+            lblVencidos.TabIndex = 73;
+            lblVencidos.Text = "•  VENCIDOS";
+            lblVencidos.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // lblDesactivados
+            // 
+            lblDesactivados.BackColor = Color.Black;
+            lblDesactivados.Dock = DockStyle.Fill;
+            lblDesactivados.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblDesactivados.ForeColor = Color.White;
+            lblDesactivados.Location = new Point(0, 29);
+            lblDesactivados.Margin = new Padding(0);
+            lblDesactivados.Name = "lblDesactivados";
+            lblDesactivados.Size = new Size(290, 29);
+            lblDesactivados.TabIndex = 74;
+            lblDesactivados.Text = "•  DESACTIVADOS";
+            lblDesactivados.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // lblCongelado
+            // 
+            lblCongelado.BackColor = Color.Black;
+            lblCongelado.Dock = DockStyle.Fill;
+            lblCongelado.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblCongelado.ForeColor = Color.White;
+            lblCongelado.Location = new Point(0, 58);
+            lblCongelado.Margin = new Padding(0);
+            lblCongelado.Name = "lblCongelado";
+            lblCongelado.Size = new Size(290, 29);
+            lblCongelado.TabIndex = 75;
+            lblCongelado.Text = "•  CONGELADOS";
+            lblCongelado.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // lblCondeuda
+            // 
+            lblCondeuda.BackColor = Color.Black;
+            lblCondeuda.Dock = DockStyle.Fill;
+            lblCondeuda.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblCondeuda.ForeColor = Color.White;
+            lblCondeuda.Location = new Point(0, 87);
+            lblCondeuda.Margin = new Padding(0);
+            lblCondeuda.Name = "lblCondeuda";
+            lblCondeuda.Size = new Size(290, 29);
+            lblCondeuda.TabIndex = 76;
+            lblCondeuda.Text = "•  CON DEUDA";
+            lblCondeuda.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // lblCGluteosGrande (oculto; KPI sigue contando en TOTAL)
             // 
             lblCGluteosGrande.AutoSize = true;
             lblCGluteosGrande.BackColor = Color.Transparent;
@@ -830,6 +912,7 @@ namespace UI.DISEÑO
             lblCGluteosGrande.TabIndex = 62;
             lblCGluteosGrande.Tag = "classic";
             lblCGluteosGrande.Text = "0";
+            lblCGluteosGrande.Visible = false;
             // 
             // lblMGluteosGrande
             // 
@@ -843,6 +926,7 @@ namespace UI.DISEÑO
             lblMGluteosGrande.TabIndex = 61;
             lblMGluteosGrande.Tag = "classic";
             lblMGluteosGrande.Text = "0";
+            lblMGluteosGrande.Visible = false;
             // 
             // label15
             // 
@@ -852,10 +936,11 @@ namespace UI.DISEÑO
             label15.ForeColor = Color.White;
             label15.Location = new Point(21, 5);
             label15.Name = "label15";
-            label15.Size = new Size(234, 35);
+            label15.Size = new Size(0, 35);
             label15.TabIndex = 60;
             label15.Tag = "classic";
-            label15.Text = "GLUTEOS GRANDE";
+            label15.Text = "";
+            label15.Visible = false;
             // 
             // panel7
             // 
@@ -974,13 +1059,10 @@ namespace UI.DISEÑO
             // panelCiclos
             // 
             panelCiclos.BackColor = Color.FromArgb(30, 30, 30);
-            panelCiclos.Controls.Add(lblCondeuda);
-            panelCiclos.Controls.Add(lblCongelado);
-            panelCiclos.Controls.Add(lblDesactivados);
-            panelCiclos.Controls.Add(lblVencidos);
             panelCiclos.Controls.Add(pnlQuincena);
             panelCiclos.Controls.Add(pnlMensualidad);
             panelCiclos.Controls.Add(panel7);
+            panelCiclos.Controls.Add(btnCalendario);
             panelCiclos.Dock = DockStyle.Right;
             panelCiclos.Location = new Point(1634, 136);
             panelCiclos.Name = "panelCiclos";
@@ -989,53 +1071,29 @@ namespace UI.DISEÑO
             panelCiclos.TabIndex = 5;
             panelCiclos.Tag = "classic";
             // 
-            // lblCondeuda
+            // btnCalendario
             // 
-            lblCondeuda.AutoSize = true;
-            lblCondeuda.BackColor = Color.Black;
-            lblCondeuda.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblCondeuda.ForeColor = Color.White;
-            lblCondeuda.Location = new Point(4, 505);
-            lblCondeuda.Name = "lblCondeuda";
-            lblCondeuda.Size = new Size(111, 23);
-            lblCondeuda.TabIndex = 76;
-            lblCondeuda.Text = "CON DEUDA";
-            // 
-            // lblCongelado
-            // 
-            lblCongelado.AutoSize = true;
-            lblCongelado.BackColor = Color.Black;
-            lblCongelado.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblCongelado.ForeColor = Color.White;
-            lblCongelado.Location = new Point(4, 526);
-            lblCongelado.Name = "lblCongelado";
-            lblCongelado.Size = new Size(125, 23);
-            lblCongelado.TabIndex = 75;
-            lblCongelado.Text = "CONGELADOS";
-            // 
-            // lblDesactivados
-            // 
-            lblDesactivados.AutoSize = true;
-            lblDesactivados.BackColor = Color.Black;
-            lblDesactivados.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblDesactivados.ForeColor = Color.White;
-            lblDesactivados.Location = new Point(4, 484);
-            lblDesactivados.Name = "lblDesactivados";
-            lblDesactivados.Size = new Size(138, 23);
-            lblDesactivados.TabIndex = 74;
-            lblDesactivados.Text = "DESACTIVADOS";
-            // 
-            // lblVencidos
-            // 
-            lblVencidos.AutoSize = true;
-            lblVencidos.BackColor = Color.Black;
-            lblVencidos.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            lblVencidos.ForeColor = Color.White;
-            lblVencidos.Location = new Point(4, 461);
-            lblVencidos.Name = "lblVencidos";
-            lblVencidos.Size = new Size(95, 23);
-            lblVencidos.TabIndex = 73;
-            lblVencidos.Text = "VENCIDOS";
+            btnCalendario.BackColor = Color.FromArgb(18, 18, 18);
+            btnCalendario.Cursor = Cursors.Hand;
+            btnCalendario.Dock = DockStyle.Top;
+            btnCalendario.FlatAppearance.BorderColor = Color.FromArgb(70, 130, 200);
+            btnCalendario.FlatAppearance.BorderSize = 1;
+            btnCalendario.FlatAppearance.MouseDownBackColor = Color.FromArgb(27, 80, 140);
+            btnCalendario.FlatAppearance.MouseOverBackColor = Color.FromArgb(32, 48, 68);
+            btnCalendario.FlatStyle = FlatStyle.Flat;
+            btnCalendario.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+            btnCalendario.ForeColor = Color.White;
+            btnCalendario.Location = new Point(8, 8);
+            btnCalendario.Margin = new Padding(0, 0, 0, 8);
+            btnCalendario.Name = "btnCalendario";
+            btnCalendario.Padding = new Padding(10, 0, 10, 0);
+            btnCalendario.Size = new Size(274, 44);
+            btnCalendario.TabIndex = 77;
+            btnCalendario.Tag = "classic";
+            btnCalendario.Text = "📅  Calendario";
+            btnCalendario.TextAlign = ContentAlignment.MiddleLeft;
+            btnCalendario.UseVisualStyleBackColor = false;
+            btnCalendario.Click += btnCalendario_Click;
             // 
             // pnlQuincena
             // 
@@ -1243,6 +1301,7 @@ namespace UI.DISEÑO
             ((System.ComponentModel.ISupportInitialize)dgvEstado).EndInit();
             panelCiclos.ResumeLayout(false);
             panelCiclos.PerformLayout();
+            tlpEstados.ResumeLayout(false);
             pnlQuincena.ResumeLayout(false);
             pnlQuincena.PerformLayout();
             pnlMensualidad.ResumeLayout(false);
@@ -1332,5 +1391,7 @@ namespace UI.DISEÑO
         private Label lblVencidos;
         private Label lblCongelado;
         private Label lblDesactivados;
+        private Button btnCalendario;
+        private TableLayoutPanel tlpEstados;
     }
 }

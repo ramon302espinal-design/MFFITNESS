@@ -46,18 +46,37 @@ namespace UI.DISEÑO
             Text = "Renovar - " + (string.IsNullOrWhiteSpace(_nombreCliente) ? "Cliente" : _nombreCliente);
             lblCliente.Text = string.IsNullOrWhiteSpace(_nombreCliente) ? "Cliente" : _nombreCliente;
             ResetOfertaCampos();
+            ResetFinanciamientoCampos();
             CargarPlanes();
         }
 
         private void CargarPlanes()
         {
+            // Misma fuente que Pagos (dbo.Planes Activo=1). 2X entra como 3x/PREMIUM;
+            // solo se excluyen PRODUCTO A CRÉDITO, M-A, ATLETA y VISITA.
             DataTable tablaPlanes = Planes.ObtenerPlanes() ?? new DataTable();
             DataTable fuente = FiltrarPlanesRenovacion(tablaPlanes);
+            if (fuente.Columns.Contains("Nombre") && fuente.Rows.Count > 0)
+            {
+                DataView orden = fuente.DefaultView;
+                orden.Sort = "Nombre ASC";
+                fuente = orden.ToTable();
+            }
 
-            cmbPlan.DisplayMember = "Nombre";
-            cmbPlan.ValueMember = "Id";
-            cmbPlan.DataSource = fuente.Rows.Count > 0 ? fuente : null;
-            cmbPlan.SelectedIndex = -1;
+            cmbPlan.BeginUpdate();
+            try
+            {
+                cmbPlan.DataSource = null;
+                cmbPlan.DisplayMember = "Nombre";
+                cmbPlan.ValueMember = "Id";
+                cmbPlan.DataSource = fuente.Rows.Count > 0 ? fuente : null;
+                cmbPlan.SelectedIndex = -1;
+            }
+            finally
+            {
+                cmbPlan.EndUpdate();
+            }
+
             lblPrecio.Text = "Precio: RD$ 0.00";
         }
 
@@ -77,6 +96,14 @@ namespace UI.DISEÑO
             }
 
             ActualizarPanelOfertaPorPlan();
+
+            if (chkFinanciamiento.Checked)
+            {
+                if (EsPlanOfertaSeleccionado())
+                    ResetFinanciamientoCampos();
+                else
+                    CalcularSaldoFinanciamiento();
+            }
         }
 
         private void btnConfirmar_Click(object? sender, EventArgs e)
@@ -104,6 +131,12 @@ namespace UI.DISEÑO
                 if (EsPlanOfertaSeleccionado())
                 {
                     ConfirmarRenovacionConOferta(planId, plan, usuario);
+                    return;
+                }
+
+                if (chkFinanciamiento.Checked)
+                {
+                    ConfirmarRenovacionFinanciada(planId, plan, usuario);
                     return;
                 }
 

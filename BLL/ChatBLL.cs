@@ -117,10 +117,14 @@ namespace BLL
             return lista;
         }
 
-        public IReadOnlyList<ChatMensajeDto> ListarMensajes(int clienteId)
+        public IReadOnlyList<ChatMensajeDto> ListarMensajes(int clienteId) =>
+            ListarMensajes(clienteId, takeUltimos: null);
+
+        /// <param name="takeUltimos">Si tiene valor, solo los N mensajes más recientes (orden ASC).</param>
+        public IReadOnlyList<ChatMensajeDto> ListarMensajes(int clienteId, int? takeUltimos)
         {
             chatDal.EnsureSchema();
-            DataTable dt = chatDal.ListarMensajes(clienteId);
+            DataTable dt = chatDal.ListarMensajes(clienteId, takeUltimos);
             var lista = new List<ChatMensajeDto>(dt.Rows.Count);
 
             foreach (DataRow row in dt.Rows)

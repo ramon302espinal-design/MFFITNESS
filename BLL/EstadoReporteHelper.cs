@@ -20,6 +20,9 @@ namespace BLL
             if (string.Equals(n, "3x", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(n, "3X", StringComparison.OrdinalIgnoreCase))
                 return "3X";
+            if (string.Equals(n, "2x", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(n, "2X", StringComparison.OrdinalIgnoreCase))
+                return "2X";
             if (string.Equals(n, "ABDOMEN PLANO", StringComparison.OrdinalIgnoreCase))
                 return "ABDOMEN PLANO";
             if (string.Equals(n, "GLUTEOS GRANDE", StringComparison.OrdinalIgnoreCase))
@@ -48,6 +51,7 @@ namespace BLL
                 ["PREMIUM"] = (0, 0m),
                 ["PRO"] = (0, 0m),
                 ["3X"] = (0, 0m),
+                ["2X"] = (0, 0m),
                 ["ABDOMEN PLANO"] = (0, 0m),
                 ["GLUTEOS GRANDE"] = (0, 0m),
                 ["OTROS"] = (0, 0m)

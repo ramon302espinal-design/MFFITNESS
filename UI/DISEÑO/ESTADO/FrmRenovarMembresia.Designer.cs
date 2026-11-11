@@ -21,6 +21,14 @@ namespace UI.DISEÑO
             lblPlan = new Label();
             cmbPlan = new ComboBox();
             lblPrecio = new Label();
+            chkFinanciamiento = new CheckBox();
+            pnlFinanciamiento = new Panel();
+            lblPagoInicial = new Label();
+            txtPagoInicial = new TextBox();
+            lblSaldo = new Label();
+            lblSaldoValor = new Label();
+            lblFechaLimite = new Label();
+            dtpFechaLimitePago = new DateTimePicker();
             pnlOferta = new Panel();
             lblOfertaPct = new Label();
             txtDescuentoPorcental = new TextBox();
@@ -33,6 +41,7 @@ namespace UI.DISEÑO
             panelAcciones = new Panel();
             btnConfirmar = new Button();
             btnCancelar = new Button();
+            pnlFinanciamiento.SuspendLayout();
             pnlOferta.SuspendLayout();
             panelAcciones.SuspendLayout();
             SuspendLayout();
@@ -79,6 +88,98 @@ namespace UI.DISEÑO
             lblPrecio.TabIndex = 3;
             lblPrecio.Text = "Precio: RD$ 0.00";
             // 
+            // chkFinanciamiento
+            // 
+            chkFinanciamiento.AutoSize = true;
+            chkFinanciamiento.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            chkFinanciamiento.ForeColor = Color.FromArgb(33, 150, 243);
+            chkFinanciamiento.Location = new Point(16, 152);
+            chkFinanciamiento.Name = "chkFinanciamiento";
+            chkFinanciamiento.Size = new Size(171, 29);
+            chkFinanciamiento.TabIndex = 4;
+            chkFinanciamiento.Text = " Financiamiento";
+            chkFinanciamiento.UseVisualStyleBackColor = true;
+            chkFinanciamiento.CheckedChanged += chkFinanciamiento_CheckedChanged;
+            // 
+            // pnlFinanciamiento
+            // 
+            pnlFinanciamiento.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            pnlFinanciamiento.BackColor = Color.FromArgb(240, 248, 255);
+            pnlFinanciamiento.BorderStyle = BorderStyle.FixedSingle;
+            pnlFinanciamiento.Controls.Add(lblPagoInicial);
+            pnlFinanciamiento.Controls.Add(txtPagoInicial);
+            pnlFinanciamiento.Controls.Add(lblSaldo);
+            pnlFinanciamiento.Controls.Add(lblSaldoValor);
+            pnlFinanciamiento.Controls.Add(lblFechaLimite);
+            pnlFinanciamiento.Controls.Add(dtpFechaLimitePago);
+            pnlFinanciamiento.Location = new Point(16, 188);
+            pnlFinanciamiento.Name = "pnlFinanciamiento";
+            pnlFinanciamiento.Size = new Size(381, 170);
+            pnlFinanciamiento.TabIndex = 5;
+            pnlFinanciamiento.Visible = false;
+            // 
+            // lblPagoInicial
+            // 
+            lblPagoInicial.AutoSize = true;
+            lblPagoInicial.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblPagoInicial.Location = new Point(14, 16);
+            lblPagoInicial.Name = "lblPagoInicial";
+            lblPagoInicial.Size = new Size(108, 23);
+            lblPagoInicial.TabIndex = 0;
+            lblPagoInicial.Text = "Pago Inicial:";
+            // 
+            // txtPagoInicial
+            // 
+            txtPagoInicial.Font = new Font("Segoe UI", 12F);
+            txtPagoInicial.Location = new Point(160, 12);
+            txtPagoInicial.Name = "txtPagoInicial";
+            txtPagoInicial.Size = new Size(140, 34);
+            txtPagoInicial.TabIndex = 1;
+            txtPagoInicial.Text = "0";
+            txtPagoInicial.TextAlign = HorizontalAlignment.Right;
+            txtPagoInicial.TextChanged += txtPagoInicial_TextChanged;
+            // 
+            // lblSaldo
+            // 
+            lblSaldo.AutoSize = true;
+            lblSaldo.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblSaldo.Location = new Point(14, 62);
+            lblSaldo.Name = "lblSaldo";
+            lblSaldo.Size = new Size(146, 23);
+            lblSaldo.TabIndex = 2;
+            lblSaldo.Text = "Saldo Pendiente:";
+            // 
+            // lblSaldoValor
+            // 
+            lblSaldoValor.AutoSize = true;
+            lblSaldoValor.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            lblSaldoValor.ForeColor = Color.FromArgb(244, 67, 54);
+            lblSaldoValor.Location = new Point(160, 56);
+            lblSaldoValor.Name = "lblSaldoValor";
+            lblSaldoValor.Size = new Size(77, 31);
+            lblSaldoValor.TabIndex = 3;
+            lblSaldoValor.Text = "$0.00";
+            // 
+            // lblFechaLimite
+            // 
+            lblFechaLimite.AutoSize = true;
+            lblFechaLimite.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblFechaLimite.Location = new Point(14, 112);
+            lblFechaLimite.Name = "lblFechaLimite";
+            lblFechaLimite.Size = new Size(183, 23);
+            lblFechaLimite.TabIndex = 4;
+            lblFechaLimite.Text = "Fecha Límite de Pago:";
+            // 
+            // dtpFechaLimitePago
+            // 
+            dtpFechaLimitePago.Enabled = false;
+            dtpFechaLimitePago.Font = new Font("Segoe UI", 10F);
+            dtpFechaLimitePago.Format = DateTimePickerFormat.Short;
+            dtpFechaLimitePago.Location = new Point(203, 108);
+            dtpFechaLimitePago.Name = "dtpFechaLimitePago";
+            dtpFechaLimitePago.Size = new Size(150, 30);
+            dtpFechaLimitePago.TabIndex = 5;
+            // 
             // pnlOferta
             // 
             pnlOferta.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -91,10 +192,10 @@ namespace UI.DISEÑO
             pnlOferta.Controls.Add(lblTotalPagar);
             pnlOferta.Controls.Add(lblMotivoOferta);
             pnlOferta.Controls.Add(txtMotivo);
-            pnlOferta.Location = new Point(12, 165);
+            pnlOferta.Location = new Point(16, 188);
             pnlOferta.Name = "pnlOferta";
             pnlOferta.Size = new Size(381, 245);
-            pnlOferta.TabIndex = 5;
+            pnlOferta.TabIndex = 6;
             pnlOferta.Tag = "classic";
             pnlOferta.Visible = false;
             // 
@@ -187,11 +288,11 @@ namespace UI.DISEÑO
             panelAcciones.Controls.Add(btnConfirmar);
             panelAcciones.Controls.Add(btnCancelar);
             panelAcciones.Dock = DockStyle.Bottom;
-            panelAcciones.Location = new Point(0, 433);
+            panelAcciones.Location = new Point(0, 448);
             panelAcciones.Name = "panelAcciones";
             panelAcciones.Padding = new Padding(12, 8, 12, 8);
             panelAcciones.Size = new Size(413, 52);
-            panelAcciones.TabIndex = 4;
+            panelAcciones.TabIndex = 7;
             panelAcciones.Tag = "classic";
             // 
             // btnConfirmar
@@ -224,8 +325,10 @@ namespace UI.DISEÑO
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             CancelButton = btnCancelar;
-            ClientSize = new Size(413, 485);
+            ClientSize = new Size(413, 500);
             Controls.Add(pnlOferta);
+            Controls.Add(pnlFinanciamiento);
+            Controls.Add(chkFinanciamiento);
             Controls.Add(panelAcciones);
             Controls.Add(lblPrecio);
             Controls.Add(cmbPlan);
@@ -241,6 +344,8 @@ namespace UI.DISEÑO
             Tag = "classic";
             Text = "Renovar membresía";
             Load += FrmRenovarMembresia_Load;
+            pnlFinanciamiento.ResumeLayout(false);
+            pnlFinanciamiento.PerformLayout();
             pnlOferta.ResumeLayout(false);
             pnlOferta.PerformLayout();
             panelAcciones.ResumeLayout(false);
@@ -254,6 +359,14 @@ namespace UI.DISEÑO
         private Label lblPlan;
         private ComboBox cmbPlan;
         private Label lblPrecio;
+        private CheckBox chkFinanciamiento;
+        private Panel pnlFinanciamiento;
+        private Label lblPagoInicial;
+        private TextBox txtPagoInicial;
+        private Label lblSaldo;
+        private Label lblSaldoValor;
+        private Label lblFechaLimite;
+        private DateTimePicker dtpFechaLimitePago;
         private Panel pnlOferta;
         private Label lblOfertaPct;
         private TextBox txtDescuentoPorcental;

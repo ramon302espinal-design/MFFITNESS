@@ -837,15 +837,24 @@ namespace BLL
             string? errorCode = null;
             string? errorMessage = null;
 
+            // Con webhook de estado activo no bloqueamos el hilo en texto:
+            // el callback + huella del chat actualizan ENTREGADO/FALLIDO.
+            if (!esMedia
+                && TwilioSettings.WebhookInboundConfigurado
+                && !TwilioSettings.ExigirEntregaConfirmada)
+            {
+                return ("queued", null, null);
+            }
+
             // No congelar la UI: pocas consultas cortas. Twilio sigue procesando en segundo plano.
             // Con media se espera mas: "sent" no es terminal y Meta puede rechazar despues (63016).
             int intentosConfig = TwilioSettings.IntentosConsultaEstado;
             int intentos = esMedia
-                ? Math.Clamp(Math.Max(intentosConfig, 8), 1, 10)
-                : Math.Clamp(Math.Min(intentosConfig, 3), 1, 3);
+                ? Math.Clamp(Math.Max(intentosConfig, 5), 1, 6)
+                : Math.Clamp(Math.Min(intentosConfig, 2), 1, 2);
             int esperaBase = esMedia
-                ? Math.Clamp(TwilioSettings.MilisegundosEntreConsultasEstado, 800, 1500)
-                : Math.Clamp(TwilioSettings.MilisegundosEntreConsultasEstado, 200, 800);
+                ? Math.Clamp(TwilioSettings.MilisegundosEntreConsultasEstado, 600, 1200)
+                : Math.Clamp(TwilioSettings.MilisegundosEntreConsultasEstado, 150, 500);
 
             for (int intento = 0; intento < intentos; intento++)
             {

@@ -12,37 +12,31 @@ v#FF7ED957
 
 
 
-que tenga un limite de tres fotos y que el máximo sea 10 mgb que lo presente tal como la imagen adjunta
 
 
 
 
 
 
+&#x20;**catg padre en Arte, Manualidades y Costura**
 
 
 
-
-
-en accesorio  para electrodomestico
-
-
-
-poner "Lavandería (Lavadoras y Secadoras)" categoría padre
+**catg HIJA  Bisutería y Joyería Artesanal**
 
 
 
-&#x20;categorías hija en "Kits y Soportes de Instalación" y sus sub: Kits de apilado (para montar secadora sobre lavadora), bases/pedestales con cajón, soportes de pared para secadora.
+**Abalorios y Cuentas: SUS SUB: Cuentas de cristal, mostacillas, cuentas de madera, piedras semipreciosas, perlas y letras acrílicas.**
 
 
 
-Mangueras y Conexiones Externas: y sus sub: Mangueras de llenado de agua (acero inoxidable trenzado / goma), adaptadores de grifo universal, ductos de ventilación flexibles para secadora.
+**Material de Ensamblaje y Hallazgos: SUS SUB: Enganches para aretes/pendientes, broches para collares, argollas, alfileres de cabeza y terminales.**
 
 
 
-Cuidado de la Ropa y Protección: y sus sub: Mallas/bolsas de lavado para ropa delicada, bolas de secado (de lana o plástico), atrapapelusas externos para desagüe.
+**Cables y Cordones para Bisutería: SUS SUB: Hilos de pescar/nylon, alambres de cobre/aluminio para engarzar, cordones de cuero y hilos elásticos.**
 
 
 
-Fundas y Limpieza: y sus sub: Fundas protectoras impermeables para lavadora/secadora, pastillas o líquidos limpiadores de tina/tambor.
+**Herramientas de Joyería:SUS SUB:  Pinzas de corte preciso, pinzas de punta redonda, herramientas para entorchar alambre y organizadores de cuentas.**
 

@@ -1289,15 +1289,25 @@ namespace UI.DISEÑO
             PlanBLL planBLL = new PlanBLL();
             DataTable dt = planBLL.ObtenerPlanes();
 
-            // 3x (Id 1011, RD$ 1000, 30 días) entra al mismo cobro que el resto:
-            // caja, membresía, historial y el KPI 3X de Estado. No se filtra.
+            // Catálogo dbo.Planes (Activo=1): PREMIUM, PRO, MENSUALIDAD, 3x, 2X, etc.
+            // Sin filtro: el cobro usa Precio del plan → caja, historial, deudas y Estado.
             DataView dv = dt.DefaultView;
             dv.RowFilter = string.Empty;
+            dv.Sort = "Nombre ASC";
 
-            cmbMembresia.DataSource = dv;
-            cmbMembresia.DisplayMember = "Nombre";
-            cmbMembresia.ValueMember = "Id";
-            cmbMembresia.SelectedIndex = -1;
+            cmbMembresia.BeginUpdate();
+            try
+            {
+                cmbMembresia.DataSource = null;
+                cmbMembresia.DisplayMember = "Nombre";
+                cmbMembresia.ValueMember = "Id";
+                cmbMembresia.DataSource = dv;
+                cmbMembresia.SelectedIndex = -1;
+            }
+            finally
+            {
+                cmbMembresia.EndUpdate();
+            }
         }
 
         private void ConfigurarCarrito()

@@ -15,7 +15,7 @@ namespace UI.DISEÑO.ESTADO
     {
         private static readonly string[] PlanesPermitidos =
         {
-            "PREMIUM", "PRO", "MENSUALIDAD", "GLUTEOS GRANDE", "ABDOMEN PLANO", "M-A", "3x"
+            "PREMIUM", "PRO", "MENSUALIDAD", "GLUTEOS GRANDE", "ABDOMEN PLANO", "M-A", "3x", "2X", "2x"
         };
 
         private ClienteBLL? _clienteBLL;

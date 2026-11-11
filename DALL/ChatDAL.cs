@@ -149,11 +149,18 @@ ORDER BY
             return db.ExecuteQuery(query, parametros);
         }
 
-        public DataTable ListarMensajes(int clienteId)
+        public DataTable ListarMensajes(int clienteId) =>
+            ListarMensajes(clienteId, takeUltimos: null);
+
+        /// <summary>
+        /// Historial del hilo. Si <paramref name="takeUltimos"/> tiene valor, solo trae los N más recientes
+        /// (cronológico ASC) para no congelar la UI con historiales enormes.
+        /// </summary>
+        public DataTable ListarMensajes(int clienteId, int? takeUltimos)
         {
             EnsureSchema();
 
-            string query = @"
+            string union = @"
 SELECT
     CAST(Id AS BIGINT) AS Id,
     ClienteId,
@@ -185,9 +192,32 @@ SELECT
     CASE WHEN Estado = N'ERROR' THEN LEFT(Respuesta, 500) ELSE NULL END AS DetalleError
 FROM dbo.RegistroMensajes WITH (NOLOCK)
 WHERE ClienteId = @ClienteId
-  AND Estado IN (N'ENVIADO', N'ERROR', N'PENDIENTE')
+  AND Estado IN (N'ENVIADO', N'ERROR', N'PENDIENTE')";
 
-ORDER BY Fecha ASC;";
+            if (takeUltimos is int take && take > 0)
+            {
+                string queryVentana = $@"
+SELECT Id, ClienteId, Direccion, Cuerpo, Estado, Usuario, Fecha, EsAutomatico, TipoAutomatico, Origen, DetalleError
+FROM (
+    SELECT TOP (@Take) *
+    FROM (
+        {union}
+    ) u
+    ORDER BY Fecha DESC, Id DESC
+) recientes
+ORDER BY Fecha ASC, Id ASC;";
+
+                SqlParameter[] parametrosVentana =
+                {
+                    new SqlParameter("@ClienteId", clienteId),
+                    new SqlParameter("@Take", take)
+                };
+                return db.ExecuteQuery(queryVentana, parametrosVentana);
+            }
+
+            string query = union + @"
+
+ORDER BY Fecha ASC, Id ASC;";
 
             SqlParameter[] parametros = { new SqlParameter("@ClienteId", clienteId) };
             return db.ExecuteQuery(query, parametros);

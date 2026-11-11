@@ -867,6 +867,22 @@ namespace BLL
             }
         }
 
+        /// <summary>
+        /// Reutilizable desde renovación financiada (Estado) y cobro financiado (Pagos).
+        /// </summary>
+        public void NotificarWhatsAppFinanciamiento(
+            int clienteId,
+            int planId,
+            decimal pagoInicial,
+            DateTime? fechaVencimientoDeuda,
+            string metodoPago,
+            MembresiaOperacionResult result)
+        {
+            EnviarWhatsAppEnBackground(() =>
+                EnviarWhatsAppFinanciamiento(
+                    clienteId, planId, pagoInicial, fechaVencimientoDeuda, metodoPago, result));
+        }
+
         private void EnviarWhatsAppFinanciamiento(
             int clienteId,
             int planId,

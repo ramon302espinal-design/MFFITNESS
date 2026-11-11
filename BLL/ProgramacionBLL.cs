@@ -46,7 +46,7 @@ namespace BLL
 
         {
 
-            "PREMIUM", "PRO", "MENSUALIDAD", "M-A", "3X", "3x",
+            "PREMIUM", "PRO", "MENSUALIDAD", "M-A", "3X", "3x", "2X", "2x",
 
             "GLUTEOS GRANDE", "ABDOMEN PLANO"
 

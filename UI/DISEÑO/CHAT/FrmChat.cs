@@ -19,6 +19,9 @@ namespace UI.DISEÑO.CHAT
     [System.ComponentModel.DesignerCategory("Form")]
     public partial class FrmChat : Form
     {
+        /// <summary>Tope de burbujas/SQL por hilo: evita congelar al abrir historiales enormes.</summary>
+        private const int MaxMensajesVentana = 120;
+
         private readonly ChatBLL _chatBll = new();
         private List<ChatConversacionDto> _conversaciones = new();
         private int? _clienteSeleccionadoId;
@@ -34,6 +37,10 @@ namespace UI.DISEÑO.CHAT
         private CancellationTokenSource? _cargaMensajesCts;
         private System.Windows.Forms.Timer? _timerBuscar;
         private System.Windows.Forms.Timer? _timerEstadoWebhook;
+        private System.Windows.Forms.Timer? _timerCoalesceRefresh;
+        private bool _refreshForzadoPendiente;
+        private int _tickCoalesceOcupado;
+        private long _ultimoIntentoNgrokUtcTicks;
         private ToolTip? _toolTipEstado;
         private Label? _lblEstadoMensajes;
         private CheckBox? _chkModoPrueba;
@@ -97,12 +104,21 @@ namespace UI.DISEÑO.CHAT
             ActualizarEstadoTwilio();
             _ = CargarConversacionesAsync(mantenerSeleccion: false);
             _ = BootstrapWebhookSilenciosoAsync();
+            _ = InicializarHuellaAsync();
 
-            _timerBuscar = new System.Windows.Forms.Timer { Interval = 350 };
+            _timerBuscar = new System.Windows.Forms.Timer { Interval = 450 };
             _timerBuscar.Tick += (_, _) =>
             {
                 _timerBuscar!.Stop();
                 _ = CargarConversacionesAsync(mantenerSeleccion: true);
+            };
+
+            // Fusiona ráfagas de mensajes entrantes en un solo refresh.
+            _timerCoalesceRefresh = new System.Windows.Forms.Timer { Interval = 180 };
+            _timerCoalesceRefresh.Tick += (_, _) =>
+            {
+                _timerCoalesceRefresh!.Stop();
+                _ = EjecutarRefreshCoalescidoAsync();
             };
 
             _toolTipEstado = new ToolTip { AutoPopDelay = 30_000, InitialDelay = 400 };
@@ -134,8 +150,7 @@ namespace UI.DISEÑO.CHAT
                 {
                     ActualizarEstadoTwilio();
                     await RefrescarEstadosEntregaAsync();
-                    if (!TwilioSettings.WebhookInboundConfigurado || string.IsNullOrWhiteSpace(WhatsAppStackBootstrapper.TryGetNgrokPublicUrl()))
-                        _ = SincronizarNgrokSilenciosoAsync();
+                    ProgramarNgrokSiHaceFalta();
                 }
                 finally
                 {
@@ -144,12 +159,9 @@ namespace UI.DISEÑO.CHAT
             };
             _timerEstadoWebhook.Start();
 
-            ActualizarContadorNoLeidos();
-
             if (_clienteInicialId is > 0)
                 SeleccionarCliente(_clienteInicialId.Value);
 
-            SincronizarHuellaChat();
             // Sin polling de UI: ChatNotificationHost avisa mensajes entrantes;
             // envío/búsqueda/foco refrescan solo cuando hay acción o cambio real.
             timerRefresh.Stop();
@@ -163,6 +175,8 @@ namespace UI.DISEÑO.CHAT
             _timerBuscar?.Dispose();
             _timerEstadoWebhook?.Stop();
             _timerEstadoWebhook?.Dispose();
+            _timerCoalesceRefresh?.Stop();
+            _timerCoalesceRefresh?.Dispose();
             _cargaMensajesCts?.Cancel();
             _cargaMensajesCts?.Dispose();
             LiberarBurbujas();
@@ -233,6 +247,9 @@ namespace UI.DISEÑO.CHAT
                 || noLeidos != _ultimoNoLeidosConocido
                 || maxEntrada != _ultimoMaxIdEntradaConocido;
 
+            bool recargarMensajes = false;
+            int cidMensajes = 0;
+
             if (_clienteSeleccionadoId is int cid && cid > 0)
             {
                 try
@@ -244,7 +261,8 @@ namespace UI.DISEÑO.CHAT
                     if (maxId != _ultimoMaxIdMensajes)
                     {
                         hayCambio = true;
-                        _ = CargarMensajesAsync(cid);
+                        recargarMensajes = true;
+                        cidMensajes = cid;
                     }
                 }
                 catch
@@ -259,20 +277,39 @@ namespace UI.DISEÑO.CHAT
             _ultimoNoLeidosConocido = noLeidos;
             _ultimoMaxIdEntradaConocido = maxEntrada;
             MostrarContadorNoLeidos(noLeidos);
-            await CargarConversacionesAsync(mantenerSeleccion: true);
+
+            // Una sola carga de mensajes (await) + lista en paralelo lógico.
+            Task? tMensajes = recargarMensajes ? CargarMensajesAsync(cidMensajes) : null;
+            await CargarConversacionesAsync(mantenerSeleccion: true).ConfigureAwait(true);
+            if (tMensajes != null)
+                await tMensajes.ConfigureAwait(true);
         }
 
-        private void SincronizarHuellaChat()
+        private async Task InicializarHuellaAsync()
         {
             try
             {
-                _ultimoNoLeidosConocido = _chatBll.ContarNoLeidosTotal();
-                _ultimoMaxIdEntradaConocido = _chatBll.ObtenerMaxIdMensajeEntrada();
+                var huella = await Task.Run(() =>
+                {
+                    int noLeidos = _chatBll.ContarNoLeidosTotal();
+                    int maxEntrada = _chatBll.ObtenerMaxIdMensajeEntrada();
+                    return (noLeidos, maxEntrada);
+                }).ConfigureAwait(true);
+
+                if (IsDisposed)
+                    return;
+
+                _ultimoNoLeidosConocido = huella.noLeidos;
+                _ultimoMaxIdEntradaConocido = huella.maxEntrada;
+                MostrarContadorNoLeidos(huella.noLeidos);
             }
             catch
             {
-                _ultimoNoLeidosConocido = -1;
-                _ultimoMaxIdEntradaConocido = -1;
+                if (!IsDisposed)
+                {
+                    _ultimoNoLeidosConocido = -1;
+                    _ultimoMaxIdEntradaConocido = -1;
+                }
             }
         }
 
@@ -283,17 +320,63 @@ namespace UI.DISEÑO.CHAT
 
             void aplicar()
             {
-                // Tiempo real por evento (mensaje entrante), no por timer de UI.
-                _ = RefrescarVistaAsync(forzar: true);
-
-                if (_clienteSeleccionadoId == clienteId)
-                    _ = CargarMensajesAsync(clienteId);
+                _refreshForzadoPendiente = true;
+                ProgramarRefreshCoalescido();
             }
 
             if (InvokeRequired)
                 BeginInvoke(aplicar);
             else
                 aplicar();
+        }
+
+        private void ProgramarRefreshCoalescido()
+        {
+            if (_timerCoalesceRefresh == null || IsDisposed)
+                return;
+
+            _timerCoalesceRefresh.Stop();
+            _timerCoalesceRefresh.Start();
+        }
+
+        private async Task EjecutarRefreshCoalescidoAsync()
+        {
+            if (Interlocked.CompareExchange(ref _tickCoalesceOcupado, 1, 0) != 0)
+            {
+                ProgramarRefreshCoalescido();
+                return;
+            }
+
+            bool forzar = _refreshForzadoPendiente;
+            _refreshForzadoPendiente = false;
+
+            try
+            {
+                if (IsDisposed)
+                    return;
+
+                // Una sola pasada: lista + mensajes del hilo activo (sin duplicar cargas).
+                await RefrescarVistaAsync(forzar).ConfigureAwait(true);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _tickCoalesceOcupado, 0);
+            }
+        }
+
+        private void ProgramarNgrokSiHaceFalta()
+        {
+            if (TwilioSettings.WebhookInboundConfigurado
+                && !string.IsNullOrWhiteSpace(WhatsAppStackBootstrapper.TryGetNgrokPublicUrl()))
+                return;
+
+            long ahora = DateTime.UtcNow.Ticks;
+            // Evita EnsureReady cada 8s (puede dormir hasta decenas de segundos).
+            if (ahora - _ultimoIntentoNgrokUtcTicks < TimeSpan.FromSeconds(60).Ticks)
+                return;
+
+            _ultimoIntentoNgrokUtcTicks = ahora;
+            _ = SincronizarNgrokSilenciosoAsync();
         }
 
         private void ConfigurarCentroConversaciones()
@@ -466,6 +549,7 @@ namespace UI.DISEÑO.CHAT
         {
             panelMensajes.BackColor = Color.FromArgb(233, 237, 234);
             ActivarDobleBuffer(panelMensajes);
+            ActivarDobleBuffer(flowMensajes);
             ActivarDobleBuffer(lstConversaciones);
             flowMensajes.Dock = DockStyle.None;
             flowMensajes.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -863,7 +947,7 @@ namespace UI.DISEÑO.CHAT
             try
             {
                 mensajes = await Task.Run(
-                    () => _chatBll.ListarMensajes(clienteId).ToList(),
+                    () => _chatBll.ListarMensajes(clienteId, MaxMensajesVentana).ToList(),
                     ct).ConfigureAwait(true);
             }
             catch (OperationCanceledException)
@@ -924,6 +1008,7 @@ namespace UI.DISEÑO.CHAT
         /// </summary>
         private bool PintarMensajes(int clienteId, IReadOnlyList<ChatMensajeDto> mensajes, int anchoMax)
         {
+            // Prefijo idéntico → actualizar estados / anexar.
             bool mismoHilo = _burbujasClienteId == clienteId && _burbujas.Count > 0 && _burbujas.Count <= mensajes.Count;
             if (mismoHilo)
             {
@@ -969,6 +1054,10 @@ namespace UI.DISEÑO.CHAT
                 return agrego;
             }
 
+            // Ventana deslizante (tope MaxMensajesVentana): cayó el más viejo y entró uno nuevo.
+            if (TryPintarVentanaDeslizante(clienteId, mensajes, anchoMax, out bool scrollFinal))
+                return scrollFinal;
+
             flowMensajes.SuspendLayout();
             panelMensajes.SuspendLayout();
             try
@@ -987,6 +1076,57 @@ namespace UI.DISEÑO.CHAT
             AjustarAnchoFlowMensajes();
             AjustarAltoFlowMensajes(conservarScroll: false);
             return mensajes.Count > 0;
+        }
+
+        /// <summary>
+        /// Si la ventana SQL se deslizó 1 mensaje, reutiliza controles en vez de reconstruir todo.
+        /// </summary>
+        private bool TryPintarVentanaDeslizante(
+            int clienteId,
+            IReadOnlyList<ChatMensajeDto> mensajes,
+            int anchoMax,
+            out bool scrollAlFinal)
+        {
+            scrollAlFinal = false;
+            if (_burbujasClienteId != clienteId || _burbujas.Count == 0 || mensajes.Count == 0)
+                return false;
+
+            if (_burbujas.Count != mensajes.Count)
+                return false;
+
+            // burbujas[1..] == mensajes[0..n-2]
+            for (int i = 0; i < _burbujas.Count - 1; i++)
+            {
+                if (_burbujas[i + 1].Id != mensajes[i].Id)
+                    return false;
+            }
+
+            flowMensajes.SuspendLayout();
+            try
+            {
+                BurbujaSlot vieja = _burbujas[0];
+                _burbujas.RemoveAt(0);
+                flowMensajes.Controls.Remove(vieja.Contenedor);
+                vieja.Contenedor.Dispose();
+
+                for (int i = 0; i < _burbujas.Count; i++)
+                {
+                    string firma = FirmaMensaje(mensajes[i]);
+                    if (_burbujas[i].Firma == firma)
+                        continue;
+                    AplicarBurbuja(_burbujas[i], mensajes[i], anchoMax, firma);
+                }
+
+                AgregarBurbuja(mensajes[^1], anchoMax);
+            }
+            finally
+            {
+                flowMensajes.ResumeLayout(false);
+            }
+
+            AjustarAltoFlowMensajes(conservarScroll: false);
+            scrollAlFinal = true;
+            return true;
         }
 
         private void AgregarBurbuja(ChatMensajeDto msg, int anchoMax)
@@ -1249,7 +1389,7 @@ namespace UI.DISEÑO.CHAT
                     LimpiarAdjuntoPdf();
                     await CargarMensajesAsync(clienteId);
                     _ = CargarConversacionesAsync(mantenerSeleccion: true);
-                    SincronizarHuellaChat();
+                    _ = InicializarHuellaAsync();
                 }
                 else
                 {
@@ -1370,7 +1510,7 @@ namespace UI.DISEÑO.CHAT
                         LimpiarAdjuntoPdf();
                         await CargarMensajesAsync(clienteId);
                         _ = CargarConversacionesAsync(mantenerSeleccion: true);
-                        SincronizarHuellaChat();
+                        _ = InicializarHuellaAsync();
                     }
                 }
                 else if (!resultado.RequierePlantilla)

@@ -8,9 +8,17 @@ namespace DL
     {
         private DBHelper db = new DBHelper();
 
+        /// <summary>
+        /// Catálogo activo (PREMIUM, PRO, MENSUALIDAD, 3x, 2X, etc.).
+        /// Misma fuente para Pagos, Renovación, Estado, Programación y Deudas.
+        /// </summary>
         public DataTable ObtenerPlanes()
         {
-            string query = "SELECT Id, Nombre, Precio, DuracionDias FROM Planes WHERE Activo = 1";
+            string query = @"
+SELECT Id, Nombre, Precio, DuracionDias
+FROM dbo.Planes
+WHERE Activo = 1
+ORDER BY Nombre ASC;";
             return db.ExecuteQuery(query);
         }
 

@@ -129,6 +129,34 @@ namespace BLL.Commands
             }
         }
 
+        /// <summary>
+        /// Renovación con pago inicial + saldo a deuda (misma cadena que Pagos financiado).
+        /// </summary>
+        public static CommandResult RenovarMembresiaFinanciada(
+            int clienteId,
+            int planId,
+            decimal pagoInicial,
+            string metodoPago,
+            DateTime fechaVencimientoDeuda,
+            string? usuario = null)
+        {
+            try
+            {
+                var operacion = new RenovacionBLL().RenovarClienteFinanciadoConResultado(
+                    clienteId,
+                    planId,
+                    pagoInicial,
+                    metodoPago,
+                    ResolveUsuario(usuario),
+                    fechaVencimientoDeuda);
+                return CommandResult.Ok("Renovación financiada registrada.", operacion);
+            }
+            catch (Exception ex)
+            {
+                return CommandResult.Fail(ex.Message);
+            }
+        }
+
         public static CommandResult ProgramarMembresia(
             int clienteId,
             int planId,

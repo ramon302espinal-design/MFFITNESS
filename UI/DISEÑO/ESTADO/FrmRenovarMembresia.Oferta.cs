@@ -63,6 +63,7 @@ namespace UI.DISEÑO
                 if (pnlOferta.Visible)
                     ResetOfertaCampos();
                 lblPrecio.Visible = true;
+                chkFinanciamiento.Enabled = true;
                 return;
             }
 
@@ -76,6 +77,10 @@ namespace UI.DISEÑO
                 ResetOfertaCampos();
                 return;
             }
+
+            // Oferta y financiamiento son mutuamente excluyentes (igual que Pagos).
+            ResetFinanciamientoCampos();
+            chkFinanciamiento.Enabled = false;
 
             pnlOferta.Visible = true;
             lblPrecio.Visible = false;
@@ -132,6 +137,7 @@ namespace UI.DISEÑO
             _sincronizandoOferta = false;
             pnlOferta.Visible = false;
             lblPrecio.Visible = true;
+            chkFinanciamiento.Enabled = true;
         }
 
         private static bool TryParseDecimalFlexible(string? texto, out decimal valor)
